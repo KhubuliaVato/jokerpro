@@ -1,26 +1,221 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --felt-1: #1f7a4d;
+  --felt-2: #0d4128;
+  --ink: #f4efe2;
+  --gold: #e8c46a;
+  --hand-cw: clamp(3.3rem, min(15vw, 12.5dvh), 6.6rem);
+  --opp-cw: clamp(2.5rem, min(9vw, 8dvh), 4rem);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-noto-georgian), "Sylfaen", system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #0a2418;
+  color: var(--ink);
+  font-family: var(--font-noto-georgian), "Sylfaen", system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.felt {
+  background:
+    radial-gradient(ellipse at 50% 45%, var(--felt-1) 0%, var(--felt-2) 75%),
+    var(--felt-2);
+}
+
+/* ---------- playing cards ---------- */
+.pc {
+  --cw: var(--hand-cw);
+  width: var(--cw);
+  aspect-ratio: 5 / 7;
+  border-radius: calc(var(--cw) * 0.11);
+  background: #fbf8ef;
+  color: #1b1b1b;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.45),
+    0 4px 10px rgb(0 0 0 / 0.25);
+  position: relative;
+  flex: none;
+  user-select: none;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.pc.red {
+  color: #c4302b;
+}
+.pc.sm {
+  --cw: clamp(2.8rem, min(12.5vw, 9.5dvh), 5rem);
+}
+.pc.opp {
+  --cw: var(--opp-cw);
+}
+.pc.xs {
+  --cw: clamp(1.8rem, 5vw, 2.6rem);
+}
+.pc .corner {
+  position: absolute;
+  top: 7%;
+  left: 9%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: calc(var(--cw) * 0.3);
+  gap: 0.08em;
+}
+.pc .pip {
+  position: absolute;
+  right: 10%;
+  bottom: 6%;
+  font-size: calc(var(--cw) * 0.5);
+}
+.pc.joker {
+  background: linear-gradient(145deg, #fff7d6, #f4d9ff 55%, #cfe7ff);
+  color: #6b2d9c;
+}
+.pc.joker .star {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--cw) * 0.62);
+}
+.pc.joker .corner {
+  font-size: calc(var(--cw) * 0.2);
+  letter-spacing: -0.04em;
+  writing-mode: vertical-rl;
+  top: 8%;
+}
+.pc.back {
+  background:
+    repeating-linear-gradient(45deg, #1b3f8f 0 5px, #234fae 5px 10px);
+  border: calc(var(--cw) * 0.07) solid #fbf8ef;
+}
+
+.hand-card {
+  cursor: default;
+}
+.hand-card + .hand-card {
+  margin-left: calc(var(--hand-cw) * -0.55);
+}
+.hand-card.playable {
+  cursor: pointer;
+}
+.hand-card.playable:hover,
+.hand-card.playable:focus-visible {
+  transform: translateY(-0.7rem);
+  z-index: 5;
+  outline: none;
+}
+.hand-card.dim {
+  opacity: 0.45;
+}
+.hand-card.glow {
+  box-shadow:
+    0 0 0 2px var(--gold),
+    0 4px 14px rgb(0 0 0 / 0.35);
+}
+
+@keyframes drop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.7) translateY(var(--from, 1rem));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.drop-in {
+  animation: drop-in 0.28s ease-out both;
+}
+
+.win-glow {
+  box-shadow:
+    0 0 0 3px var(--gold),
+    0 0 22px rgb(232 196 106 / 0.8);
+}
+
+.chip {
+  background: rgb(0 0 0 / 0.35);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 999px;
+}
+
+.btn {
+  border-radius: 0.75rem;
+  padding: 0.55rem 0.9rem;
+  font-weight: 700;
+  background: rgb(255 255 255 / 0.1);
+  border: 1px solid rgb(255 255 255 / 0.2);
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+.btn:hover:not(:disabled) {
+  background: rgb(255 255 255 / 0.2);
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--gold);
+  color: #2a1d00;
+  border-color: transparent;
+}
+.btn-primary:hover:not(:disabled) {
+  background: #f3d58a;
+}
+
+.panel {
+  background: rgb(8 28 18 / 0.92);
+  border: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 1rem;
+  backdrop-filter: blur(6px);
+}
+
+.bid-btn {
+  display: grid;
+  place-items: center;
+  min-width: 3rem;
+  height: 3rem;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  background: rgb(255 255 255 / 0.1);
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1;
+  transition:
+    transform 0.12s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.bid-btn:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.05);
+  background: var(--gold);
+  color: #2a1d00;
+}
+.bid-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.bid-btn:disabled {
+  opacity: 0.25;
+  text-decoration: line-through;
+  cursor: not-allowed;
 }
