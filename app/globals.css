@@ -105,6 +105,11 @@ body {
 
 .hand-card {
   cursor: default;
+  --rot: 0deg;
+  --drop: 0rem;
+  rotate: var(--rot);
+  translate: 0 var(--drop);
+  transition: translate 0.15s ease-out, filter 0.15s;
 }
 .hand-card + .hand-card {
   margin-left: calc(var(--hand-cw) * -0.55);
@@ -114,17 +119,12 @@ body {
 }
 .hand-card.playable:hover,
 .hand-card.playable:focus-visible {
-  transform: translateY(-0.7rem);
+  translate: 0 calc(var(--drop) - 1.1rem);
   z-index: 5;
   outline: none;
 }
 .hand-card.dim {
-  opacity: 0.45;
-}
-.hand-card.glow {
-  box-shadow:
-    0 0 0 2px var(--gold),
-    0 4px 14px rgb(0 0 0 / 0.35);
+  filter: brightness(0.6) saturate(0.7);
 }
 
 @keyframes drop-in {
@@ -218,4 +218,61 @@ body {
   opacity: 0.25;
   text-decoration: line-through;
   cursor: not-allowed;
+}
+
+@keyframes last-trick-pop {
+  from {
+    opacity: 0;
+    transform: translateY(0.6rem) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.last-trick-pop {
+  transform-origin: bottom left;
+  animation: last-trick-pop 0.18s ease-out;
+}
+
+.joker-pop {
+  transform-origin: bottom center;
+  animation: joker-pop 0.16s ease-out;
+}
+@keyframes joker-pop {
+  from {
+    opacity: 0;
+    margin-bottom: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.joker-opt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 6.5rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 0.8rem;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  transition: transform 0.12s, background 0.12s;
+}
+.joker-opt:hover {
+  transform: translateY(-2px);
+}
+.joker-opt-high {
+  background: linear-gradient(180deg, #f1d584, #d9ac3f);
+  color: #2b2005;
+  border-color: #f5e2a0;
+}
+.joker-opt-low {
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+.joker-opt-low:hover {
+  background: rgb(255 255 255 / 0.18);
 }

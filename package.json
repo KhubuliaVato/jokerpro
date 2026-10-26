@@ -7,9 +7,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:functions": "esbuild supabase/functions/joker/index.ts --bundle --format=esm --platform=neutral --minify --external:npm:* --outfile=supabase/functions/joker/dist/index.js",
+    "sim:online": "esbuild scripts/online-sim.ts --bundle --platform=node --format=cjs --outfile=.sim/online-sim.cjs --log-level=warning && node .sim/online-sim.cjs",
+    "sim:friends": "esbuild scripts/online-friends.ts --bundle --platform=node --format=cjs --outfile=.sim/online-friends.cjs --log-level=warning && node .sim/online-friends.cjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "next": "16.4.3",
     "react": "19.3.0",
     "react-dom": "19.3.0"
@@ -19,6 +23,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.4.3",
     "tailwindcss": "^4",

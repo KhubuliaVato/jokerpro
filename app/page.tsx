@@ -1,5 +1,5 @@
-import { JokerApp } from "@/components/JokerApp";
+import { MainMenu } from "@/components/MainMenu";
 
 export default function Home() {
-  return <JokerApp />;
+  return <MainMenu />;
 }
