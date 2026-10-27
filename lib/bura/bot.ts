@@ -1,10 +1,20 @@
 import { shuffle, type NormalCard, type Rng, type Suit } from "../joker/cards";
 import type { BotProfile } from "../joker/botProfiles";
 import {
+  answerCall,
   beatsCombo,
+  canCall,
+  decideVar,
+  finishTrick,
+  MAX_PRICE,
+  nextLevel,
+  playCards,
+  VAR_POINTS,
+  type BuraAction,
   cardPoints,
   combinations,
   legalPlays,
+  outranks,
   sumPoints,
   teamOf,
   unseenCards,
@@ -30,8 +40,8 @@ const keepValue = (c: NormalCard, trump: Suit) => (c.suit === trump ? 4 + 0.6 * 
 const spend = (cards: NormalCard[], trump: Suit) => cards.reduce((n, c) => n + cardPoints(c.rank) + keepValue(c, trump), 0);
 
 /** What a player does with no cleverness: the cheapest way to beat, else the cheapest throw-away. */
-function simpleAnswer(hand: NormalCard[], top: NormalCard[], partnerWinning: boolean, trump: Suit): NormalCard[] {
-  const all = combinations(hand, top.length);
+function simpleAnswer(hand: NormalCard[], top: NormalCard[], partnerWinning: boolean, trump: Suit, need: number): NormalCard[] {
+  const all = combinations(hand, need);
   const beating = partnerWinning ? all : all.filter((c) => beatsCombo(c, top, trump));
   const choices = beating.length > 0 ? beating : all;
   return choices.reduce((best, c) => (spend(c, trump) < spend(best, trump) ? c : best));
@@ -41,13 +51,14 @@ function simpleAnswer(hand: NormalCard[], top: NormalCard[], partnerWinning: boo
 function valueOf(s: BuraState, me: number, option: NormalCard[], guess: NormalCard[][]): number {
   const plays = s.trick.map((p) => ({ player: p.player, cards: p.cards }));
   plays.push({ player: me, cards: option });
-  let best = plays.length === 1 || beatsCombo(option, plays[s.best].cards, s.trump) ? plays.length - 1 : s.best;
+  let best = plays.length === 1 || outranks(option, plays[s.best].cards, s.trump) ? plays.length - 1 : s.best;
   while (plays.length < s.players) {
     const p = (plays[plays.length - 1].player + 1) % s.players;
     const top = plays[best];
-    const answer = simpleAnswer(guess[p], top.cards, teamOf(top.player) === teamOf(p), s.trump);
+    const need = plays[plays.length - 1].cards.length;
+    const answer = simpleAnswer(guess[p], top.cards, teamOf(top.player) === teamOf(p), s.trump, need);
     plays.push({ player: p, cards: answer });
-    if (beatsCombo(answer, top.cards, s.trump)) best = plays.length - 1;
+    if (outranks(answer, top.cards, s.trump)) best = plays.length - 1;
   }
   const points = sumPoints(plays.flatMap((p) => p.cards));
   const won = teamOf(plays[best].player) === teamOf(me);
@@ -85,4 +96,60 @@ export function botMove(s: BuraState, style: BuraStyle = STRONG_STYLE, rng: Rng 
   let best = 0;
   for (let k = 1; k < options.length; k++) if (totals[k] > totals[best]) best = k;
   return pick(options[best]);
+}
+
+/** The chance (0 to 1) that the team of `me` takes the round: imagined deals of what is hidden, each played to the end with simple play. */
+export function winChance(s: BuraState, me: number, samples: number, rng: Rng = Math.random): number {
+  const unseen = unseenCards(s, me);
+  const trumpLast = s.deck.length > 0 ? [s.trumpCard] : [];
+  let wins = 0;
+  for (let i = 0; i < samples; i++) {
+    const cards = shuffle(unseen, rng);
+    let sim = structuredClone(s);
+    let at = 0;
+    for (let p = 0; p < s.players; p++) {
+      if (p === me) continue;
+      sim.hands[p] = cards.slice(at, at + s.hands[p].length);
+      at += s.hands[p].length;
+    }
+    sim.deck = [...cards.slice(at, at + Math.max(0, s.deck.length - trumpLast.length)), ...trumpLast];
+    for (let guard = 0; guard < 200 && sim.phase !== "roundEnd" && sim.phase !== "gameEnd"; guard++) {
+      if (sim.phase === "call") sim = answerCall(sim, "accept");
+      else if (sim.phase === "var") sim = decideVar(sim, false);
+      else if (sim.phase === "trickEnd") sim = finishTrick(sim);
+      else {
+        const options = legalPlays(sim);
+        const singles = sim.trick.length === 0 ? options.filter((o) => o.length === 1) : options;
+        const pool = singles.length > 0 ? singles : options;
+        sim = playCards(sim, pool.reduce((best, c) => (spend(c, sim.trump) < spend(best, sim.trump) ? c : best)).map((c) => c.id));
+      }
+    }
+    const winner = sim.result?.winner;
+    wins += winner === undefined || winner === null ? 0.5 : winner === teamOf(me) ? 1 : 0;
+  }
+  return wins / samples;
+}
+
+/** Whatever the bot on turn does: puts down cards, makes or answers a call, or decides on "var". */
+export function botAct(s: BuraState, style: BuraStyle = STRONG_STYLE, rng: Rng = Math.random): BuraAction {
+  const me = s.turn;
+  const samples = Math.max(6, Math.round(style.samples / 2));
+  if (s.phase === "var") {
+    const mine = s.piles[teamOf(me)];
+    // a careless bot sometimes says var a little too early
+    const rash = style.mistake > 0.15 && mine >= VAR_POINTS - 5 && rng() < 0.4;
+    return { type: "var", say: mine >= VAR_POINTS || rash };
+  }
+  if (s.phase === "call" && s.call) {
+    const p = winChance(s, me, samples, rng);
+    const level = s.call.level;
+    if (level < MAX_PRICE && p > 0.78 && rng() < 0.6) return { type: "answer", answer: "raise" };
+    // accepting is worth level * (2p - 1) against losing the price from before
+    return { type: "answer", answer: level * (2 * p - 1) > -s.price ? "accept" : "fold" };
+  }
+  if (canCall(s, me) && rng() > 0.35) {
+    const level = nextLevel(s);
+    if (winChance(s, me, samples, rng) > 0.64 + 0.04 * level) return { type: "call" };
+  }
+  return { type: "play", ids: botMove(s, style, rng) };
 }

@@ -11,7 +11,7 @@ import { BTN_PRIMARY, rise } from "./ui";
 
 /** A game of Bura against bots: nothing is rated and nothing is recorded anywhere. */
 export function BuraApp() {
-  const { game, bots, secondsLeft, kicked, start, quit, next, play } = useBuraGame();
+  const { game, bots, secondsLeft, kicked, start, quit, next, play, doAct } = useBuraGame();
   const [players, setPlayers] = useState<BuraPlayers>(2);
   // (fixed to begin with: a random pick would differ between the server's page and the browser's)
   const [picked, setPicked] = useState<Record<BuraPlayers, string[]>>({ 2: ["levani"], 4: DEFAULT_BOTS });
@@ -25,6 +25,7 @@ export function BuraApp() {
         names={["თქვენ", ...bots.map((b) => b.name)]}
         avatars={[null, ...bots.map((b) => ({ color: b.color, icon: b.icon }))]}
         onPlay={play}
+        onAct={doAct}
         onNext={next}
         autoNext
         onQuit={quit}

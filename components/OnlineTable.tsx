@@ -156,6 +156,7 @@ export function OnlineTable({ code }: { code: string }) {
           names={names}
           avatars={avatars}
           onPlay={(ids) => void t.playCards(ids)}
+          onAct={(a) => void t.buraAct(a)}
           onNext={() => {}}
           autoNext
           onQuit={leaveToMenu}

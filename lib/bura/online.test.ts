@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createGame, finishTrick, legalPlays, nextRound, playCards, type BuraPlayers, type BuraState } from "./engine";
-import { advance, resultFor, settle, viewFor } from "./online";
+import { createGame, decideVar, finishTrick, legalPlays, nextRound, playCards, type BuraPlayers, type BuraState } from "./engine";
+import { advance, parseAction, resultFor, settle, viewFor } from "./online";
+
+/** The trick goes to its winner, who just carries on (no "var"). */
+const carryOn = (s: BuraState): BuraState => {
+  const next = finishTrick(s);
+  return next.phase === "var" ? decideVar(next, false) : next;
+};
 
 function rng(seed: number) {
   return () => {
@@ -17,7 +23,7 @@ function playUntil(players: BuraPlayers, seed: number, stop: (s: BuraState) => b
   let s = createGame(players, r);
   for (let i = 0; i < 5000 && !stop(s); i++) {
     if (s.phase === "roundEnd") s = nextRound(s, r);
-    else if (s.phase === "trickEnd") s = finishTrick(s);
+    else if (s.phase === "trickEnd" || s.phase === "var") s = s.phase === "var" ? decideVar(s, false) : carryOn(s);
     else {
       const options = legalPlays(s);
       s = playCards(s, options[Math.floor(r() * options.length)].map((c) => c.id));
@@ -85,7 +91,8 @@ describe("server helpers", () => {
 
   it("advance moves on after a trick and after a round, and result is by team", () => {
     const s = playUntil(4, 2, (g) => g.phase === "trickEnd");
-    expect(advance(s).phase).toBe("play");
+    // the winner of the trick is asked about "var" before anybody draws
+    expect(advance(s).phase).toBe("var");
     const done = playUntil(2, 4, (g) => g.phase === "gameEnd");
     expect(done.scores.some((v) => v >= done.target)).toBe(true);
     const a = resultFor(done, 0);
@@ -93,5 +100,38 @@ describe("server helpers", () => {
     expect(new Set([a.place, b.place])).toEqual(new Set([1, 2]));
     expect(a.score).toBe(done.scores[0]);
     expect(b.scores).toEqual([done.scores[1], done.scores[0]]);
+  });
+});
+
+describe("calls and var online", () => {
+  it("a view hides what the other team has collected until the round is over, and turns the call", () => {
+    const s = createGame(4, rng(8));
+    const asked = { ...s, phase: "call" as const, call: { by: 1, level: 2 }, turn: 2, piles: [10, 25], raised: 1 };
+    const v = viewFor(asked, 0);
+    expect(v.piles).toEqual([10, 0]);
+    expect(v.call).toEqual({ by: 1, level: 2 });
+    const v1 = viewFor(asked, 1);
+    expect(v1.piles).toEqual([25, 0]);
+    expect(v1.call).toEqual({ by: 0, level: 2 });
+    expect(v1.raised).toBe(0);
+    expect(v1.turn).toBe(1);
+  });
+
+  it("settle lets bots answer calls and decide on var", () => {
+    const s = createGame(2, rng(9));
+    const asked = { ...s, phase: "call" as const, call: { by: 0, level: 2 }, turn: 1 };
+    const out = settle(asked, (seat) => seat === 1);
+    expect(out.phase === "play" || out.phase === "roundEnd" || out.phase === "gameEnd").toBe(true);
+    expect(out.call).toBeNull();
+  });
+
+  it("parses only well-formed moves", () => {
+    expect(parseAction({ ids: ["S14"] })).toEqual({ type: "play", ids: ["S14"] });
+    expect(parseAction({ type: "call" })).toEqual({ type: "call" });
+    expect(parseAction({ type: "answer", answer: "fold" })).toEqual({ type: "answer", answer: "fold" });
+    expect(parseAction({ type: "var", say: true })).toEqual({ type: "var", say: true });
+    expect(() => parseAction({ type: "answer", answer: "x" })).toThrow();
+    expect(() => parseAction({ type: "var" })).toThrow();
+    expect(() => parseAction(null)).toThrow();
   });
 });

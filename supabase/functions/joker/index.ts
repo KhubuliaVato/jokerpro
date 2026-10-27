@@ -22,7 +22,7 @@ import {
   type Action,
 } from "../../../lib/joker/online";
 import type { Rules } from "../../../lib/joker/rules";
-import { createGame as createBura, playCards as playBura, type BuraState } from "../../../lib/bura/engine";
+import { act as actBura, createGame as createBura, type BuraState } from "../../../lib/bura/engine";
 import * as bura from "../../../lib/bura/online";
 // Private: the rating formulas live outside the public repository (see .gitignore).
 import { rateGame } from "../../../lib/secret/rating";
@@ -303,10 +303,8 @@ async function handle(userId: string, body: Record<string, unknown>) {
         let next: AnyState;
         if (isBura(table)) {
           const s = row.state as BuraState;
-          if (s.phase !== "play" || s.turn !== me.seat) throw new Error("not your turn");
-          const ids = (body.move as { ids?: unknown })?.ids;
-          if (!Array.isArray(ids)) throw new Error("illegal");
-          next = playBura(s, ids.map(String));
+          if (!bura.isActivePhase(s) || s.turn !== me.seat) throw new Error("not your turn");
+          next = actBura(s, bura.parseAction(body.move));
         } else {
           next = applyAction(row.state as GameState, me.seat, body.move as Action);
         }

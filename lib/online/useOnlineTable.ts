@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { playCards as playBura, type BuraState } from "@/lib/bura/engine";
+import { act as actBura, type BuraAction, type BuraState } from "@/lib/bura/engine";
 import type { BuraRules } from "@/lib/bura/online";
 import type { GameState } from "@/lib/joker/engine";
 import { applyAction, realSeat, type Action } from "@/lib/joker/online";
@@ -22,7 +22,7 @@ export interface SeatProfile {
 const ROUND_PAUSE = 6000;
 
 /** A game of this table needs a decision from somebody (Joker: trump / bid / play; Bura: play). */
-const needsMove = (v: GameState | BuraState) => ["trump", "bidding", "playing", "play"].includes(v.phase);
+const needsMove = (v: GameState | BuraState) => ["trump", "bidding", "playing", "play", "call", "var"].includes(v.phase);
 
 /** A little randomness so that four browsers do not all ask the server for the same thing at once. */
 const jitter = (ms: number) => ms + Math.random() * 250;
@@ -277,17 +277,20 @@ export function useOnlineTable(code: string) {
     [tableId, row, loadView],
   );
 
-  /** Bura: put down these cards. */
-  const playCards = useCallback(
-    async (ids: string[]) => {
+  /** Bura: cards, a call, an answer to a call or "var". */
+  const buraAct = useCallback(
+    async (action: BuraAction) => {
       const supabase = getSupabase();
       if (!supabase || !tableId || !row) return;
-      try {
-        setOptimistic({ version: row.version, view: playBura(row.view as BuraState, ids) });
-      } catch {
-        return;
+      // (saying "var" or going on changes what is drawn, which only the server knows)
+      if (action.type !== "var") {
+        try {
+          setOptimistic({ version: row.version, view: actBura(row.view as BuraState, action) });
+        } catch {
+          return;
+        }
       }
-      const err = await callJoker(supabase, { action: "move", table_id: tableId, move: { ids } });
+      const err = await callJoker(supabase, { action: "move", table_id: tableId, move: action });
       if (err) {
         setOptimistic(null);
         setNotice(err);
@@ -297,6 +300,7 @@ export function useOnlineTable(code: string) {
     },
     [tableId, row, loadView],
   );
+  const playCards = useCallback((ids: string[]) => buraAct({ type: "play", ids }), [buraAct]);
 
   const leave = useCallback(async () => {
     const supabase = getSupabase();
@@ -328,6 +332,7 @@ export function useOnlineTable(code: string) {
     notice,
     act,
     playCards,
+    buraAct,
     capacity,
     leave,
   };

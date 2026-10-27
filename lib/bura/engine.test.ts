@@ -2,12 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { NormalCard, Rank, Suit } from "../joker/cards";
 import {
   beats,
+  answerCall,
   beatsCombo,
   buildDeck,
+  canCall,
   cardPoints,
   createGame,
+  decideVar,
   finishTrick,
   isLegal,
+  makeCall,
+  molotka,
   legalPlays,
   nextRound,
   playCards,
@@ -15,6 +20,12 @@ import {
   unseenCards,
   type BuraState,
 } from "./engine";
+
+/** The trick goes to its winner, who just carries on (no "var"). */
+const carryOn = (s: BuraState): BuraState => {
+  const next = finishTrick(s);
+  return next.phase === "var" ? decideVar(next, false) : next;
+};
 
 const c = (suit: Suit, rank: number): NormalCard => ({ joker: false, suit, rank: rank as Rank, id: `${suit}${rank}` });
 
@@ -77,11 +88,19 @@ describe("cards", () => {
 });
 
 describe("deal", () => {
-  it("gives three cards each, turns up the trump and puts it under the pile", () => {
+  it("two play with the 20 cards from ten to ace, four with all 36", () => {
+    expect(buildDeck(2)).toHaveLength(20);
+    expect(buildDeck(2).every((x) => x.rank >= 10)).toBe(true);
+    expect(sumPoints(buildDeck(2))).toBe(120);
+    expect(buildDeck(4)).toHaveLength(36);
+  });
+
+  it("gives three cards each (two players) or five (four), turns up the trump and puts it under the pile", () => {
     for (const n of [2, 4] as const) {
       const g = createGame(n, rng(7));
-      expect(g.hands.map((h) => h.length)).toEqual(Array(n).fill(3));
-      expect(g.deck).toHaveLength(36 - n * 3);
+      const size = n === 4 ? 5 : 3;
+      expect(g.hands.map((h) => h.length)).toEqual(Array(n).fill(size));
+      expect(g.deck).toHaveLength(buildDeck(n).length - n * size);
       expect(g.deck[g.deck.length - 1]).toEqual(g.trumpCard);
       expect(g.trump).toBe(g.trumpCard.suit);
       expect(g.turn).toBe((g.dealer + 1) % n);
@@ -139,7 +158,7 @@ describe("tricks", () => {
     g = playCards(g, ["S10"]);
     g = playCards(g, ["S14"]);
     expect(g.phase).toBe("trickEnd");
-    g = finishTrick(g);
+    g = carryOn(g);
     expect(g.piles).toEqual([0, 21]);
     expect(g.tricks).toEqual([0, 1]);
     expect(g.leader).toBe(1);
@@ -154,7 +173,7 @@ describe("tricks", () => {
     let g = table([[c("S", 14), c("D", 7), c("C", 6)], [c("S", 9), c("D", 8), c("C", 7)]]);
     g = playCards(g, ["S14"]);
     g = playCards(g, ["D8"]);
-    g = finishTrick(g);
+    g = carryOn(g);
     expect(g.leader).toBe(0);
     expect(g.piles).toEqual([11, 0]);
   });
@@ -164,15 +183,20 @@ describe("round end", () => {
   /** One trick left in each hand, played so that seat 0 takes it. */
   const last = (piles: number[], tricks: number[]) => {
     const g = table([[c("S", 14)], [c("S", 9)]], { piles, tricks });
-    return finishTrick(playCards(playCards(g, ["S14"]), ["S9"]));
+    return carryOn(playCards(playCards(g, ["S14"]), ["S9"]));
   };
 
-  it("61 wins, the loser's points decide how many game points", () => {
+  it("61 wins the round, worth one game point whatever the loser took", () => {
     expect(last([50, 59], [3, 3]).result).toMatchObject({ winner: 0, gain: 1 });
     expect(last([50, 40], [3, 3]).result?.piles).toEqual([61, 40]);
     expect(last([50, 40], [3, 3]).scores).toEqual([1, 0]);
-    expect(last([50, 20], [3, 3]).result).toMatchObject({ winner: 0, gain: 2 });
-    expect(last([50, 0], [3, 0]).result).toMatchObject({ winner: 0, gain: 3 });
+    expect(last([50, 20], [3, 3]).result).toMatchObject({ winner: 0, gain: 1 });
+    expect(last([50, 0], [3, 0]).result).toMatchObject({ winner: 0, gain: 1 });
+  });
+
+  it("a round is worth its price", () => {
+    const g = table([[c("S", 14)], [c("S", 9)]], { piles: [50, 40], tricks: [3, 3], price: 3 });
+    expect(carryOn(playCards(playCards(g, ["S14"]), ["S9"])).scores).toEqual([3, 0]);
   });
 
   it("60:60 scores nothing and the match goes on", () => {
@@ -184,7 +208,7 @@ describe("round end", () => {
 
   it("the match ends at the target", () => {
     const g = table([[c("S", 14)], [c("S", 9)]], { piles: [50, 40], tricks: [3, 3], scores: [11, 5] });
-    expect(finishTrick(playCards(playCards(g, ["S14"]), ["S9"])).phase).toBe("gameEnd");
+    expect(carryOn(playCards(playCards(g, ["S14"]), ["S9"])).phase).toBe("gameEnd");
   });
 
   it("the next round is dealt after the dealer changes", () => {
@@ -193,27 +217,28 @@ describe("round end", () => {
     expect(n.round).toBe(1);
     expect(n.dealer).toBe((g.dealer + 1) % 2);
     expect(n.hands.map((h) => h.length)).toEqual([3, 3]);
+    expect(n.price).toBe(1);
     expect(n.scores).toEqual(g.scores);
   });
 });
 
 describe("bura", () => {
-  it("three trumps in a hand after drawing end the round with four game points", () => {
+  it("three trumps in a hand after drawing end the round and are worth the round's price", () => {
     const g = table([[c("S", 10), c("D", 7), c("C", 6)], [c("S", 14), c("H", 9), c("H", 7)]], {
       deck: [c("H", 12), c("D", 6), c("C", 8), c("S", 8)],
     });
     // seat 1 wins the trick, draws first and so completes three trumps
-    const done = finishTrick(playCards(playCards(g, ["S10"]), ["S14"]));
-    expect(done.result).toMatchObject({ winner: 1, gain: 4, bura: 1 });
-    expect(done.scores).toEqual([0, 4]);
+    const done = carryOn(playCards(playCards(g, ["S10"]), ["S14"]));
+    expect(done.result).toMatchObject({ winner: 1, gain: 1, bura: 1 });
+    expect(done.scores).toEqual([0, 1]);
   });
 
   it("a dealt hand of three trumps wins at once", () => {
     for (let seed = 1; seed < 4000; seed++) {
       const g = createGame(2, rng(seed));
       if (g.result?.bura !== null && g.result) {
-        expect(g.result.gain).toBe(4);
-        expect(g.scores[g.result.winner!]).toBe(4);
+        expect(g.result.gain).toBe(1);
+        expect(g.scores[g.result.winner!]).toBe(1);
         expect(g.phase).toBe("roundEnd");
         return;
       }
@@ -243,7 +268,7 @@ describe("four players", () => {
     expect(legalPlays(g)).toHaveLength(3);
     g = playCards(g, ["D10"]);
     expect(g.phase).toBe("trickEnd");
-    const done = finishTrick(g);
+    const done = carryOn(g);
     expect(done.leader).toBe(2);
     expect(done.piles).toEqual([31, 0]);
   });
@@ -269,7 +294,7 @@ describe("whole games", () => {
     let steps = 0;
     while (g.phase !== "gameEnd" && steps++ < 20000) {
       if (g.phase === "roundEnd") g = nextRound(g, r);
-      else if (g.phase === "trickEnd") g = finishTrick(g);
+      else if (g.phase === "trickEnd") g = carryOn(g);
       else {
         const options = legalPlays(g);
         expect(options.length).toBeGreaterThan(0);
@@ -280,7 +305,7 @@ describe("whole games", () => {
       if (g.phase === "play" && g.result === null) {
         const ids = new Set(all.map((x) => x.id));
         const withTrumpCard = g.deck.length > 0 ? 1 : 0;
-        expect(ids.size + withTrumpCard).toBe(36);
+        expect(ids.size + withTrumpCard).toBe(buildDeck(players).length);
         expect(all).toHaveLength(ids.size);
       }
       if (g.result && g.result.bura === null && g.result.winner !== null) {
@@ -295,13 +320,148 @@ describe("whole games", () => {
       expect(playOut(2, seed).phase).toBe("gameEnd");
       expect(playOut(4, seed).phase).toBe("gameEnd");
     }
-  });
+ }, 30000);
 
   it("unseenCards excludes what the player can see", () => {
     const g = createGame(2, rng(5));
     const unseen = unseenCards(g, g.turn);
-    expect(unseen).toHaveLength(36 - 3 - 1);
+    expect(unseen).toHaveLength(20 - 3 - 1);
     expect(unseen.some((x) => g.hands[g.turn].some((h) => h.id === x.id))).toBe(false);
     expect(unseen.some((x) => x.id === g.trumpCard.id)).toBe(false);
+  });
+});
+
+describe("molotka", () => {
+  const mtable = (hands: NormalCard[][]) => table(hands, { deck: buildDeck(4).slice(0, 30) });
+  const hearts = [c("H", 6), c("H", 7), c("H", 8)];
+
+  it("a full hand of one suit that all beat a single card may be played whole", () => {
+    const g = playCards(mtable([[c("D", 14), c("D", 7), c("C", 6)], [...hearts]]), ["D14"]);
+    expect(molotka(g)).toHaveLength(3);
+    expect(isLegal(g, ["H6", "H7", "H8"])).toBe(true);
+    // the ordinary answers are still there
+    expect(isLegal(g, ["H6"])).toBe(true);
+  });
+
+  it("the next player must answer the whole hand, and the molotka took the lead", () => {
+    let g = playCards(mtable([[c("D", 14), c("D", 7), c("C", 6)], [...hearts]]), ["D14"]);
+    g = playCards(g, ["H6", "H7", "H8"]);
+    expect(g.best).toBe(1);
+    expect(g.phase).toBe("trickEnd");
+    expect(carryOn(g).leader).toBe(1);
+  });
+
+  it("is not allowed against several cards, with mixed suits or when one card does not beat", () => {
+    const pair = playCards(mtable([[c("D", 14), c("D", 7), c("C", 6)], [...hearts]]), ["D14", "D7"]);
+    expect(molotka(pair)).toBeNull();
+    const mixed = playCards(mtable([[c("D", 14), c("D", 7), c("C", 6)], [c("H", 6), c("H", 7), c("S", 8)]]), ["D14"]);
+    expect(molotka(mixed)).toBeNull();
+    const weak = playCards(mtable([[c("H", 9), c("D", 7), c("C", 6)], [...hearts]]), ["H9"]);
+    expect(molotka(weak)).toBeNull();
+  });
+
+  it("is not allowed when the pile is too small to fill every hand again", () => {
+    const g = playCards(table([[c("D", 14), c("D", 7), c("C", 6)], [...hearts]], { deck: buildDeck(4).slice(0, 3) }), ["D14"]);
+    expect(molotka(g)).toBeNull();
+  });
+
+  it("four players: five cards in the hand, and only against an opponent", () => {
+    const five = [c("H", 6), c("H", 7), c("H", 8), c("H", 9), c("H", 10)];
+    const rest = [c("D", 6), c("D", 7), c("D", 8), c("D", 9), c("C", 6)];
+    let g = mtable([[c("D", 14), ...rest.slice(0, 4)], [...five], [...rest], [...rest]]);
+    g = playCards(g, ["D14"]);
+    expect(molotka(g)).toHaveLength(5);
+  });
+});
+
+describe("var", () => {
+  /** Seat 1 takes a trick worth 21 on top of the given pile, with cards still to be drawn. */
+  const afterTrick = (piles: number[]) => {
+    const g = table([[c("S", 10), c("D", 7), c("C", 6)], [c("S", 14), c("S", 9), c("D", 8)]], {
+      deck: [c("D", 14), c("D", 13), c("C", 14), c("H", 6)],
+      piles,
+    });
+    return finishTrick(playCards(playCards(g, ["S10"]), ["S14"]));
+  };
+
+  it("the winner of a trick decides before anybody draws", () => {
+    const g = afterTrick([0, 0]);
+    expect(g.phase).toBe("var");
+    expect(g.turn).toBe(1);
+    expect(g.hands[1]).toHaveLength(2);
+    const on = decideVar(g, false);
+    expect(on.phase).toBe("play");
+    expect(on.hands[1]).toHaveLength(3);
+    expect(on.turn).toBe(1);
+  });
+
+  it("with 31 points the round is won at once, at the price of the round", () => {
+    const g = { ...afterTrick([0, 10]), price: 2 };
+    expect(g.piles[1]).toBe(31);
+    const done = decideVar(g, true);
+    expect(done.result).toMatchObject({ winner: 1, gain: 2, how: "var", by: 1 });
+    expect(done.scores).toEqual([0, 2]);
+  });
+
+  it("with fewer than 31 the others win the round", () => {
+    const done = decideVar(afterTrick([0, 9]), true);
+    expect(done.piles[1]).toBe(30);
+    expect(done.result).toMatchObject({ winner: 0, gain: 1, how: "var", by: 1 });
+    expect(done.scores).toEqual([1, 0]);
+  });
+
+  it("the last trick has nothing to decide", () => {
+    const g = table([[c("S", 14)], [c("S", 9)]]);
+    expect(finishTrick(playCards(playCards(g, ["S14"]), ["S9"])).phase).toBe("roundEnd");
+  });
+});
+
+describe("calls", () => {
+  const g0 = () => table([[c("S", 14), c("D", 7), c("C", 6)], [c("S", 9), c("D", 8), c("C", 7)]]);
+
+  it("a player on turn calls; the other side answers; accepted, the round is worth more and the caller goes on", () => {
+    expect(canCall(g0())).toBe(true);
+    const asked = makeCall(g0());
+    expect(asked.phase).toBe("call");
+    expect(asked.call).toEqual({ by: 0, level: 2 });
+    expect(asked.turn).toBe(1);
+    const on = answerCall(asked, "accept");
+    expect(on).toMatchObject({ phase: "play", price: 2, turn: 0, call: null, raised: 0 });
+    // the caller's side cannot raise again until the other side does
+    expect(canCall(on)).toBe(false);
+  });
+
+  it("giving in hands the caller the price from before the call", () => {
+    const done = answerCall(makeCall(g0()), "fold");
+    expect(done.result).toMatchObject({ winner: 0, gain: 1, how: "fold", by: 0 });
+    expect(done.scores).toEqual([1, 0]);
+  });
+
+  it("raising makes the earlier call the price; giving in to the raise pays that price", () => {
+    const raised = answerCall(makeCall(g0()), "raise");
+    expect(raised.price).toBe(2);
+    expect(raised.call).toEqual({ by: 1, level: 3 });
+    expect(raised.turn).toBe(0);
+    const done = answerCall(raised, "fold");
+    expect(done.result).toMatchObject({ winner: 1, gain: 2 });
+    const accepted = answerCall(raised, "accept");
+    expect(accepted).toMatchObject({ price: 3, turn: 1, raised: 1 });
+    expect(canCall(accepted)).toBe(false);
+  });
+
+  it("nothing goes above shashi, and the round pays the price when it is won", () => {
+    let g = { ...g0(), price: 5 };
+    g = answerCall(makeCall(g), "accept");
+    expect(g.price).toBe(6);
+    expect(() => makeCall({ ...g, raised: null })).toThrow();
+    const r = { ...g0(), price: 5 };
+    const asked = makeCall(r);
+    expect(() => answerCall(answerCall(asked, "raise"), "raise")).toThrow();
+  });
+
+  it("a call needs your turn in the play phase", () => {
+    const g = playCards(g0(), ["S14"]);
+    expect(canCall(g, 0)).toBe(false);
+    expect(canCall(g, 1)).toBe(true);
   });
 });
