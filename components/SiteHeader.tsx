@@ -3,15 +3,32 @@
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { Avatar } from "./Avatar";
+import { Logo } from "./Logo";
+
+const NAV = [
+  { href: "/leaderboard", label: "ლიდერბორდი" },
+  { href: "/ranks", label: "წოდებები" },
+];
 
 /** Top bar of the hub pages: the brand on the left, the player (or a sign-in link) on the right. */
 export function SiteHeader() {
   const { loading, user, profile, configured } = useAuth();
   return (
     <header className="flex items-center justify-between gap-3">
-      <Link href="/" className="text-xl font-extrabold tracking-wide text-white/90 transition-colors hover:text-amber-300 sm:text-2xl">
-        <span className="text-amber-300">♠</span> ჯოკერპრო
-      </Link>
+      <div className="flex items-center gap-8">
+        <Logo />
+        <nav className="hidden items-center gap-6 md:flex">
+          {NAV.map((n) => (
+            <Link
+              key={n.href}
+              href={n.href}
+              className="text-base font-bold text-white/55 transition-colors hover:text-amber-300"
+            >
+              {n.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
 
       {loading ? (
         <span className="h-12 w-40 animate-pulse rounded-full bg-white/10" />

@@ -44,3 +44,9 @@ next-env.d.ts
 dev.log
 .claude/
 .sim/
+
+# Rating algorithm: kept out of the public repository on purpose (see README of the rating work)
+/lib/secret/
+
+# Built function bundle: it contains the private rating formula
+/supabase/functions/joker/dist/

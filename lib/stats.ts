@@ -10,6 +10,11 @@ export interface GameResult {
   /** Played at an online table (then `players` holds the four nicknames, the player first). */
   online?: boolean;
   players?: string[] | null;
+  /** ranked / friendly (online games with random players). */
+  kind?: "ranked" | "friendly" | null;
+  /** Rating around a ranked game; the change is after - before. */
+  rating_before?: number | null;
+  rating_after?: number | null;
 }
 
 export interface Stats {
@@ -56,31 +61,6 @@ export function bestStreak(results: Pick<GameResult, "place">[]): number {
     best = Math.max(best, run);
   }
   return best;
-}
-
-export interface Rank {
-  name: string;
-  icon: string;
-  /** Games needed to reach this rank. */
-  min: number;
-}
-
-export const RANKS: Rank[] = [
-  { name: "დამწყები", icon: "♠", min: 0 },
-  { name: "მოთამაშე", icon: "♥", min: 5 },
-  { name: "გამოცდილი", icon: "♣", min: 20 },
-  { name: "ოსტატი", icon: "♦", min: 50 },
-  { name: "ლეგენდა", icon: "♛", min: 100 },
-];
-
-/** Current rank plus progress (0..1) towards the next one; `next` is null at the top. */
-export function rankFor(played: number): { rank: Rank; next: Rank | null; progress: number } {
-  let i = 0;
-  while (i + 1 < RANKS.length && played >= RANKS[i + 1].min) i++;
-  const rank = RANKS[i];
-  const next = RANKS[i + 1] ?? null;
-  const progress = next ? (played - rank.min) / (next.min - rank.min) : 1;
-  return { rank, next, progress };
 }
 
 export interface Achievement {

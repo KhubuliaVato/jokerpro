@@ -6,6 +6,8 @@ export interface TableRow {
   id: string;
   code: string;
   host_id: string;
+  /** private: friends with a code. friendly / ranked: random players (ranked changes the rating). */
+  kind: "private" | "friendly" | "ranked";
   status: "waiting" | "playing" | "finished" | "closed";
   rules: Rules;
 }
@@ -34,6 +36,7 @@ export function onlineMessage(message: string): string {
   if (m.includes("not your turn")) return "ახლა თქვენი სვლა არ არის";
   if (m.includes("illegal")) return "ეს სვლა დაუშვებელია";
   if (m.includes("not seated")) return "თქვენ ამ მაგიდასთან არ ზიხართ";
+  if (m.includes("already in a game")) return "თქვენ უკვე გაქვთ დაწყებული თამაში: ჯერ დაბრუნდით მასში ან გამოდით";
   if (m.includes("failed to fetch") || m.includes("network")) return "კავშირის შეცდომა, შეამოწმეთ ინტერნეტი";
   return `შეცდომა: ${message}`;
 }
@@ -55,6 +58,28 @@ export async function joinTable(
 ): Promise<{ table: TableRow | null; error: string | null }> {
   const { data, error } = await supabase.rpc("join_table", { p_code: code });
   return { table: (data as TableRow | null) ?? null, error: error ? onlineMessage(error.message) : null };
+}
+
+/** Sits the player at an open table of random players, or opens a new one. */
+export async function findTable(
+  supabase: SupabaseClient,
+  kind: "ranked" | "friendly",
+  format: "nine" | "full",
+): Promise<{ table: TableRow | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("find_table", { p_kind: kind, p_format: format });
+  return { table: (data as TableRow | null) ?? null, error: error ? onlineMessage(error.message) : null };
+}
+
+/** "I am still waiting here": seats of silent players are given up after about 40 seconds. */
+export async function pingTable(supabase: SupabaseClient, tableId: string): Promise<void> {
+  await supabase.rpc("table_ping", { p_table_id: tableId });
+}
+
+/** The running game the player is part of (e.g. after closing the page), if any. */
+export async function activeTable(supabase: SupabaseClient): Promise<TableRow | null> {
+  const { data } = await supabase.rpc("my_active_table");
+  const row = (Array.isArray(data) ? data[0] : data) as TableRow | null;
+  return row && row.id ? row : null;
 }
 
 export async function leaveTable(supabase: SupabaseClient, tableId: string): Promise<void> {

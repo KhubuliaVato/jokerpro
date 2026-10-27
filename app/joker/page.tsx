@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { JokerApp } from "@/components/JokerApp";
+import { JokerHub } from "@/components/JokerHub";
 
 export const metadata: Metadata = { title: "ჯოკერი" };
 
 export default function JokerPage() {
-  return <JokerApp />;
+  return <JokerHub />;
 }

@@ -8,39 +8,8 @@ import {
   type Play,
   type PlayOption,
 } from "./engine";
-
-const TRUMP_VALUE: Record<number, number> = {
-  14: 0.95,
-  13: 0.8,
-  12: 0.65,
-  11: 0.5,
-  10: 0.4,
-  9: 0.3,
-  8: 0.25,
-  7: 0.2,
-  6: 0.15,
-};
-const SIDE_VALUE: Record<number, number> = { 14: 0.75, 13: 0.4, 12: 0.15 };
-
-function expectedTricks(hand: Card[], trump: Suit | null): number {
-  let est = 0;
-  let trumpCount = 0;
-  for (const c of hand) {
-    if (c.joker) {
-      est += 0.95;
-    } else if (c.suit === trump) {
-      trumpCount++;
-      est += TRUMP_VALUE[c.rank];
-    } else {
-      const suitLen = hand.filter((x) => !x.joker && x.suit === c.suit).length;
-      const v = SIDE_VALUE[c.rank] ?? 0;
-      // A lone king or queen is easily caught.
-      est += suitLen === 1 && c.rank < 14 ? v * 0.5 : v;
-    }
-  }
-  if (trumpCount >= 4) est += (trumpCount - 3) * 0.3;
-  return est;
-}
+import { STANDARD_STYLE, type BotStyle } from "./botProfiles";
+import { expectedTricks, TRUMP_VALUE } from "./strength";
 
 /** Trump choice on the first three cards of a nine-card hand. `null` is no-trump. */
 export function botChooseTrump(hand: Card[]): Suit | null {
@@ -65,9 +34,13 @@ export function botChooseTrump(hand: Card[]): Suit | null {
   return bez >= 2.5 && bez > bestScore ? null : bestSuit;
 }
 
-export function botBid(s: GameState, player: number): number {
+export function botBid(s: GameState, player: number, style: BotStyle = STANDARD_STYLE): number {
   const est = expectedTricks(s.hands[player], s.trump);
-  const want = est < 0.45 ? 0 : Math.max(1, Math.round(est * 0.9));
+  let want = est < 0.45 ? 0 : Math.max(1, Math.round(est * 0.9));
+  // Weaker bots misjudge their hands or lean one way.
+  want += style.bidBias;
+  if (Math.random() < style.bidNoise) want += Math.random() < 0.5 ? -1 : 1;
+  want = Math.min(s.cards, Math.max(0, want));
   const legal = legalBids(s, player);
   return legal.reduce((best, b) =>
     Math.abs(b - want) < Math.abs(best - want) ? b : best,
@@ -124,9 +97,13 @@ function pickSuit(s: GameState, hand: Card[], mode: "high" | "low"): Suit {
   return SUITS.reduce((a, b) => (score(b) > score(a) ? b : a));
 }
 
-export function botPlay(s: GameState, player: number): PlayOption {
+export function botPlay(s: GameState, player: number, style: BotStyle = STANDARD_STYLE): PlayOption {
   const hand = s.hands[player];
   let options = legalPlays(s, player);
+  // A weaker bot sometimes just plays any legal card.
+  if (style.mistake > 0 && Math.random() < style.mistake) {
+    return options[Math.floor(Math.random() * options.length)];
+  }
   if (s.trick.length === 0) {
     // Jokers lead with a heuristically chosen suit instead of all four.
     options = options.filter(

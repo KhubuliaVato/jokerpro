@@ -7,6 +7,7 @@ import {
   type Suit,
 } from "./cards";
 import { handPoints, schedule, type Rules } from "./rules";
+import { expectedTricks } from "./strength";
 
 export const PLAYERS = 4;
 
@@ -37,6 +38,8 @@ export interface HandRecord {
   bids: number[];
   taken: number[];
   points: number[];
+  /** How strong each player's deal was (see strength.ts). Server-side only: never sent to players. */
+  strength?: number[];
 }
 
 export interface GameState {
@@ -64,6 +67,8 @@ export interface GameState {
   history: HandRecord[];
   /** Pulka premium per pulka index, per player. */
   premiums: number[][];
+  /** Strength of each player's current deal, set once trump is known. */
+  strength: number[];
 }
 
 const next = (p: number) => (p + 1) % PLAYERS;
@@ -110,6 +115,7 @@ export function createGame(rules: Rules, rng: Rng = Math.random): GameState {
     played: [],
     history: [],
     premiums: schedule(rules.format).map(() => Array(PLAYERS).fill(0)),
+    strength: [],
   };
   return deal(state, rng);
 }
@@ -140,6 +146,7 @@ function deal(prev: GameState, rng: Rng): GameState {
     const up = deck[PLAYERS * cards];
     s.trumpCard = up;
     s.trump = up.joker ? null : up.suit;
+    s.strength = s.hands.map((h) => expectedTricks(h, s.trump));
     s.phase = "bidding";
   }
   return s;
@@ -152,6 +159,7 @@ export function chooseTrump(prev: GameState, trump: Suit | null): GameState {
   s.trump = trump;
   s.hands = s.hands.map((h, p) => [...h, ...s.rest[p]]);
   s.rest = [];
+  s.strength = s.hands.map((h) => expectedTricks(h, s.trump));
   s.phase = "bidding";
   s.turn = next(s.dealer);
   return s;
@@ -298,6 +306,7 @@ function closeHand(s: GameState): GameState {
     bids: bids.slice(),
     taken: s.taken.slice(),
     points: bids.map((b, p) => handPoints(b, s.taken[p], s.cards, s.rules)),
+    strength: s.strength.slice(),
   });
 
   if (inPulka === pulkaLength - 1 && s.rules.pulkaPremium) {

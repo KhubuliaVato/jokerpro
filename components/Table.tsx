@@ -540,7 +540,7 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
             თამაში დასრულდა
           </h2>
           <Standings sums={sums} />
-          {endNote && <p className="mb-3 text-center text-sm">{endNote}</p>}
+          {endNote && <div className="mb-3 text-center text-sm">{endNote}</div>}
           <ScoreSheet game={game} />
           <button className="btn btn-primary mt-3 w-full" onClick={onQuit}>
             ახალი თამაში

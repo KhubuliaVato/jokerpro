@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { botBid, botChooseTrump, botPlay } from "./bot";
+import { botById, DEFAULT_BOTS, STANDARD_STYLE, type BotProfile, type BotStyle } from "./botProfiles";
 import type { Suit } from "./cards";
 import {
   chooseTrump,
@@ -27,10 +28,10 @@ export const TURN_SECONDS = 40;
 const AFK_LIMIT = 2;
 
 /** The move a bot would make for the player on turn; used when the timer runs out. */
-function autoMove(g: GameState): GameState {
+function autoMove(g: GameState, style: BotStyle = STANDARD_STYLE): GameState {
   if (g.phase === "trump") return chooseTrump(g, botChooseTrump(g.hands[g.turn]));
-  if (g.phase === "bidding") return placeBid(g, botBid(g, g.turn));
-  if (g.phase === "playing") return playCard(g, botPlay(g, g.turn));
+  if (g.phase === "bidding") return placeBid(g, botBid(g, g.turn, style));
+  if (g.phase === "playing") return playCard(g, botPlay(g, g.turn, style));
   return g;
 }
 
@@ -41,6 +42,12 @@ export function useJokerGame() {
   const deadline = useRef(0);
   const missed = useRef(0);
   const [kicked, setKicked] = useState(false);
+  // The three opponents (seats 1-3) of the current game.
+  const [bots, setBots] = useState<BotProfile[]>(() => DEFAULT_BOTS.map(botById));
+  const botsRef = useRef(bots);
+  useEffect(() => {
+    botsRef.current = bots;
+  }, [bots]);
 
   // A new key whenever the human has a fresh decision to make.
   const turnKey =
@@ -72,9 +79,10 @@ export function useJokerGame() {
 
   const secondsLeft = turnKey && timer.key === turnKey ? timer.left : turnKey ? TURN_SECONDS : null;
 
-  const start = useCallback((rules: Rules) => {
+  const start = useCallback((rules: Rules, opponents: BotProfile[] = DEFAULT_BOTS.map(botById)) => {
     missed.current = 0;
     setKicked(false);
+    setBots(opponents);
     setGame(createGame(rules));
   }, []);
   const quit = useCallback(() => setGame(null), []);
@@ -113,11 +121,11 @@ export function useJokerGame() {
       (game.phase === "trump" || game.phase === "bidding" || game.phase === "playing")
     ) {
       timer = setTimeout(() => {
-        setGame((g) => (g && g.turn !== HUMAN ? autoMove(g) : g));
+        setGame((g) => (g && g.turn !== HUMAN ? autoMove(g, botsRef.current[g.turn - 1]?.style) : g));
       }, BOT_DELAY);
     }
     return () => clearTimeout(timer);
   }, [game]);
 
-  return { game, secondsLeft, kicked, start, quit, bid, pickTrump, play };
+  return { game, secondsLeft, kicked, bots, start, quit, bid, pickTrump, play };
 }

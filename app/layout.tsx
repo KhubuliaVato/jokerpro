@@ -10,7 +10,7 @@ const notoGeorgian = Noto_Sans_Georgian({
 });
 
 export const metadata: Metadata = {
-  title: "ჯოკერპრო",
+  title: "ProJoker",
   description: "ქართული კარტის თამაშები",
 };
 

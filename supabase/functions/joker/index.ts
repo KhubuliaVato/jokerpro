@@ -21,6 +21,8 @@ import {
   type Action,
 } from "../../../lib/joker/online";
 import type { Rules } from "../../../lib/joker/rules";
+// Private: the rating formula lives outside the public repository (see .gitignore).
+import { rateGame } from "../../../lib/secret/rating";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -64,11 +66,13 @@ interface Table {
   id: string;
   status: string;
   rules: Rules;
+  /** private: friends with a code (nothing recorded). friendly / ranked: random players. */
+  kind: "private" | "friendly" | "ranked";
 }
 
 async function loadTable(tableId: string, userId: string) {
   const [{ data: table }, { data: seats }] = await Promise.all([
-    admin.from("game_tables").select("id, status, rules").eq("id", tableId).maybeSingle(),
+    admin.from("game_tables").select("id, status, rules, kind").eq("id", tableId).maybeSingle(),
     admin.from("table_seats").select("seat, user_id, bot").eq("table_id", tableId).order("seat"),
   ]);
   if (!table) throw new UserError("table not found");
@@ -125,32 +129,94 @@ async function save(
   return true;
 }
 
-/** Saves every human player's result and closes the table. */
+/**
+ * The game is over. Private tables record nothing. Friendly matches record the result of everyone who stayed.
+ * Ranked matches also rate everyone: players who left (a bot finished their seat) lose the full penalty.
+ */
 async function finish(table: Table, seats: Seat[], state: GameState) {
-  const { data: profiles } = await admin
-    .from("profiles")
-    .select("id, nickname")
-    .in("id", seats.map((s) => s.user_id));
-  const names = (seat: number) => profiles?.find((p) => p.id === seats.find((s) => s.seat === seat)?.user_id)?.nickname ?? "მოთამაშე";
+  if (table.kind !== "private") {
+    const { data: profiles } = await admin
+      .from("profiles")
+      .select("id, nickname")
+      .in("id", seats.map((s) => s.user_id));
+    const names = (seat: number) =>
+      profiles?.find((p) => p.id === seats.find((s) => s.seat === seat)?.user_id)?.nickname ?? "მოთამაშე";
 
-  const rows = seats
-    .filter((s) => !s.bot)
-    .map((s) => {
-      const r = resultFor(state, s.seat);
-      return {
-        user_id: s.user_id,
-        game: "joker",
-        format: table.rules.format,
-        hands: state.history.length,
-        place: r.place,
-        score: r.score,
-        scores: r.scores,
-        players: Array.from({ length: PLAYERS }, (_, k) => names((s.seat + k) % PLAYERS)),
-        online: true,
-        table_id: table.id,
-      };
-    });
-  if (rows.length > 0) await admin.from("game_results").upsert(rows, { onConflict: "table_id,user_id", ignoreDuplicates: true });
+    const ranked = table.kind === "ranked";
+    const bySeat = [0, 1, 2, 3].map((n) => seats.find((s) => s.seat === n)!);
+
+    // Ratings before the game, then the verdict.
+    const before: number[] = [50, 50, 50, 50];
+    let verdict: ReturnType<typeof rateGame> | null = null;
+    const current = new Map<string, { rating: number; games: number; wins: number; peak: number }>();
+    if (ranked) {
+      const { data: rows } = await admin
+        .from("player_ratings")
+        .select("user_id, rating, games, wins, peak")
+        .eq("game", "joker")
+        .in("user_id", bySeat.map((s) => s.user_id));
+      for (const r of rows ?? []) current.set(r.user_id, r);
+      bySeat.forEach((s, i) => (before[i] = current.get(s.user_id)?.rating ?? 50));
+      verdict = rateGame(state, before, bySeat.map((s) => s.bot));
+    }
+
+    const rows = bySeat
+      // Friendly matches keep nothing about players who left; ranked ones do (they are rated).
+      .filter((s) => ranked || !s.bot)
+      .map((s) => {
+        const r = resultFor(state, s.seat);
+        const after = ranked ? Math.max(0, before[s.seat] + verdict!.delta[s.seat]) : null;
+        return {
+          user_id: s.user_id,
+          game: "joker",
+          format: table.rules.format,
+          hands: state.history.length,
+          place: r.place,
+          score: r.score,
+          scores: r.scores,
+          players: Array.from({ length: PLAYERS }, (_, k) => names((s.seat + k) % PLAYERS)),
+          online: true,
+          kind: table.kind,
+          rating_before: ranked ? before[s.seat] : null,
+          rating_after: after,
+          table_id: table.id,
+        };
+      });
+
+    // The unique (table, player) key makes saving happen once, however often the server is asked.
+    const { data: inserted } = await admin
+      .from("game_results")
+      .upsert(rows, { onConflict: "table_id,user_id", ignoreDuplicates: true })
+      .select("user_id");
+
+    if (ranked && verdict) {
+      const fresh = new Set((inserted ?? []).map((r) => r.user_id));
+      for (const s of bySeat) {
+        if (!fresh.has(s.user_id)) continue;
+        const prev = current.get(s.user_id);
+        const rating = Math.max(0, before[s.seat] + verdict.delta[s.seat]);
+        const place = resultFor(state, s.seat).place;
+        await admin.from("player_ratings").upsert({
+          user_id: s.user_id,
+          game: "joker",
+          rating,
+          games: (prev?.games ?? 0) + 1,
+          wins: (prev?.wins ?? 0) + (place === 1 ? 1 : 0),
+          peak: Math.max(prev?.peak ?? 50, rating),
+          updated_at: new Date().toISOString(),
+        });
+        await admin.from("rating_log").insert({
+          table_id: table.id,
+          user_id: s.user_id,
+          game: "joker",
+          rating_before: before[s.seat],
+          rating_after: rating,
+          delta: verdict.delta[s.seat],
+          detail: { ...verdict.detail[s.seat], quit: s.bot },
+        });
+      }
+    }
+  }
   await admin.from("game_tables").update({ status: "finished" }).eq("id", table.id);
 }
 

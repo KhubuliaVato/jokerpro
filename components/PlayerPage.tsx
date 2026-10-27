@@ -60,7 +60,7 @@ export function PlayerPage() {
       ) : (
         <>
           <PlayerHero player={player} />
-          <StatsSection results={results} loadError={error} name={player.nickname} />
+          <StatsSection userId={player.id} results={results} loadError={error} name={player.nickname} />
         </>
       )}
     </PageShell>

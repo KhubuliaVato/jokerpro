@@ -10,7 +10,8 @@
     "test": "vitest run",
     "build:functions": "esbuild supabase/functions/joker/index.ts --bundle --format=esm --platform=neutral --minify --external:npm:* --outfile=supabase/functions/joker/dist/index.js",
     "sim:online": "esbuild scripts/online-sim.ts --bundle --platform=node --format=cjs --outfile=.sim/online-sim.cjs --log-level=warning && node .sim/online-sim.cjs",
-    "sim:friends": "esbuild scripts/online-friends.ts --bundle --platform=node --format=cjs --outfile=.sim/online-friends.cjs --log-level=warning && node .sim/online-friends.cjs"
+    "sim:friends": "esbuild scripts/online-friends.ts --bundle --platform=node --format=cjs --outfile=.sim/online-friends.cjs --log-level=warning && node .sim/online-friends.cjs",
+    "sim:ranked": "esbuild scripts/ranked-setup.ts --bundle --platform=node --format=cjs --outfile=.sim/ranked-setup.cjs --log-level=warning && node .sim/ranked-setup.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

@@ -120,3 +120,19 @@ describe("a whole online game", () => {
     expect(s.turn === humanSeat || !isActivePhase(s)).toBe(true);
   });
 });
+
+describe("what players are not shown", () => {
+  it("views do not carry how strong the deals were", () => {
+    let s = createGame(DEFAULT_RULES, seeded(21));
+    for (let guard = 0; guard < 2000 && s.history.length < 2; guard++) {
+      s = isActivePhase(s) ? botMove(s) : advance(s);
+    }
+    expect(s.history.length).toBeGreaterThanOrEqual(2);
+    expect(s.history[0].strength).toHaveLength(4); // the server keeps it
+    for (let me = 0; me < PLAYERS; me++) {
+      const v = viewFor(s, me);
+      expect(v.strength).toEqual([]);
+      expect(v.history.every((h) => h.strength === undefined)).toBe(true);
+    }
+  });
+});

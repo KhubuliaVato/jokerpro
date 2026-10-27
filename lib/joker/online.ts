@@ -60,12 +60,13 @@ export function viewFor(state: GameState, me: number): GameState {
     plays: state.lastTrick.plays.map((p) => ({ ...p, player: viewSeat(p.player, me) })),
     winner: viewSeat(state.lastTrick.winner, me),
   };
-  view.history = state.history.map((h) => ({
-    ...h,
-    bids: rotate(h.bids),
-    taken: rotate(h.taken),
-    points: rotate(h.points),
-  }));
+  view.strength = [];
+  // `strength` is dropped here: players never see how a deal was valued.
+  view.history = state.history.map((record) => {
+    const h = { ...record };
+    delete h.strength;
+    return { ...h, bids: rotate(h.bids), taken: rotate(h.taken), points: rotate(h.points) };
+  });
   view.premiums = state.premiums.map((row) => rotate(row));
   return view;
 }

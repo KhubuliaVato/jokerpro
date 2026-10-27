@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { isActivePhase, applyAction, realSeat, type Action } from "@/lib/joker/online";
 import { HAND_END_PAUSE, TRICK_PAUSE } from "@/lib/joker/useGame";
 import { getSupabase } from "@/lib/supabase";
-import { callJoker, joinTable, leaveTable, type SeatRow, type TableRow, type ViewRow } from "./client";
+import { callJoker, joinTable, leaveTable, pingTable, type SeatRow, type TableRow, type ViewRow } from "./client";
 
 export interface SeatProfile {
   id: string;
@@ -69,7 +69,7 @@ export function useOnlineTable(code: string) {
   const loadTable = useCallback(async () => {
     const supabase = getSupabase();
     if (!supabase || !tableId) return;
-    const { data } = await supabase.from("game_tables").select("id, code, host_id, status, rules").eq("id", tableId).maybeSingle();
+    const { data } = await supabase.from("game_tables").select("id, code, host_id, kind, status, rules").eq("id", tableId).maybeSingle();
     if (data) setTable(data as TableRow);
   }, [tableId]);
 
@@ -123,6 +123,17 @@ export function useOnlineTable(code: string) {
   const mySeat = seats.find((s) => s.user_id === userId);
   const full = seats.length === 4;
   const status = table?.status ?? null;
+
+  // While waiting at a table of random players, keep telling the server we are still here.
+  const waitingPublic = !!table && table.status === "waiting" && table.kind !== "private";
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase || !tableId || !waitingPublic) return;
+    const ping = () => void pingTable(supabase, tableId);
+    ping();
+    const id = setInterval(ping, 10000);
+    return () => clearInterval(id);
+  }, [tableId, waitingPublic]);
 
   // 3. Four players seated: the game begins (the server ignores duplicate requests).
   const started = useRef(false);

@@ -76,7 +76,7 @@ export function ProfilePage() {
 
           {editing && profile && <EditProfile onDone={() => setEditing(false)} />}
 
-          <StatsSection results={results} loadError={loadError} owner />
+          <StatsSection userId={user.id} results={results} loadError={loadError} owner />
         </>
       )}
     </PageShell>

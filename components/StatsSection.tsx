@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatDate, formatTime } from "@/lib/format";
 import { GAMES, gameName } from "@/lib/games";
 import { achievements, computeStats, placeCounts, type GameResult } from "@/lib/stats";
 import { PLAYER_NAMES } from "./names";
-import { Achievements, Donut, GameTabs, Panel, PlaceBars, RankCard, Sparkline } from "./ProfileWidgets";
+import { loadPosition, loadRating, type RatingRow } from "@/lib/ratings";
+import { getSupabase } from "@/lib/supabase";
+import { Achievements, Donut, GameTabs, Panel, PlaceBars, RatingCard, Sparkline } from "./ProfileWidgets";
 import { FORMAT_LABEL, rise } from "./ui";
 
 const PLACE_STYLE = [
@@ -22,11 +24,14 @@ const PLACE_STYLE = [
  * Shared by the own profile and by the page of any other player.
  */
 export function StatsSection({
+  userId,
   results,
   loadError,
   owner = false,
   name,
 }: {
+  /** The player these stats belong to (their rating is loaded for the rank card). */
+  userId: string;
   /** Newest first; null while loading. */
   results: GameResult[] | null;
   loadError: string | null;
@@ -36,6 +41,19 @@ export function StatsSection({
   name?: string;
 }) {
   const [gameId, setGameId] = useState(GAMES[0].id);
+  const [standing, setStanding] = useState<{ userId: string; row: RatingRow | null; position: number | null } | null>(null);
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    let cancelled = false;
+    Promise.all([loadRating(supabase, userId), loadPosition(supabase, userId)]).then(([row, position]) => {
+      if (!cancelled) setStanding({ userId, row, position });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+  const mine = standing && standing.userId === userId ? standing : null;
   const all = results ?? [];
   // Charts, numbers and history show one game at a time; the rank counts every game.
   const rows = all.filter((r) => r.game === gameId);
@@ -49,7 +67,7 @@ export function StatsSection({
   return (
     <>
       <div className="flex flex-col gap-6" style={rise(2)}>
-        <RankCard played={all.length} />
+        <RatingCard row={mine?.row ?? null} position={mine?.position ?? null} />
 
         <GameTabs games={GAMES} value={gameId} onChange={setGameId} />
 
@@ -132,9 +150,13 @@ function HistoryRow({ r, firstName }: { r: GameResult; firstName: string }) {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-lg font-bold">
             {gameName(r.game)} · {FORMAT_LABEL[r.format] ?? r.format}
-            {r.online && (
-              <span className="ml-2 rounded-full bg-emerald-400/15 px-2.5 py-0.5 align-middle text-xs font-bold text-emerald-300">
-                ონლაინ
+            {r.kind && (
+              <span
+                className={`ml-2 rounded-full px-2.5 py-0.5 align-middle text-xs font-bold ${
+                  r.kind === "ranked" ? "bg-amber-300/15 text-amber-300" : "bg-sky-300/15 text-sky-300"
+                }`}
+              >
+                {r.kind === "ranked" ? "წოდებისთვის" : "მეგობრული"}
               </span>
             )}
           </span>
@@ -142,6 +164,17 @@ function HistoryRow({ r, firstName }: { r: GameResult; firstName: string }) {
             {formatDate(when)} · {formatTime(when)}
           </span>
         </span>
+        {r.rating_before != null && r.rating_after != null && (
+          <b
+            className={`w-14 text-right text-lg tabular-nums ${
+              r.rating_after > r.rating_before ? "text-emerald-300" : r.rating_after < r.rating_before ? "text-red-300" : "text-white/50"
+            }`}
+            title="ქულის ცვლილება"
+          >
+            {r.rating_after - r.rating_before > 0 ? "+" : ""}
+            {r.rating_after - r.rating_before}
+          </b>
+        )}
         <b className={`text-2xl tabular-nums ${r.score < 0 ? "text-red-300" : "text-white"}`}>{r.score}</b>
         <span className={`text-white/35 transition-transform duration-300 ${open ? "rotate-180" : ""}`}>⌄</span>
       </button>

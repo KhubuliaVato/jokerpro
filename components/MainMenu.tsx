@@ -18,7 +18,7 @@ const KING: Card = { joker: false, suit: "H", rank: 13, id: "H13" };
 const CARD_SIZE = { ["--cw" as string]: "clamp(5.5rem, 14vw, 7.5rem)" } as React.CSSProperties;
 
 export function MainMenu() {
-  const { user, profile, configured, loading } = useAuth();
+  const { user, profile, configured } = useAuth();
   const [loaded, setLoaded] = useState<{ userId: string; stats: Stats } | null>(null);
 
   const userId = user?.id ?? null;
@@ -65,14 +65,6 @@ export function MainMenu() {
               "აირჩიეთ თამაში."
             )}
           </p>
-          {!loading && !user && configured && (
-            <Link
-              href="/login"
-              className="mt-1 w-fit text-base text-white/55 underline decoration-white/25 underline-offset-4 transition-colors hover:text-amber-300 hover:decoration-amber-300"
-            >
-              შექმენით პროფილი, რომ შედეგები შეინახოთ
-            </Link>
-          )}
         </section>
 
         <section className="grid gap-5 sm:grid-cols-[repeat(2,minmax(0,1fr))] sm:gap-8" style={rise(2)}>

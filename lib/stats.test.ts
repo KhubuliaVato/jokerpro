@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { achievements, bestStreak, computeStats, placeCounts, placeOf, rankFor } from "./stats";
+import { achievements, bestStreak, computeStats, placeCounts, placeOf } from "./stats";
 
 describe("placeOf", () => {
   it("ranks by strictly higher scores, so ties share the better place", () => {
@@ -38,16 +38,6 @@ describe("placeCounts / bestStreak", () => {
   it("finds the longest win run regardless of order", () => {
     expect(bestStreak(newestFirst)).toBe(3);
     expect(bestStreak([])).toBe(0);
-  });
-});
-
-describe("rankFor", () => {
-  it("moves up at the thresholds and reports progress", () => {
-    expect(rankFor(0).rank.name).toBe("დამწყები");
-    expect(rankFor(4).progress).toBeCloseTo(0.8);
-    expect(rankFor(5).rank.name).toBe("მოთამაშე");
-    expect(rankFor(20).rank.name).toBe("გამოცდილი");
-    expect(rankFor(150)).toMatchObject({ next: null, progress: 1 });
   });
 });
 

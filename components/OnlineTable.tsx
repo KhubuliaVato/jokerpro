@@ -9,6 +9,8 @@ import type { Rules } from "@/lib/joker/rules";
 import { Avatar } from "./Avatar";
 import { PlayerNamesProvider } from "./names";
 import { PageShell } from "./PageShell";
+import { QueueLobby } from "./QueueLobby";
+import { RatingResult } from "./RatingResult";
 import { Table } from "./Table";
 import { BTN_GHOST, BTN_PRIMARY, FORMAT_LABEL, rise } from "./ui";
 
@@ -73,6 +75,18 @@ export function OnlineTable({ code }: { code: string }) {
 
   if (t.table.status === "waiting" || !t.view) {
     if (t.table.status === "closed") return <Message title="მაგიდა დაიხურა" />;
+    // Random-player tables wait in a lobby with four lamps; private ones show the code to share.
+    if (t.table.kind !== "private") {
+      return (
+        <QueueLobby
+          kind={t.table.kind}
+          rules={t.table.rules}
+          players={t.players}
+          full={t.seats.length === 4}
+          onLeave={leaveToMenu}
+        />
+      );
+    }
     return (
       <Lobby
         code={t.table.code}
@@ -102,8 +116,20 @@ export function OnlineTable({ code }: { code: string }) {
         onTrump={(suit) => void t.act({ type: "trump", suit })}
         onPlay={(option) => void t.act({ type: "play", option })}
         onQuit={leaveToMenu}
-        quitConfirm="დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს."
-        endNote={<span className="text-emerald-300">✓ შედეგი შენახულია პროფილში</span>}
+        quitConfirm={
+          t.table.kind === "ranked"
+            ? "დარწმუნებული ხართ? თამაშიდან გასვლა წოდებისთვის ბრძოლაში −10 ქულას ნიშნავს და თქვენს ადგილს ბოტი დაიკავებს."
+            : "დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს."
+        }
+        endNote={
+          t.table.kind === "ranked" ? (
+            <RatingResult tableId={t.table.id} userId={user.id} />
+          ) : t.table.kind === "friendly" ? (
+            <span className="text-emerald-300">✓ თამაში ჩაიწერა ისტორიაში</span>
+          ) : (
+            <span className="text-white/60">კერძო თამაში არ იწერება ისტორიაში</span>
+          )
+        }
       />
       {t.notice && (
         <div

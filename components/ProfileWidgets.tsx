@@ -1,5 +1,9 @@
 import type { GameInfo } from "@/lib/games";
-import { rankFor, type Achievement } from "@/lib/stats";
+import Link from "next/link";
+import { rankFor } from "@/lib/ranks";
+import type { RatingRow } from "@/lib/ratings";
+import type { Achievement } from "@/lib/stats";
+import { RankEmblem } from "./RankEmblem";
 
 const PLACE_COLORS = ["#fcd34d", "#cbd5e1", "#fb923c", "#64748b"];
 
@@ -21,31 +25,59 @@ export function Panel({
   );
 }
 
-/** Rank name with a progress bar towards the next rank. */
-export function RankCard({ played }: { played: number }) {
-  const { rank, next, progress } = rankFor(played);
+/** Rank, rating and the way to the next rank. `row` is null for a player without a ranked game. */
+export function RatingCard({ row, position }: { row: RatingRow | null; position: number | null }) {
+  const rating = row?.rating ?? 50;
+  const { rank, next, progress, toNext } = rankFor(rating);
   return (
-    <Panel>
-      <div className="flex items-center gap-4">
-        <span className="grid size-14 flex-none place-items-center rounded-2xl bg-amber-300/15 text-3xl text-amber-300">
-          {rank.icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-3">
-            <b className="text-2xl font-extrabold">{rank.name}</b>
-            <span className="text-sm text-white/45">
-              {next ? `${next.name}-მდე ${next.min - played} თამაში` : "უმაღლესი ხარისხი"}
-            </span>
+    <section
+      className="relative overflow-hidden rounded-3xl border bg-white/[0.04] p-6 sm:p-8"
+      style={{ borderColor: `${rank.accent}55`, boxShadow: `0 20px 60px -34px ${rank.accent}` }}
+    >
+      <div className="pointer-events-none absolute -left-10 -top-16 size-64 rounded-full blur-3xl" style={{ background: `${rank.accent}22` }} />
+      <div className="relative flex flex-col items-center gap-6 sm:flex-row">
+        <div className={row ? "" : "opacity-50 grayscale"}>
+          <RankEmblem rank={rank} className="size-28 sm:size-32" />
+        </div>
+        <div className="min-w-0 flex-1 text-center sm:text-left">
+          <div className="flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1 sm:justify-start">
+            <b className="text-4xl font-extrabold sm:text-5xl" style={{ color: rank.accent }}>
+              {rank.name}
+            </b>
+            <span className="text-3xl font-black tabular-nums">{row ? rating : "—"}</span>
+            <span className="text-white/45">ქულა</span>
           </div>
-          <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-white/10">
+
+          <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-500 transition-[width] duration-700 ease-out"
-              style={{ width: `${Math.round(progress * 100)}%` }}
+              className="h-full rounded-full transition-[width] duration-700 ease-out"
+              style={{ width: `${Math.round(progress * 100)}%`, background: `linear-gradient(90deg, ${rank.metal[1]}, ${rank.accent})` }}
             />
+          </div>
+          <div className="mt-2 flex justify-between text-sm text-white/50">
+            <span>{rank.name}</span>
+            <span>{next ? `${next.name}-მდე ${toNext} ქულა` : "უმაღლესი წოდება"}</span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap justify-center gap-3 sm:justify-start">
+            {position !== null && (
+              <Link
+                href="/leaderboard"
+                className="rounded-full border border-white/15 px-4 py-1.5 text-sm font-bold transition-colors hover:border-amber-300 hover:text-amber-300"
+              >
+                ადგილი ლიდერბორდზე: #{position}
+              </Link>
+            )}
+            {row && <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm text-white/60">საუკეთესო: {row.peak}</span>}
+            {!row && (
+              <span className="text-sm text-white/45">
+                ჯერ არ გაქვთ რეიტინგული თამაში. წოდებისთვის ბრძოლაში იწყებთ 50 ქულით.
+              </span>
+            )}
           </div>
         </div>
       </div>
-    </Panel>
+    </section>
   );
 }
 
