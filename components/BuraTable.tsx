@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { isRed, SUIT_SYMBOL, sortHand, type NormalCard } from "@/lib/joker/cards";
-import { callName, canCall, handSize, isLegal, legalPlays, MAX_PRICE, molotka, needCount, nextLevel, teamOf, type BuraAction, type BuraState } from "@/lib/bura/engine";
+import { callName, canCall, handSize, isLegal, legalPlays, MAX_PRICE, molotka, needOf, nextLevel, teamOf, type BuraAction, type BuraState } from "@/lib/bura/engine";
 import { playCardSound, playDealSound } from "@/lib/sound";
 import { Avatar } from "./Avatar";
 import { CardView } from "./CardView";
@@ -139,19 +139,25 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
         </div>
 
         {/* the trick */}
-        {game.trick.map((p, i) => {
-          const where = spot(game, p.player);
-          const best = i === game.best;
+        {Array.from(new Set(game.trick.map((p) => p.player))).map((player) => {
+          const where = spot(game, player);
+          const entries = game.trick.filter((p) => p.player === player);
+          const best = game.best >= 0 && game.trick[game.best].player === player;
           return (
             <div
-              key={`${game.round}-${game.tricks[0] + game.tricks[1]}-${p.player}`}
+              key={`${game.round}-${game.tricks[0] + game.tricks[1]}-${player}`}
               className={`absolute z-10 flex ${TRICK_AT[where]} ${winnerSpot === where && best ? "scale-105" : ""} transition-transform`}
             >
-              {p.cards.map((c, k) => (
+              {entries.flatMap((p) => p.cards.map((c) => ({ c, hidden: p.hidden }))).map(({ c, hidden }, k) => (
                 <div key={c.id} style={{ marginLeft: k === 0 ? 0 : `calc(var(--cw) * -0.45)` }}>
+                  {/* a card thrown down face down shows its back to everybody but its owner (who sees it dimmed) */}
                   <CardView
-                    card={c}
-                    style={{ ...cw(TRICK_CW), boxShadow: best ? "0 0 0 3px rgb(252 211 77), 0 6px 14px rgb(0 0 0 / .4)" : undefined }}
+                    card={c.id.startsWith("hidden-") || (hidden && player !== 0) ? undefined : c}
+                    style={{
+                      ...cw(TRICK_CW),
+                      opacity: hidden && player === 0 ? 0.55 : undefined,
+                      boxShadow: best ? "0 0 0 3px rgb(252 211 77), 0 6px 14px rgb(0 0 0 / .4)" : undefined,
+                    }}
                   />
                 </div>
               ))}
@@ -259,14 +265,16 @@ function Hand({
   const [selected, setSelected] = useState<string[]>([]);
   const hand = sortHand(game.hands[0]) as NormalCard[];
   const leading = game.trick.length === 0;
-  const need = needCount(game);
-  const mol = active ? molotka(game, 0) : null;
+  const need = leading ? null : needOf(game, 0);
+  const mol = active && molotka(game, 0) && molotka(game, 0)!.length !== need ? molotka(game, 0) : null;
 
   const plays = active ? legalPlays(game, 0) : [];
   const reachable = new Set(
     plays.filter((p) => selected.every((id) => p.some((c) => c.id === id))).flatMap((p) => p.map((c) => c.id)),
   );
-  const ready = active && selected.length > 0 && isLegal(game, selected, 0);
+  // when only one thing can be played (the whole hand to a molotka) there is nothing to choose
+  const forced = plays.length === 1 ? plays[0].map((c) => c.id) : null;
+  const ready = active && (forced !== null || (selected.length > 0 && isLegal(game, selected, 0)));
 
   const tap = (card: NormalCard) => {
     if (!active || !reachable.has(card.id)) return;
@@ -288,8 +296,8 @@ function Hand({
       <div className="flex h-11 items-center gap-3">
         {active ? (
           <>
-            <button className={`${BTN_PRIMARY} !px-6 !py-2`} disabled={!ready} onClick={() => onPlay(selected)}>
-              {need && need > 1 ? `ითამაშე ${selected.length}/${need}` : "ითამაშე"}
+            <button className={`${BTN_PRIMARY} !px-6 !py-2`} disabled={!ready} onClick={() => onPlay(forced ?? selected)}>
+              {need && need > 1 && !forced ? `ითამაშე ${selected.length}/${need}` : "ითამაშე"}
             </button>
             {canCall(game, 0) && (
               <button

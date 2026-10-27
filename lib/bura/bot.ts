@@ -2,22 +2,22 @@ import { shuffle, type NormalCard, type Rng, type Suit } from "../joker/cards";
 import type { BotProfile } from "../joker/botProfiles";
 import {
   answerCall,
+  bestCards,
   beatsCombo,
   canCall,
+  cardPoints,
   decideVar,
   finishTrick,
+  legalPlays,
   MAX_PRICE,
   nextLevel,
+  onTable,
   playCards,
-  VAR_POINTS,
-  type BuraAction,
-  cardPoints,
-  combinations,
-  legalPlays,
-  outranks,
   sumPoints,
   teamOf,
   unseenCards,
+  VAR_POINTS,
+  type BuraAction,
   type BuraState,
 } from "./engine";
 
@@ -39,35 +39,57 @@ export function styleFor(bot: Pick<BotProfile, "style">): BuraStyle {
 const keepValue = (c: NormalCard, trump: Suit) => (c.suit === trump ? 4 + 0.6 * (c.rank - 6) : 0);
 const spend = (cards: NormalCard[], trump: Suit) => cards.reduce((n, c) => n + cardPoints(c.rank) + keepValue(c, trump), 0);
 
-/** What a player does with no cleverness: the cheapest way to beat, else the cheapest throw-away. */
-function simpleAnswer(hand: NormalCard[], top: NormalCard[], partnerWinning: boolean, trump: Suit, need: number): NormalCard[] {
-  const all = combinations(hand, need);
-  const beating = partnerWinning ? all : all.filter((c) => beatsCombo(c, top, trump));
-  const choices = beating.length > 0 ? beating : all;
-  return choices.reduce((best, c) => (spend(c, trump) < spend(best, trump) ? c : best));
+/** What a player does with no cleverness: the cheapest way to take the lead, else the cheapest throw-away (or points for a partner). */
+function simplePick(s: BuraState, options: NormalCard[][]): NormalCard[] {
+  const me = s.turn;
+  if (s.trick.length === 0) {
+    const singles = options.filter((o) => o.length === 1);
+    const pool = singles.length > 0 ? singles : options;
+    return pool.reduce((best, c) => (spend(c, s.trump) < spend(best, s.trump) ? c : best));
+  }
+  const best = s.trick[s.best];
+  if (teamOf(best.player) === teamOf(me)) {
+    // a partner is winning: feed them points, keep the trumps
+    const feed = (c: NormalCard[]) => sumPoints(c) - c.reduce((n, x) => n + keepValue(x, s.trump), 0) * 2;
+    return options.reduce((top, c) => (feed(c) > feed(top) ? c : top));
+  }
+  const table = bestCards(s);
+  const winning = options.filter((c) => beatsCombo([...onTable(s, me), ...c], table, s.trump));
+  const pool = winning.length > 0 ? winning : options;
+  return pool.reduce((cheapest, c) => (spend(c, s.trump) < spend(cheapest, s.trump) ? c : cheapest));
 }
 
 /** Plays out the rest of the trick with the other hands guessed, and says how good it was for `me` (in points). */
 function valueOf(s: BuraState, me: number, option: NormalCard[], guess: NormalCard[][]): number {
-  const plays = s.trick.map((p) => ({ player: p.player, cards: p.cards }));
-  plays.push({ player: me, cards: option });
-  let best = plays.length === 1 || outranks(option, plays[s.best].cards, s.trump) ? plays.length - 1 : s.best;
-  while (plays.length < s.players) {
-    const p = (plays[plays.length - 1].player + 1) % s.players;
-    const top = plays[best];
-    const need = plays[plays.length - 1].cards.length;
-    const answer = simpleAnswer(guess[p], top.cards, teamOf(top.player) === teamOf(p), s.trump, need);
-    plays.push({ player: p, cards: answer });
-    if (outranks(answer, top.cards, s.trump)) best = plays.length - 1;
+  let sim = structuredClone(s);
+  for (let p = 0; p < s.players; p++) if (p !== me) sim.hands[p] = guess[p];
+  sim = playCards(sim, option.map((c) => c.id));
+  for (let guard = 0; guard < 40 && sim.phase === "play"; guard++) {
+    const options = legalPlays(sim);
+    if (options.length === 0) break;
+    sim = playCards(sim, simplePick(sim, options).map((c) => c.id));
   }
-  const points = sumPoints(plays.flatMap((p) => p.cards));
-  const won = teamOf(plays[best].player) === teamOf(me);
+  const points = sumPoints(sim.trick.flatMap((p) => p.cards));
+  const winner = sim.best >= 0 ? sim.trick[sim.best].player : me;
+  const won = teamOf(winner) === teamOf(me);
   // Winning also brings the lead; spending trumps costs something for the rest of the round.
   const kept = option.reduce((n, c) => n + keepValue(c, s.trump), 0);
   return (won ? points + 1 : -points) - 0.6 * kept;
 }
 
-/** The cards the bot on turn plays. */
+/** Imagined hands for the other players: the hidden cards dealt out at random (cards in the sizes they hold). */
+function dealGuess(s: BuraState, me: number, cards: NormalCard[]): NormalCard[][] {
+  const guess: NormalCard[][] = Array.from({ length: s.players }, () => []);
+  let at = 0;
+  for (let p = 0; p < s.players; p++) {
+    if (p === me) continue;
+    guess[p] = cards.slice(at, at + s.hands[p].length);
+    at += s.hands[p].length;
+  }
+  return guess;
+}
+
+/** The cards the bot on turn puts down. */
 export function botMove(s: BuraState, style: BuraStyle = STRONG_STYLE, rng: Rng = Math.random): string[] {
   const options = legalPlays(s);
   if (options.length === 0) throw new Error("nothing to play");
@@ -77,18 +99,9 @@ export function botMove(s: BuraState, style: BuraStyle = STRONG_STYLE, rng: Rng 
 
   const me = s.turn;
   const unseen = unseenCards(s, me);
-  const others = Array.from({ length: s.players }, (_, p) => p).filter((p) => p !== me);
   const totals = options.map(() => 0);
   for (let i = 0; i < style.samples; i++) {
-    const cards = shuffle(unseen, rng);
-    const guess: NormalCard[][] = Array.from({ length: s.players }, () => []);
-    let at = 0;
-    for (const p of others) {
-      // Hands of players who already played in this trick are smaller by what they put down.
-      const size = s.hands[p].length;
-      guess[p] = cards.slice(at, at + size);
-      at += size;
-    }
+    const guess = dealGuess(s, me, shuffle(unseen, rng));
     options.forEach((o, k) => {
       totals[k] += valueOf(s, me, o, guess);
     });
@@ -106,22 +119,22 @@ export function winChance(s: BuraState, me: number, samples: number, rng: Rng = 
   for (let i = 0; i < samples; i++) {
     const cards = shuffle(unseen, rng);
     let sim = structuredClone(s);
+    const guess = dealGuess(s, me, cards);
     let at = 0;
     for (let p = 0; p < s.players; p++) {
       if (p === me) continue;
-      sim.hands[p] = cards.slice(at, at + s.hands[p].length);
+      sim.hands[p] = guess[p];
       at += s.hands[p].length;
     }
     sim.deck = [...cards.slice(at, at + Math.max(0, s.deck.length - trumpLast.length)), ...trumpLast];
-    for (let guard = 0; guard < 200 && sim.phase !== "roundEnd" && sim.phase !== "gameEnd"; guard++) {
+    for (let guard = 0; guard < 300 && sim.phase !== "roundEnd" && sim.phase !== "gameEnd"; guard++) {
       if (sim.phase === "call") sim = answerCall(sim, "accept");
       else if (sim.phase === "var") sim = decideVar(sim, false);
       else if (sim.phase === "trickEnd") sim = finishTrick(sim);
       else {
         const options = legalPlays(sim);
-        const singles = sim.trick.length === 0 ? options.filter((o) => o.length === 1) : options;
-        const pool = singles.length > 0 ? singles : options;
-        sim = playCards(sim, pool.reduce((best, c) => (spend(c, sim.trump) < spend(best, sim.trump) ? c : best)).map((c) => c.id));
+        if (options.length === 0) break;
+        sim = playCards(sim, simplePick(sim, options).map((c) => c.id));
       }
     }
     const winner = sim.result?.winner;
@@ -130,15 +143,23 @@ export function winChance(s: BuraState, me: number, samples: number, rng: Rng = 
   return wins / samples;
 }
 
+/** What the bot thinks its team's pile is worth: what it has seen plus a guess at the cards the others threw down on it. */
+function pileEstimate(s: BuraState, team: number): number {
+  const left = Math.max(1, s.deck.length + s.hands.reduce((n, h) => n + h.length, 0));
+  const pointsLeft = 120 - s.piles[0] - s.piles[1];
+  return s.known[team] + s.unknown[team] * (pointsLeft / left);
+}
+
 /** Whatever the bot on turn does: puts down cards, makes or answers a call, or decides on "var". */
 export function botAct(s: BuraState, style: BuraStyle = STRONG_STYLE, rng: Rng = Math.random): BuraAction {
   const me = s.turn;
   const samples = Math.max(6, Math.round(style.samples / 2));
   if (s.phase === "var") {
-    const mine = s.piles[teamOf(me)];
-    // a careless bot sometimes says var a little too early
-    const rash = style.mistake > 0.15 && mine >= VAR_POINTS - 5 && rng() < 0.4;
-    return { type: "var", say: mine >= VAR_POINTS || rash };
+    const team = teamOf(me);
+    // it only knows what it has seen of its pile; a careless bot is readier to take the risk
+    const margin = style.mistake > 0.15 ? 1 : 4;
+    const say = s.known[team] >= VAR_POINTS || (s.unknown[team] > 0 && pileEstimate(s, team) >= VAR_POINTS + margin);
+    return { type: "var", say };
   }
   if (s.phase === "call" && s.call) {
     const p = winChance(s, me, samples, rng);

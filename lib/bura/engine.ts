@@ -4,14 +4,19 @@ import { shuffle, SUITS, type NormalCard, type Rank, type Rng, type Suit } from 
  * Bura (the rules of parabura.ge). Four players play in two teams (seats 0 and 2 against seats 1 and 3) with
  * 36 cards (6 to ace) and five cards in a hand; two players play "three-card" Bura with the 20 cards from ten to
  * ace and three cards each. The card turned up under the pile sets the trump.
- * The leader plays one to HAND cards of one suit; each player after them answers with the same number of cards
- * and has to beat what is on the table if they can. The best answer takes every card of the trick.
- * A "molotka": a full hand of one suit, every card of which beats a single card on the table, may be played whole.
+ * The leader plays one to HAND cards of one suit; each player after them answers with the same number of cards,
+ * any cards they like. An answer that beats every led card (each one by a different card: higher in its suit, or a
+ * trump) takes the lead of the trick and is shown; any other answer is thrown down face down and stays secret.
+ * The best answer takes every card of the trick, the ones thrown down included.
+ * A "molotka" is a whole hand of one suit put down at once: in the three-card game on any lead, in the five-card
+ * game over a single card of an opponent when every card of the hand beats it. The players who are short of the
+ * number of cards then have to add to theirs, and the molotka stands unless their cards beat it card by card.
  * A round is won with 61 of the 120 points (60:60 counts for nobody); it is worth `price` game points
  * and the match goes to `target` points.
- * Whoever wins a trick may say "var": with 31 or more points in their team's pile the round is theirs at once,
- * with fewer it goes to the others. On their own turn a player may call "davi" (the round is worth 2), "se" (3) ...
- * up to "shashi" (6); the other side accepts, raises or gives in, and giving in hands the caller the price from before.
+ * In the three-card game whoever wins a trick may say "var": with 31 or more points in their team's pile the
+ * round is theirs at once, with fewer it goes to the others.
+ * On their own turn a player may call "davi" (the round is worth 2), "se" (3) ... up to "shashi" (6); the other
+ * side accepts, raises or gives in, and giving in hands the caller the price from before.
  */
 export type BuraPlayers = 2 | 4;
 
@@ -40,6 +45,8 @@ export function buildDeck(players: BuraPlayers = 4): NormalCard[] {
 export interface Play {
   player: number;
   cards: NormalCard[];
+  /** Thrown down face down: it did not beat what was on the table, so only its owner knows what it is. */
+  hidden: boolean;
 }
 
 export interface RoundResult {
@@ -92,14 +99,22 @@ export interface BuraState {
   hands: NormalCard[][];
   leader: number;
   turn: number;
+  /** Everything put down in the trick, in the order it happened (a player who adds to a molotka has two entries). */
   trick: Play[];
-  /** Index in `trick` of the play that is winning so far. */
+  /** Index in `trick` of the last entry of the player who is winning so far. */
   best: number;
-  /** Cards of all finished tricks of this round (what has been seen). */
+  /** A molotka is on the table: the number of cards every player has to have put down. */
+  mol: number | null;
+  /** Cards of finished tricks that were shown (what everybody has seen). */
   seen: NormalCard[];
+  /** What each player threw down face down in this round (only they know it). */
+  gave: NormalCard[][];
   /** Points and tricks per team in this round. */
   piles: number[];
   tricks: number[];
+  /** Points in each team's pile that the team has seen, and how many cards in it it has not (the others' secret throws). */
+  known: number[];
+  unknown: number[];
   /** Game points per team. */
   scores: number[];
   /** What the round is worth in game points. */
@@ -129,28 +144,6 @@ export function beatsCombo(answer: NormalCard[], base: NormalCard[], trump: Suit
   return permutations(base).some((order) => answer.every((c, i) => beats(c, order[i], trump)));
 }
 
-/** Does the play take the lead from `top`: it beats it card by card, or it is a molotka (more cards than a single one). */
-export function outranks(answer: NormalCard[], top: NormalCard[], trump: Suit): boolean {
-  return answer.length > top.length || beatsCombo(answer, top, trump);
-}
-
-/** How many cards the next player has to put down. */
-export const needCount = (s: BuraState) => (s.trick.length === 0 ? null : s.trick[s.trick.length - 1].cards.length);
-
-/** The whole hand as a molotka: one card of an opponent is on the table and every card of the hand beats it. */
-export function molotka(s: BuraState, player = s.turn): NormalCard[] | null {
-  if (s.phase !== "play" || player !== s.turn || s.trick.length === 0) return null;
-  const top = s.trick[s.best];
-  const hand = s.hands[player];
-  if (top.cards.length !== 1 || hand.length !== handSize(s.players) || hand.length < 2) return null;
-  if (teamOf(top.player) === teamOf(player)) return null;
-  // Every hand has to be full again after the trick, or the players would be left with unequal hands.
-  const consumed = s.trick.reduce((n, p) => n + p.cards.length, 0) + hand.length * (s.players - s.trick.length);
-  if (s.deck.length < consumed) return null;
-  if (!hand.every((c) => c.suit === hand[0].suit && beats(c, top.cards[0], s.trump))) return null;
-  return hand;
-}
-
 /** Every way of choosing `n` of the cards. */
 export function combinations<T>(items: T[], n: number): T[][] {
   if (n === 0) return [[]];
@@ -159,27 +152,70 @@ export function combinations<T>(items: T[], n: number): T[][] {
   return [...combinations(rest, n - 1).map((c) => [first, ...c]), ...combinations(rest, n)];
 }
 
-/** What the player on turn may play: one to three cards of a suit when leading, an answer of the same size otherwise. */
+/** Everything a player has put down in the trick so far. */
+export const onTable = (s: BuraState, player: number): NormalCard[] => s.trick.filter((p) => p.player === player).flatMap((p) => p.cards);
+
+/** The cards that are winning the trick so far. */
+export const bestCards = (s: BuraState): NormalCard[] => (s.best < 0 ? [] : onTable(s, s.trick[s.best].player));
+
+/** How many cards each player has to have on the table: what the leader led, or the size of a molotka. */
+export const targetCount = (s: BuraState): number | null => (s.trick.length === 0 ? null : (s.mol ?? s.trick[0].cards.length));
+
+/** How many more cards the player has to put down in this trick. */
+export const needOf = (s: BuraState, player: number): number => {
+  const target = targetCount(s);
+  return target === null ? 0 : Math.max(0, target - onTable(s, player).length);
+};
+
+/** The next player (after the one on turn) who still has cards to put down. */
+function nextToAct(s: BuraState): number | null {
+  for (let k = 1; k <= s.players; k++) {
+    const p = (s.turn + k) % s.players;
+    if (needOf(s, p) > 0) return p;
+  }
+  return null;
+}
+
+/** The whole hand as a molotka, if the player may put it down now. */
+export function molotka(s: BuraState, player = s.turn): NormalCard[] | null {
+  if (s.phase !== "play" || player !== s.turn || s.trick.length === 0 || s.mol !== null) return null;
+  const hand = s.hands[player];
+  const size = handSize(s.players);
+  if (hand.length !== size || onTable(s, player).length > 0) return null;
+  if (!hand.every((c) => c.suit === hand[0].suit)) return null;
+  // somebody has to be short of cards for it to mean anything, and everybody has to be able to match it
+  if (s.trick[0].cards.length >= size) return null;
+  if (s.hands.some((h, p) => h.length + onTable(s, p).length < size)) return null;
+  if (s.players === 4) {
+    // five-card game: only over a single card of an opponent that every card of the hand beats
+    const best = bestCards(s);
+    if (best.length !== 1 || s.trick[0].cards.length !== 1) return null;
+    if (teamOf(s.trick[s.best].player) === teamOf(player)) return null;
+    if (!hand.every((c) => beats(c, best[0], s.trump))) return null;
+  }
+  return hand;
+}
+
+/** What the player on turn may put down: a lead of one to HAND cards of a suit, or as many cards as they still need. */
 export function legalPlays(s: BuraState, player = s.turn): NormalCard[][] {
   if (s.phase !== "play" || player !== s.turn) return [];
   const hand = s.hands[player];
   if (s.trick.length === 0) {
     const out: NormalCard[][] = [];
+    // nobody may lead more cards than the shortest hand can answer
+    const most = Math.min(handSize(s.players), ...s.hands.map((h) => h.length));
     for (const suit of SUITS) {
       const ofSuit = hand.filter((c) => c.suit === suit);
-      for (let n = 1; n <= Math.min(handSize(s.players), ofSuit.length); n++) out.push(...combinations(ofSuit, n));
+      for (let n = 1; n <= Math.min(most, ofSuit.length); n++) out.push(...combinations(ofSuit, n));
     }
     return out;
   }
-  const need = s.trick[s.trick.length - 1].cards.length;
-  const all = combinations(hand, need);
-  const top = s.trick[s.best];
-  // A partner who is winning needs no help; anybody else has to beat what is on the table if possible.
-  if (teamOf(top.player) === teamOf(player) && top.player !== player) return all;
-  const beating = all.filter((c) => beatsCombo(c, top.cards, s.trump));
+  const need = needOf(s, player);
+  if (need === 0) return [];
+  const out = combinations(hand, need);
   const mol = molotka(s, player);
-  if (mol) beating.push(mol);
-  return beating.length > 0 ? beating : all;
+  if (mol && mol.length !== need) out.push(mol);
+  return out;
 }
 
 const sameCards = (a: NormalCard[], ids: string[]) => a.length === ids.length && a.every((c) => ids.includes(c.id));
@@ -204,9 +240,13 @@ export function createGame(players: BuraPlayers, rng: Rng = Math.random, target 
       turn: 0,
       trick: [],
       best: -1,
+      mol: null,
       seen: [],
+      gave: [],
       piles: [0, 0],
       tricks: [0, 0],
+      known: [0, 0],
+      unknown: [0, 0],
       scores: [0, 0],
       price: BASE_PRICE,
       call: null,
@@ -232,9 +272,13 @@ function deal(s: BuraState, rng: Rng): BuraState {
   next.leader = next.turn = (next.dealer + 1) % next.players;
   next.trick = [];
   next.best = -1;
+  next.mol = null;
   next.seen = [];
+  next.gave = Array.from({ length: next.players }, () => []);
   next.piles = [0, 0];
   next.tricks = [0, 0];
+  next.known = [0, 0];
+  next.unknown = [0, 0];
   next.last = null;
   next.result = null;
   next.price = BASE_PRICE;
@@ -288,45 +332,73 @@ export function playCards(s: BuraState, ids: string[]): BuraState {
   if (s.phase !== "play") throw new Error("not playing");
   if (!isLegal(s, ids)) throw new Error("illegal play");
   const next = structuredClone(s);
-  const cards = next.hands[next.turn].filter((c) => ids.includes(c.id));
-  next.hands[next.turn] = next.hands[next.turn].filter((c) => !ids.includes(c.id));
-  next.trick.push({ player: next.turn, cards });
-  const at = next.trick.length - 1;
-  if (at === 0 || outranks(cards, next.trick[next.best].cards, next.trump)) next.best = at;
-  if (next.trick.length === next.players) next.phase = "trickEnd";
-  else next.turn = (next.turn + 1) % next.players;
+  const me = next.turn;
+  const cards = next.hands[me].filter((c) => ids.includes(c.id));
+  const molotkaPlayed = next.trick.length > 0 && next.mol === null && cards.length > needOf(next, me);
+  next.hands[me] = next.hands[me].filter((c) => !ids.includes(c.id));
+
+  let hidden = false;
+  let takesLead = false;
+  if (next.trick.length === 0) {
+    takesLead = true;
+  } else if (molotkaPlayed) {
+    next.mol = cards.length;
+    takesLead = true;
+  } else {
+    // the player's cards in all (a late addition counts together with what they put down before) against the best so far
+    takesLead = beatsCombo([...onTable(next, me), ...cards], bestCards(next), next.trump);
+    hidden = !takesLead;
+  }
+  next.trick.push({ player: me, cards, hidden });
+  if (takesLead) {
+    next.best = next.trick.length - 1;
+    // winning shows the cards that went down earlier as well
+    for (const p of next.trick) if (p.player === me) p.hidden = false;
+  }
+  if (hidden) next.gave[me].push(...cards);
+
+  const after = nextToAct(next);
+  if (after === null) next.phase = "trickEnd";
+  else next.turn = after;
   return next;
 }
 
-/** The finished trick goes to its winner, who may now say "var" before everybody draws and the winner leads. */
+/** Takes the cards of the finished trick into the winner's team pile. */
+function collect(next: BuraState, winner: number) {
+  const team = teamOf(winner);
+  for (const play of next.trick) {
+    const points = sumPoints(play.cards);
+    next.piles[team] += points;
+    if (play.hidden && teamOf(play.player) !== team) next.unknown[team] += play.cards.length;
+    else next.known[team] += points;
+    if (!play.hidden) next.seen.push(...play.cards);
+  }
+  next.tricks[team] += 1;
+}
+
+/** The finished trick goes to its winner. Two players then pause for a "var"; with four everybody draws at once. */
 export function finishTrick(s: BuraState): BuraState {
   if (s.phase !== "trickEnd") throw new Error("no finished trick");
   const next = structuredClone(s);
   const winner = next.trick[next.best].player;
-  const taken = next.trick.flatMap((p) => p.cards);
-  const team = teamOf(winner);
-  next.piles[team] += sumPoints(taken);
-  next.tricks[team] += 1;
-  next.seen.push(...taken);
+  collect(next, winner);
   next.last = { plays: next.trick, winner };
   next.trick = [];
   next.best = -1;
+  next.mol = null;
   next.leader = next.turn = winner;
-  if (next.deck.length === 0 && next.hands.every((h) => h.length === 0)) return endRound(next);
-  next.phase = "var";
-  return next;
+  // nobody can refill: whoever has run out ends the round
+  if (next.deck.length === 0 && next.hands.some((h) => h.length === 0)) return endRound(next);
+  if (next.players === 2) {
+    next.phase = "var";
+    return next;
+  }
+  return refill(next);
 }
 
-/** The winner of the trick says "var" (and the round is decided on the spot) or carries on: cards are drawn and they lead. */
-export function decideVar(s: BuraState, say: boolean): BuraState {
-  if (s.phase !== "var") throw new Error("no var to decide");
-  if (say) {
-    const team = teamOf(s.turn);
-    return endRound(structuredClone(s), { winner: s.piles[team] >= VAR_POINTS ? team : 1 - team, how: "var", by: s.turn });
-  }
-  const next = structuredClone(s);
-  const winner = next.turn;
-  // Cards are drawn one at a time round the table, starting with the winner.
+/** Cards are drawn one at a time round the table, starting with the winner of the trick. */
+function refill(next: BuraState): BuraState {
+  const winner = next.leader;
   let drawing = true;
   while (drawing && next.deck.length > 0) {
     drawing = false;
@@ -340,6 +412,16 @@ export function decideVar(s: BuraState, say: boolean): BuraState {
   }
   next.phase = "play";
   return checkBura(next);
+}
+
+/** The winner of the trick says "var" (and the round is decided on the spot) or carries on: cards are drawn and they lead. */
+export function decideVar(s: BuraState, say: boolean): BuraState {
+  if (s.phase !== "var") throw new Error("no var to decide");
+  if (say) {
+    const team = teamOf(s.turn);
+    return endRound(structuredClone(s), { winner: s.piles[team] >= VAR_POINTS ? team : 1 - team, how: "var", by: s.turn });
+  }
+  return refill(structuredClone(s));
 }
 
 /** May the player on turn call (raise the price of the round)? */
@@ -402,12 +484,17 @@ export function nextRound(s: BuraState, rng: Rng = Math.random): BuraState {
   return deal(next, rng);
 }
 
-/** The cards a player cannot see in other hands or the pile (their own hand and what was played are known). */
+/**
+ * The cards a player cannot place: not in their own hand, not shown, not the trump card, and not something they
+ * threw down themselves. (What the others threw down face down has left the game without anybody seeing it, so
+ * those cards are still in this list.)
+ */
 export function unseenCards(s: BuraState, player: number): NormalCard[] {
   const known = new Set<string>([
     ...s.hands[player].map((c) => c.id),
     ...s.seen.map((c) => c.id),
-    ...s.trick.flatMap((p) => p.cards.map((c) => c.id)),
+    ...s.gave[player].map((c) => c.id),
+    ...s.trick.filter((p) => !p.hidden || p.player === player).flatMap((p) => p.cards.map((c) => c.id)),
   ]);
   // The trump card lies face up at the bottom of the pile for as long as the pile lasts.
   if (s.deck.length > 0) known.add(s.trumpCard.id);

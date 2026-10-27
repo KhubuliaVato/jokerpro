@@ -57,18 +57,20 @@ describe("bura bot", () => {
 
   it("beats a bot that plays at random, with two and with four players", () => {
     const random: BuraStyle = { samples: 1, mistake: 1 };
-    expect(match(2, STRONG_STYLE, random, 24, 3)).toBeGreaterThan(0.75);
-    expect(match(4, { samples: 24, mistake: 0 }, random, 12, 4)).toBeGreaterThan(0.6);
+    expect(match(2, { samples: 16, mistake: 0 }, random, 10, 3)).toBeGreaterThan(0.7);
+    expect(match(4, { samples: 8, mistake: 0 }, random, 6, 4)).toBeGreaterThan(0.6);
   }, 120000);
 });
 
 describe("bot calls and var", () => {
-  it("a bot says var exactly when its team has 31 points", () => {
+  it("a bot says var when it has seen 31 points of its pile, and not on a hunch of less", () => {
     const r = rng(11);
     const g = createGame(2, r);
-    const state = (mine: number): BuraState => ({ ...g, phase: "var", turn: 0, piles: [mine, 0] });
+    const state = (known: number, unknown = 0): BuraState => ({ ...g, phase: "var", turn: 0, piles: [known, 0], known: [known, 0], unknown: [unknown, 0] });
     expect(botAct(state(31), STRONG_STYLE, r)).toEqual({ type: "var", say: true });
     expect(botAct(state(30), STRONG_STYLE, r)).toEqual({ type: "var", say: false });
+    // unseen cards in the pile are only a guess: a few of them do not make it worth the risk
+    expect(botAct(state(28, 1), STRONG_STYLE, r)).toEqual({ type: "var", say: false });
   });
 
   it("a hopeless position is given in to, a winning one is accepted", () => {

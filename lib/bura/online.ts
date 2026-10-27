@@ -1,6 +1,6 @@
 import type { NormalCard } from "../joker/cards";
 import { botAct, STRONG_STYLE } from "./bot";
-import { act, finishTrick, nextRound, teamOf, type BuraAction, type BuraState } from "./engine";
+import { act, finishTrick, nextRound, teamOf, type BuraAction, type BuraState, type Play } from "./engine";
 
 export { ONLINE_AFK_LIMIT, ONLINE_TURN_SECONDS } from "../joker/online";
 
@@ -28,17 +28,26 @@ export function viewFor(state: BuraState, seat: number): BuraState {
   });
   view.deck = state.deck.map((c, i) => (i === state.deck.length - 1 ? c : hidden(`deck-${i}`)));
   view.seen = [];
+  view.gave = state.gave.map((cards, i) => (i === seat ? cards : []));
   view.dealer = (state.dealer - seat + n) % n;
   view.leader = (state.leader - seat + n) % n;
   view.turn = (state.turn - seat + n) % n;
-  view.trick = state.trick.map((p) => ({ ...p, player: (p.player - seat + n) % n }));
+  // a card thrown down face down is known to its owner alone
+  const shown = (p: Play): Play => ({
+    ...p,
+    player: (p.player - seat + n) % n,
+    cards: p.hidden && p.player !== seat ? p.cards.map((_, k) => hidden(`hidden-t${p.player}-${k}`)) : p.cards,
+  });
+  view.trick = state.trick.map(shown);
   view.last = state.last && {
-    plays: state.last.plays.map((p) => ({ ...p, player: (p.player - seat + n) % n })),
+    plays: state.last.plays.map(shown),
     winner: (state.last.winner - seat + n) % n,
   };
   // what the others have collected is the secret that makes "var" a gamble
   const over = state.phase === "roundEnd" || state.phase === "gameEnd";
   view.piles = over ? teams(state.piles) : [state.piles[teamOf(seat)], 0];
+  view.known = [state.known[teamOf(seat)], 0];
+  view.unknown = [state.unknown[teamOf(seat)], 0];
   view.call = state.call && { ...state.call, by: (state.call.by - seat + n) % n };
   view.raised = state.raised === null ? null : flip ? 1 - state.raised : state.raised;
   view.tricks = teams(state.tricks);

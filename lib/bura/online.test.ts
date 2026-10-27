@@ -90,9 +90,9 @@ describe("server helpers", () => {
   });
 
   it("advance moves on after a trick and after a round, and result is by team", () => {
-    const s = playUntil(4, 2, (g) => g.phase === "trickEnd");
-    // the winner of the trick is asked about "var" before anybody draws
-    expect(advance(s).phase).toBe("var");
+    // four players draw at once; two stop for a "var" first
+    expect(advance(playUntil(4, 2, (g) => g.phase === "trickEnd")).phase).toBe("play");
+    expect(advance(playUntil(2, 2, (g) => g.phase === "trickEnd")).phase).toBe("var");
     const done = playUntil(2, 4, (g) => g.phase === "gameEnd");
     expect(done.scores.some((v) => v >= done.target)).toBe(true);
     const a = resultFor(done, 0);

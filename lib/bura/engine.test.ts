@@ -119,29 +119,41 @@ describe("leading and answering", () => {
     expect(options).toHaveLength(4); // S14, S10, S10+S14 and D7
   });
 
-  it("the answer has the same size and must beat the lead when that is possible", () => {
+  it("nobody leads more cards than the shortest hand holds", () => {
+    const g = table([[c("S", 14), c("S", 10), c("S", 7)], [c("S", 9), c("D", 8)]]);
+    expect(Math.max(...legalPlays(g).map((p) => p.length))).toBe(2);
+  });
+
+  it("the answer has the same size, but any cards may be put down", () => {
     const g = playCards(table([[c("S", 10), c("D", 7), c("C", 6)], [c("S", 14), c("S", 9), c("D", 8)]]), ["S10"]);
-    const ids = legalPlays(g).map((p) => p[0].id);
-    expect(ids).toEqual(["S14"]);
-    expect(isLegal(g, ["S9"])).toBe(false);
+    expect(legalPlays(g).map((p) => p[0].id).sort()).toEqual(["D8", "S14", "S9"]);
+    expect(isLegal(g, ["S9"])).toBe(true);
+    expect(isLegal(g, ["S9", "D8"])).toBe(false);
   });
 
-  it("trumps are forced when they are the only way to beat", () => {
+  it("an answer that beats takes the lead and is shown; any other is thrown down face down", () => {
+    const base = table([[c("S", 10), c("D", 7), c("C", 6)], [c("S", 14), c("S", 9), c("D", 8)]]);
+    const beaten = playCards(playCards(base, ["S10"]), ["S14"]);
+    expect(beaten.best).toBe(1);
+    expect(beaten.trick.map((p) => p.hidden)).toEqual([false, false]);
+    const thrown = playCards(playCards(base, ["S10"]), ["S9"]);
+    expect(thrown.best).toBe(0);
+    expect(thrown.trick.map((p) => p.hidden)).toEqual([false, true]);
+    expect(thrown.gave[1].map((x) => x.id)).toEqual(["S9"]);
+  });
+
+  it("a trump beats a plain card", () => {
     const g = playCards(table([[c("S", 14), c("D", 7), c("C", 6)], [c("H", 7), c("S", 9), c("D", 8)]]), ["S14"]);
-    expect(legalPlays(g).map((p) => p[0].id)).toEqual(["H7"]);
+    expect(playCards(g, ["H7"]).best).toBe(1);
+    expect(playCards(g, ["S9"]).best).toBe(0);
   });
 
-  it("nothing beats: any cards may be thrown away", () => {
-    const g = playCards(table([[c("S", 14), c("D", 7), c("C", 6)], [c("S", 9), c("D", 8), c("C", 7)]]), ["S14"]);
-    expect(legalPlays(g)).toHaveLength(3);
-  });
-
-  it("a two-card lead has to be answered with two cards that both beat", () => {
+  it("a two-card lead needs two cards that each beat a different card; one ace is not enough", () => {
     const g = playCards(table([[c("S", 10), c("S", 9), c("D", 6)], [c("S", 14), c("S", 8), c("D", 8)]]), ["S10", "S9"]);
-    // S14 beats one card, S8 beats none: nothing beats the pair, so any two cards may be played
     expect(legalPlays(g)).toHaveLength(3);
+    expect(playCards(g, ["S14", "S8"]).best).toBe(0);
     const h = playCards(table([[c("S", 10), c("S", 9), c("D", 6)], [c("S", 14), c("S", 13), c("D", 8)]]), ["S10", "S9"]);
-    expect(legalPlays(h).map((p) => p.map((x) => x.id).sort().join("+"))).toEqual(["S13+S14"]);
+    expect(playCards(h, ["S13", "S14"]).best).toBe(1);
   });
 
   it("rejects cards that are not in the hand or not allowed", () => {
@@ -248,42 +260,51 @@ describe("bura", () => {
 });
 
 describe("four players", () => {
-  it("answer in turn; a partner who is winning does not have to be beaten", () => {
-    let g = table(
-      [
-        [c("S", 9), c("D", 7), c("C", 6)],
-        [c("S", 10), c("D", 8), c("C", 7)],
-        [c("S", 14), c("D", 9), c("C", 8)],
-        [c("S", 13), c("S", 12), c("D", 10)],
-      ],
-    );
+  it("answer in turn; the best answer takes the lead", () => {
+    let g = table([
+      [c("S", 9), c("D", 7), c("C", 6)],
+      [c("S", 10), c("D", 8), c("C", 7)],
+      [c("S", 14), c("D", 9), c("C", 8)],
+      [c("S", 13), c("S", 12), c("D", 10)],
+    ]);
     g = playCards(g, ["S9"]); // seat 0
     g = playCards(g, ["S10"]); // seat 1 beats
     expect(g.best).toBe(1);
-    // seat 2 is on the team of seat 0, but seat 1 (the other team) is winning: must beat with S14
-    expect(legalPlays(g).map((p) => p[0].id)).toEqual(["S14"]);
-    g = playCards(g, ["S14"]);
+    g = playCards(g, ["S14"]); // seat 2 beats again
     expect(g.best).toBe(2);
-    // seat 3 faces the other team's winner... seat 2 is seat 3's opponent (teams are 0+2 / 1+3): must beat the ace
-    expect(legalPlays(g)).toHaveLength(3);
-    g = playCards(g, ["D10"]);
+    g = playCards(g, ["D10"]); // seat 3 cannot beat the ace: thrown down
+    expect(g.trick[3].hidden).toBe(true);
     expect(g.phase).toBe("trickEnd");
-    const done = carryOn(g);
+    const done = finishTrick(g);
     expect(done.leader).toBe(2);
+    // all four cards (the secret ten included) are in the pile of the winner's team
     expect(done.piles).toEqual([31, 0]);
+    // the winning team has not seen the ten of diamonds: it is one unknown card in its pile
+    expect(done.known).toEqual([21, 0]);
+    expect(done.unknown).toEqual([1, 0]);
   });
 
-  it("a partner who is winning leaves the others free to play anything", () => {
+  it("a partner who is winning may be fed points: those cards stay secret from the others", () => {
     let g = table([
       [c("S", 14), c("D", 7), c("C", 6)],
       [c("S", 9), c("D", 8), c("C", 7)],
       [c("S", 10), c("D", 9), c("C", 8)],
       [c("S", 13), c("S", 12), c("D", 10)],
     ]);
-    g = playCards(g, ["S14"]); // seat 0, unbeaten
+    g = playCards(g, ["S14"]);
     g = playCards(g, ["D8"]);
-    // seat 2 is seat 0's partner, who is winning: free choice
-    expect(legalPlays(g)).toHaveLength(3);
+    g = playCards(g, ["S10"]);
+    expect(g.trick[2].hidden).toBe(true);
+    expect(g.best).toBe(0);
+  });
+
+  it("five cards each, and every trick refills the hands at once (no var with four players)", () => {
+    let s = createGame(4, rng(3));
+    while (s.phase === "play" && s.trick.length < 4) s = playCards(s, legalPlays(s)[0].map((x) => x.id));
+    expect(s.phase).toBe("trickEnd");
+    const next = finishTrick(s);
+    expect(next.phase).toBe("play");
+    expect(next.hands.every((h) => h.length === 5)).toBe(true);
   });
 });
 
@@ -300,13 +321,10 @@ describe("whole games", () => {
         expect(options.length).toBeGreaterThan(0);
         g = playCards(g, options[Math.floor(r() * options.length)].map((x) => x.id));
       }
-      // every card is in exactly one place
-      const all = [...g.hands.flat(), ...g.deck.slice(0, g.deck.length > 0 ? g.deck.length - 1 : 0), ...g.seen, ...g.trick.flatMap((p) => p.cards)];
-      if (g.phase === "play" && g.result === null) {
-        const ids = new Set(all.map((x) => x.id));
-        const withTrumpCard = g.deck.length > 0 ? 1 : 0;
-        expect(ids.size + withTrumpCard).toBe(buildDeck(players).length);
-        expect(all).toHaveLength(ids.size);
+      // the 120 points are always somewhere: in a hand, the pile, the trick or somebody's pile of won cards
+      if (g.result === null) {
+        const inPlay = sumPoints([...g.hands.flat(), ...g.deck, ...g.trick.flatMap((p) => p.cards)]);
+        expect(inPlay + g.piles[0] + g.piles[1]).toBe(120);
       }
       if (g.result && g.result.bura === null && g.result.winner !== null) {
         expect(g.result.piles[0] + g.result.piles[1]).toBe(120);
@@ -332,45 +350,83 @@ describe("whole games", () => {
 });
 
 describe("molotka", () => {
-  const mtable = (hands: NormalCard[][]) => table(hands, { deck: buildDeck(4).slice(0, 30) });
   const hearts = [c("H", 6), c("H", 7), c("H", 8)];
+  const mtable = (hands: NormalCard[][], over: Partial<BuraState> = {}) => table(hands, { deck: buildDeck(4).slice(0, 30), ...over });
 
-  it("a full hand of one suit that all beat a single card may be played whole", () => {
+  it("three-card game: a whole hand of one suit may be put down over a shorter lead", () => {
     const g = playCards(mtable([[c("D", 14), c("D", 7), c("C", 6)], [...hearts]]), ["D14"]);
     expect(molotka(g)).toHaveLength(3);
     expect(isLegal(g, ["H6", "H7", "H8"])).toBe(true);
-    // the ordinary answers are still there
-    expect(isLegal(g, ["H6"])).toBe(true);
+    expect(isLegal(g, ["H6"])).toBe(true); // the ordinary answers are still there
+    // it needs no beating of the lead card: a weak suit goes down just as well
+    const weak = playCards(mtable([[c("H", 14), c("D", 7), c("C", 6)], [c("D", 8), c("D", 9), c("D", 10)]]), ["H14"]);
+    expect(molotka(weak)).toHaveLength(3);
   });
 
-  it("the next player must answer the whole hand, and the molotka took the lead", () => {
-    let g = playCards(mtable([[c("D", 14), c("D", 7), c("C", 6)], [...hearts]]), ["D14"]);
+  it("the leader has to add to the lead; a molotka stands unless the combined cards beat it card by card", () => {
+    let g = playCards(mtable([[c("D", 14), c("D", 13), c("D", 12)], [...hearts]]), ["D14"]);
     g = playCards(g, ["H6", "H7", "H8"]);
-    expect(g.best).toBe(1);
-    expect(g.phase).toBe("trickEnd");
-    expect(carryOn(g).leader).toBe(1);
+    expect(g.mol).toBe(3);
+    expect(g.phase).toBe("play");
+    expect(g.turn).toBe(0);
+    expect(legalPlays(g).every((p) => p.length === 2)).toBe(true);
+    // the diamonds do not beat the hearts (hearts are trump): the molotka took the lead
+    const done = playCards(g, ["D13", "D12"]);
+    expect(done.phase).toBe("trickEnd");
+    expect(done.best).toBe(1);
+    expect(done.trick[2].hidden).toBe(true);
+    expect(finishTrick(done).leader).toBe(1);
   });
 
-  it("is not allowed against several cards, with mixed suits or when one card does not beat", () => {
-    const pair = playCards(mtable([[c("D", 14), c("D", 7), c("C", 6)], [...hearts]]), ["D14", "D7"]);
-    expect(molotka(pair)).toBeNull();
+  it("the molotka fails when the leader's cards beat it", () => {
+    let g = playCards(mtable([[c("H", 14), c("H", 13), c("H", 12)], [c("D", 6), c("D", 7), c("D", 8)]]), ["H14"]);
+    g = playCards(g, ["D6", "D7", "D8"]);
+    const done = playCards(g, ["H13", "H12"]);
+    expect(done.best).toBe(2);
+    expect(done.trick[2].hidden).toBe(false);
+  });
+
+  it("is not allowed with mixed suits, or against a full-size lead", () => {
     const mixed = playCards(mtable([[c("D", 14), c("D", 7), c("C", 6)], [c("H", 6), c("H", 7), c("S", 8)]]), ["D14"]);
     expect(molotka(mixed)).toBeNull();
-    const weak = playCards(mtable([[c("H", 9), c("D", 7), c("C", 6)], [...hearts]]), ["H9"]);
-    expect(molotka(weak)).toBeNull();
+    const full = playCards(mtable([[c("D", 14), c("D", 13), c("D", 12)], [...hearts]]), ["D14", "D13", "D12"]);
+    expect(molotka(full)).toBeNull();
   });
 
-  it("is not allowed when the pile is too small to fill every hand again", () => {
-    const g = playCards(table([[c("D", 14), c("D", 7), c("C", 6)], [...hearts]], { deck: buildDeck(4).slice(0, 3) }), ["D14"]);
-    expect(molotka(g)).toBeNull();
-  });
-
-  it("four players: five cards in the hand, and only against an opponent", () => {
+  it("five-card game: only over a single card of an opponent that all five cards beat", () => {
     const five = [c("H", 6), c("H", 7), c("H", 8), c("H", 9), c("H", 10)];
     const rest = [c("D", 6), c("D", 7), c("D", 8), c("D", 9), c("C", 6)];
     let g = mtable([[c("D", 14), ...rest.slice(0, 4)], [...five], [...rest], [...rest]]);
     g = playCards(g, ["D14"]);
     expect(molotka(g)).toHaveLength(5);
+    // two cards led: no molotka
+    let h = mtable([[c("D", 14), c("D", 13), ...rest.slice(0, 3)], [...five], [...rest], [...rest]]);
+    h = playCards(h, ["D14", "D13"]);
+    expect(molotka(h)).toBeNull();
+    // a card of the molotka that does not beat the lead: no molotka
+    let w = mtable([[c("H", 9), ...rest.slice(0, 4)], [...five], [...rest], [...rest]]);
+    w = playCards(w, ["H9"]);
+    expect(molotka(w)).toBeNull();
+  });
+
+  it("five-card game: everybody ends up with five cards on the table", () => {
+    const five = [c("H", 6), c("H", 7), c("H", 8), c("H", 9), c("H", 10)];
+    const a = [c("D", 14), c("D", 13), c("D", 12), c("D", 11), c("D", 10)];
+    const b = [c("S", 6), c("S", 7), c("S", 8), c("S", 9), c("S", 10)];
+    const d = [c("C", 6), c("C", 7), c("C", 8), c("C", 9), c("C", 10)];
+    let g = mtable([a, five, b, d]);
+    g = playCards(g, ["D14"]); // seat 0 leads one card
+    g = playCards(g, five.map((x) => x.id)); // seat 1: molotka
+    expect(g.mol).toBe(5);
+    expect(g.turn).toBe(2);
+    g = playCards(g, b.map((x) => x.id)); // seat 2 has to put down the whole hand
+    g = playCards(g, d.map((x) => x.id)); // so has seat 3
+    expect(g.turn).toBe(0);
+    expect(legalPlays(g).every((p) => p.length === 4)).toBe(true);
+    g = playCards(g, ["D13", "D12", "D11", "D10"]); // the leader adds four
+    expect(g.phase).toBe("trickEnd");
+    expect(g.trick[g.best].player).toBe(1); // the hearts are trump
+    expect(finishTrick(g).leader).toBe(1);
   });
 });
 
