@@ -8,6 +8,8 @@ import { createGame, finishTrick, nextRound, playCards, type BuraPlayers, type B
 export const HUMAN = 0;
 const BOT_DELAY = 800;
 export const TRICK_PAUSE = 1500;
+/** How long the round result stays before the next deal starts by itself. */
+export const ROUND_PAUSE = 5000;
 /** Seconds the human has for each move. */
 export const TURN_SECONDS = 40;
 /** Timed-out moves in a row after which the player is removed from the game. */
@@ -80,7 +82,9 @@ export function useBuraGame() {
   useEffect(() => {
     if (!game) return;
     let t: ReturnType<typeof setTimeout> | undefined;
-    if (game.phase === "trickEnd") {
+    if (game.phase === "roundEnd") {
+      t = setTimeout(() => setGame((g) => (g && g.phase === "roundEnd" ? nextRound(g) : g)), ROUND_PAUSE);
+    } else if (game.phase === "trickEnd") {
       t = setTimeout(() => setGame((g) => (g && g.phase === "trickEnd" ? finishTrick(g) : g)), TRICK_PAUSE);
     } else if (game.phase === "play" && game.turn !== HUMAN) {
       t = setTimeout(() => {

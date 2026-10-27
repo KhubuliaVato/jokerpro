@@ -108,13 +108,15 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onNext, a
           ))}
 
         {/* trump and pile */}
-        <div className="absolute left-3 top-2 z-10 flex items-center gap-3 sm:left-6">
-          <div className="relative" style={{ ...cw(TRICK_CW), width: "calc(var(--cw) * 2.1)", height: "calc(var(--cw) * 1.4)" }}>
+        <div className="absolute left-3 top-1 z-10 flex items-center gap-3 rounded-2xl bg-black/20 p-2 sm:left-6">
+          <div className="relative" style={{ ...cw(TRICK_CW), width: "calc(var(--cw) * 2.3)", height: "calc(var(--cw) * 1.45)" }}>
             {game.deck.length > 0 && (
               <>
-                {/* the trump card lies face up, tucked under the pile */}
-                <div className="absolute top-[18%] origin-center -rotate-90" style={{ left: "calc(var(--cw) * 0.2)" }}>
-                  <CardView card={game.trumpCard} style={cw(TRICK_CW)} />
+                {/* the trump card lies face up, sideways, tucked under the pile */}
+                <div className="absolute left-0 top-0 flex items-center justify-center" style={{ width: "calc(var(--cw) * 1.45)", height: "calc(var(--cw) * 1.45)" }}>
+                  <div className="-rotate-90">
+                    <CardView card={game.trumpCard} style={cw(TRICK_CW)} />
+                  </div>
                 </div>
                 <div className="absolute right-0 top-0">
                   <CardView style={cw(TRICK_CW)} />
@@ -123,8 +125,8 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onNext, a
             )}
           </div>
           <div className="leading-tight">
-            <b className={`block text-4xl ${isRed(game.trump) ? "text-red-400" : "text-white"}`}>{SUIT_SYMBOL[game.trump]}</b>
-            <span className="text-sm text-white/60">{game.deck.length} კარტი</span>
+            <b className={`block text-3xl ${isRed(game.trump) ? "text-red-400" : "text-white"}`}>{SUIT_SYMBOL[game.trump]}</b>
+            <span className="text-xs text-white/60">{game.deck.length} კარტი</span>
           </div>
         </div>
 
@@ -150,8 +152,12 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onNext, a
         })}
 
         {game.trick.length === 0 && game.phase === "play" && (
-          <p className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-white/40">
-            {game.turn === 0 ? "თქვენი სვლაა" : `${names[game.turn]} იწყებს`}
+          <p
+            className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full px-5 py-2 text-center font-bold ${
+              game.turn === 0 ? "bg-amber-300/20 text-amber-200" : "bg-black/25 text-white/60"
+            }`}
+          >
+            {game.turn === 0 ? "თქვენ იწყებთ" : `${names[game.turn]} იწყებს`}
           </p>
         )}
 
@@ -199,8 +205,8 @@ function Opponent({
     where === "top"
       ? "left-1/2 top-1 -translate-x-1/2 flex-col"
       : where === "left"
-        ? "left-2 top-1/2 -translate-y-1/2 flex-col"
-        : "right-2 top-1/2 -translate-y-1/2 flex-col";
+        ? "left-3 top-1/2 -translate-y-1/2 flex-col"
+        : "right-3 top-1/2 -translate-y-1/2 flex-col";
   return (
     <div className={`absolute z-10 flex items-center gap-1.5 ${place}`}>
       <div className="flex items-center gap-2">
@@ -330,7 +336,7 @@ function RoundResult({
         ? "რაუნდი თქვენია"
         : "რაუნდი წააგეთ";
   return (
-    <div className="absolute inset-0 z-30 grid place-items-center bg-black/55 p-4 backdrop-blur-sm">
+    <div className={`absolute inset-0 z-30 grid place-items-center p-4 ${final ? "bg-black/55 backdrop-blur-sm" : "bg-black/35"}`}>
       <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-3xl border border-white/15 bg-[#0c2a1c]/95 p-7 text-center shadow-2xl">
         <h2 className={`text-4xl font-extrabold ${final ? (game.scores[0] >= game.target ? "text-amber-300" : "text-white/80") : ""}`}>{title}</h2>
         {r?.bura !== null && r !== null && (
@@ -359,7 +365,12 @@ function RoundResult({
           ) : (
             <>
               {autoNext ? (
-                <span className="animate-pulse text-white/60">შემდეგი რაუნდი იწყება…</span>
+                <span className="flex w-56 flex-col items-center gap-2 text-sm text-white/60">
+                  შემდეგი რაუნდი იწყება…
+                  <span className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                    <span className="block h-full origin-left animate-[bura-fill_5s_linear_forwards] rounded-full bg-amber-300" />
+                  </span>
+                </span>
               ) : (
                 <button className={BTN_PRIMARY} onClick={onNext}>
                   შემდეგი რაუნდი

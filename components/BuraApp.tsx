@@ -26,6 +26,7 @@ export function BuraApp() {
         avatars={[null, ...bots.map((b) => ({ color: b.color, icon: b.icon }))]}
         onPlay={play}
         onNext={next}
+        autoNext
         onQuit={quit}
         endNote={<span className="text-white/60">თამაში ბოტებთან არ იწერება ისტორიაში</span>}
       />
