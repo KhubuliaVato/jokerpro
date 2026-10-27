@@ -46,9 +46,16 @@ const TRICK_AT: Record<string, string> = {
   right: "left-[73%] top-[56%] -translate-x-1/2 -translate-y-1/2",
 };
 
+/**
+ * Where a played hand sits on the table and where it comes from / goes to, from the table's centre, in screen
+ * units (vw across, dvh down): a hand flies in from the player who played it and the trick glides to whoever takes it.
+ */
+const AT = { bottom: [0, 10], top: [0, -10], left: [-23, 3.6], right: [23, 3.6] } as const;
+const EDGE = { bottom: [0, 30], top: [0, -30], left: [-45, 0], right: [45, 0] } as const;
+const move = (from: readonly number[], to: readonly number[]) => ({ x: `${to[0] - from[0]}vw`, y: `${to[1] - from[1]}dvh` });
+
 export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, onNext, autoNext, onQuit, endNote, quitConfirm }: Props) {
   const [confirm, setConfirm] = useState(false);
-  const over = game.phase === "roundEnd" || game.phase === "gameEnd";
   const teams = game.players === 4;
 
   // A sound for every card that lands on the table, and for a fresh deal.
@@ -65,6 +72,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
 
   return (
     <main className="relative flex h-dvh flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_40%,#1b6b46,#0a2a1b_78%)] text-white select-none">
+      <style>{`@keyframes bura-in{from{opacity:0;transform:translate(var(--fx,0),var(--fy,0)) scale(.8)}to{opacity:1;transform:none}}@keyframes bura-take{to{transform:translate(var(--tx,0),var(--ty,0)) scale(.55);opacity:0}}`}</style>
       {/* score */}
       <header className="relative z-20 flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3 text-sm sm:text-base">
@@ -143,24 +151,39 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
           const where = spot(game, player);
           const entries = game.trick.filter((p) => p.player === player);
           const best = game.best >= 0 && game.trick[game.best].player === player;
+          const fly = move(AT[where], EDGE[where]);
+          const take = winnerSpot ? move(AT[where], EDGE[winnerSpot]) : null;
           return (
-            <div
-              key={`${game.round}-${game.tricks[0] + game.tricks[1]}-${player}`}
-              className={`absolute z-10 flex ${TRICK_AT[where]} ${winnerSpot === where && best ? "scale-105" : ""} transition-transform`}
-            >
-              {entries.flatMap((p) => p.cards.map((c) => ({ c, hidden: p.hidden }))).map(({ c, hidden }, k) => (
-                <div key={c.id} style={{ marginLeft: k === 0 ? 0 : `calc(var(--cw) * -0.45)` }}>
-                  {/* a card thrown down face down shows its back to everybody but its owner (who sees it dimmed) */}
-                  <CardView
-                    card={c.id.startsWith("hidden-") || (hidden && player !== 0) ? undefined : c}
-                    style={{
-                      ...cw(TRICK_CW),
-                      opacity: hidden && player === 0 ? 0.55 : undefined,
-                      boxShadow: best ? "0 0 0 3px rgb(252 211 77), 0 6px 14px rgb(0 0 0 / .4)" : undefined,
-                    }}
-                  />
-                </div>
-              ))}
+            <div key={`${game.round}-${game.tricks[0] + game.tricks[1]}-${player}`} className={`absolute z-10 ${TRICK_AT[where]}`}>
+              {/* flies in from its player; once the trick is decided it glides over to the one who takes it */}
+              <div
+                className="flex"
+                style={
+                  {
+                    "--fx": fly.x,
+                    "--fy": fly.y,
+                    "--tx": take?.x,
+                    "--ty": take?.y,
+                    animation: take
+                      ? "bura-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1) both, bura-take 0.55s cubic-bezier(0.5, 0, 0.8, 0.4) 0.85s both"
+                      : "bura-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1) both",
+                  } as React.CSSProperties
+                }
+              >
+                {entries.flatMap((p) => p.cards.map((c) => ({ c, hidden: p.hidden }))).map(({ c, hidden }, k) => (
+                  <div key={c.id} style={{ marginLeft: k === 0 ? 0 : `calc(var(--cw) * -0.45)` }}>
+                    {/* a card thrown down face down shows its back to everybody but its owner (who sees it dimmed) */}
+                    <CardView
+                      card={c.id.startsWith("hidden-") || (hidden && player !== 0) ? undefined : c}
+                      style={{
+                        ...cw(TRICK_CW),
+                        opacity: hidden && player === 0 ? 0.55 : undefined,
+                        boxShadow: best ? "0 0 0 3px rgb(252 211 77), 0 6px 14px rgb(0 0 0 / .4)" : "0 4px 10px rgb(0 0 0 / .4)",
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           );
         })}
@@ -179,7 +202,8 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
           <Decision game={game} names={names} secondsLeft={secondsLeft} onAct={onAct} />
         )}
 
-        {over && <RoundResult game={game} names={names} onNext={onNext} autoNext={autoNext} onQuit={onQuit} endNote={endNote} />}
+        {game.phase === "roundEnd" && <RoundBanner game={game} names={names} />}
+        {game.phase === "gameEnd" && <RoundResult game={game} names={names} onNext={onNext} autoNext={autoNext} onQuit={onQuit} endNote={endNote} />}
       </div>
 
       {/* my hand */}
@@ -416,6 +440,47 @@ function Decision({
       ) : (
         <p className="text-sm text-white/50">{names[game.turn]} ფიქრობს…</p>
       )}
+    </div>
+  );
+}
+
+/** What the round came to, as a strip over the table (the next deal follows by itself). */
+function RoundBanner({ game, names }: { game: BuraState; names: string[] }) {
+  const r = game.result;
+  const mine = r?.winner === 0;
+  const teams = game.players === 4;
+  const title =
+    r?.winner === null ? "ფრე: 60 / 60" : r?.how === "bura" ? (mine ? "ბურა თქვენია!" : "ბურა მოწინააღმდეგეს") : mine ? "რაუნდი თქვენია" : "რაუნდი წააგეთ";
+  const why =
+    r?.how === "var" && r.by !== null
+      ? `${r.by === 0 ? "თქვენ თქვით" : `${names[r.by] ?? ""} თქვა`}: ვარ! ${(r.winner === 0) === (r.by === 0) ? "31 ქულა ჰქონდა" : "31 ქულა არ ჰქონდა"}`
+      : r?.how === "fold" && r.by !== null
+        ? r.by === 0
+          ? "თქვენს გამოძახებას დათმეს"
+          : `${names[r.by] ?? ""}-ის გამოძახებას დათმეს`
+        : r?.how === "bura" && r.bura !== null
+          ? `${r.bura === 0 ? "თქვენ" : (names[r.bura] ?? "")}: ხელში მხოლოდ კოზირებია`
+          : r && r.winner !== null
+            ? `${r.piles[0]} : ${r.piles[1]}`
+            : "";
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-[40%] z-30 flex justify-center px-4" style={{ animation: "bura-in 0.3s ease-out both", ["--fx" as string]: "0", ["--fy" as string]: "-1rem" }}>
+      <div className="flex min-w-60 flex-col items-center gap-1.5 rounded-2xl border border-white/15 bg-[#0c2a1c]/90 px-6 py-3 text-center shadow-xl backdrop-blur-sm">
+        <b className={`text-xl ${r?.winner === null ? "text-white/80" : mine ? "text-amber-300" : "text-red-200"}`}>{title}</b>
+        {why && <span className="text-sm text-white/75">{why}</span>}
+        {r && r.winner !== null && (
+          <span className="text-sm text-white/60">
+            {mine ? "+" : ""}
+            {r.gain} ქულა {mine ? "" : teams ? "მეტოქეებს" : (names[1] ?? "")}
+          </span>
+        )}
+        <span className="text-lg font-bold tabular-nums">
+          {game.scores[0]} <span className="text-white/40">:</span> {game.scores[1]}
+        </span>
+        <span className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/10">
+          <span className="block h-full origin-left animate-[bura-fill_5s_linear_forwards] rounded-full bg-amber-300" />
+        </span>
+      </div>
     </div>
   );
 }
