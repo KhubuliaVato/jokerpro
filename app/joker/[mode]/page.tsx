@@ -8,7 +8,8 @@ import { PrivateRoom } from "@/components/PrivateRoom";
 /** /joker/ranked, /joker/friendly, /joker/private and /joker/bots. */
 export default function JokerModePage() {
   const { mode } = useParams<{ mode: string }>();
-  if (mode === "ranked" || mode === "friendly") return <FormatPicker kind={mode} />;
+  if (mode === "ranked") return <FormatPicker kind="ranked" />;
+  if (mode === "friendly") return <FormatPicker kind="friendly" />;
   if (mode === "private") return <PrivateRoom />;
   if (mode === "bots") return <JokerApp />;
   notFound();

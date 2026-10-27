@@ -14,8 +14,8 @@ export const BTN_GHOST =
 
 /** Georgian labels for the game formats. */
 export const FORMAT_LABEL = {
-  full: "სრული თამაში",
-  nine: "ცხრაკარტიანი",
+  full: "სტანდარტული",
+  nine: "ცხრიანები",
 } as const;
 
 /** Keyframes for {@link rise}; render once per page inside a <style> tag. */

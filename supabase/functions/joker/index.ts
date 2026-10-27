@@ -53,6 +53,8 @@ interface Seat {
   seat: number;
   user_id: string;
   bot: boolean;
+  /** Said "yes" in the ready check of a table of random players. */
+  accepted: boolean;
 }
 interface GameRow {
   table_id: string;
@@ -73,7 +75,7 @@ interface Table {
 async function loadTable(tableId: string, userId: string) {
   const [{ data: table }, { data: seats }] = await Promise.all([
     admin.from("game_tables").select("id, status, rules, kind").eq("id", tableId).maybeSingle(),
-    admin.from("table_seats").select("seat, user_id, bot").eq("table_id", tableId).order("seat"),
+    admin.from("table_seats").select("seat, user_id, bot, accepted").eq("table_id", tableId).order("seat"),
   ]);
   if (!table) throw new UserError("table not found");
   const mine = (seats as Seat[] | null)?.find((s) => s.user_id === userId);
@@ -252,6 +254,7 @@ async function start(tableId: string, userId: string) {
   const { table, seats } = await loadTable(tableId, userId);
   if (table.status !== "waiting") return { ok: true, noop: true };
   if (seats.length < PLAYERS) throw new UserError("the table is not full yet");
+  if (table.kind !== "private" && !seats.every((s) => s.accepted)) throw new UserError("the match is not accepted yet");
   const state = settle(createGame(table.rules), botSeat(seats));
   // `insert` loses to a concurrent start, which is exactly what we want.
   const saved = await save(table, seats, null, state, {});

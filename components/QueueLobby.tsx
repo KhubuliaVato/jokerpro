@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { playMatchFound } from "@/lib/matchSound";
+import { READY_SECONDS } from "@/lib/online/client";
 import { rankFor } from "@/lib/ranks";
 import { loadRatings, type RatingRow } from "@/lib/ratings";
 import type { Rules } from "@/lib/joker/rules";
@@ -9,7 +11,7 @@ import type { useOnlineTable } from "@/lib/online/useOnlineTable";
 import { Avatar } from "./Avatar";
 import { PageShell } from "./PageShell";
 import { RankEmblem } from "./RankEmblem";
-import { BTN_GHOST, FORMAT_LABEL, rise } from "./ui";
+import { BTN_GHOST, BTN_PRIMARY, FORMAT_LABEL, rise } from "./ui";
 
 type Player = ReturnType<typeof useOnlineTable>["players"][number];
 
@@ -33,15 +35,38 @@ export function QueueLobby({
   rules,
   players,
   full,
+  readyLeft,
+  onAccept,
   onLeave,
 }: {
   kind: "ranked" | "friendly";
   rules: Rules;
   players: Player[];
   full: boolean;
+  /** Seconds left to accept the found match, or null while the table is not full (or all accepted). */
+  readyLeft: number | null;
+  onAccept: () => void;
   onLeave: () => void;
 }) {
   const seated = players.filter(Boolean).length;
+  const checking = readyLeft !== null;
+  const mine = players[0];
+
+  // How long the search has lasted.
+  const [since] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (checking) return;
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, [checking]);
+  const waited = Math.max(0, Math.floor((now - since) / 1000));
+  const clock = `${Math.floor(waited / 60)}:${String(waited % 60).padStart(2, "0")}`;
+
+  // "Match found": a chime when the ready check opens.
+  useEffect(() => {
+    if (checking) playMatchFound();
+  }, [checking]);
   const ids = players.flatMap((p) => (p ? [p.user_id] : []));
   const idKey = ids.join(",");
 
@@ -71,21 +96,45 @@ export function QueueLobby({
           {kind === "ranked" ? "წოდებისთვის ბრძოლა" : "მეგობრული მატჩი"} · {FORMAT_LABEL[rules.format]}
         </p>
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
-          {full ? "მაგიდა იღება…" : "ვეძებთ მოთამაშეებს"}
+          {checking ? "მატჩი ნაპოვნია!" : full ? "მაგიდა იღება…" : "ვეძებთ მოთამაშეებს"}
         </h1>
       </section>
 
       <section className="grid place-items-center py-4" style={rise(2)}>
         <div className="relative aspect-square w-[min(92vw,30rem)]">
+          {checking && (
+            <svg viewBox="0 0 100 100" className="pointer-events-none absolute inset-[24%] -rotate-90">
+              <circle cx="50" cy="50" r="48" fill="none" stroke="rgb(255 255 255 / .1)" strokeWidth="1.5" />
+              <circle
+                cx="50"
+                cy="50"
+                r="48"
+                fill="none"
+                stroke={readyLeft <= 8 ? "rgb(248 113 113)" : "rgb(252 211 77)"}
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeDasharray={2 * Math.PI * 48}
+                strokeDashoffset={2 * Math.PI * 48 * (1 - readyLeft / READY_SECONDS)}
+                style={{ transition: "stroke-dashoffset 0.3s linear" }}
+              />
+            </svg>
+          )}
           {/* the table */}
           <div
             className="absolute inset-[28%] grid place-items-center rounded-[2.5rem] border-4 border-amber-300/50 bg-[radial-gradient(ellipse_at_50%_40%,#1f7a4d,#0d4128_80%)] shadow-[inset_0_0_40px_rgb(0_0_0/0.45),0_18px_40px_-14px_rgb(0_0_0/0.7)]"
             style={full ? { animation: "table-open 0.9s ease-in-out infinite" } : undefined}
           >
-            <div className="text-center">
-              <b className="block text-5xl font-black tabular-nums text-amber-200 sm:text-6xl">{seated}/4</b>
-              <span className="text-sm text-white/55">{full ? "იწყება" : "ითხოვს მოთამაშეს"}</span>
-            </div>
+            {checking ? (
+              <div className="text-center">
+                <b className="block text-6xl font-black tabular-nums text-amber-200 sm:text-7xl">{readyLeft}</b>
+                <span className="text-sm text-white/55">წამი</span>
+              </div>
+            ) : (
+              <div className="text-center">
+                <b className="block text-5xl font-black tabular-nums text-amber-200 sm:text-6xl">{full ? "4/4" : clock}</b>
+                <span className="text-sm text-white/55">{full ? "იწყება" : `${seated}/4 · ძებნა`}</span>
+              </div>
+            )}
           </div>
 
           {players.map((p, k) => {
@@ -113,6 +162,11 @@ export function QueueLobby({
                         </span>
                       )}
                     </div>
+                    {checking && (
+                      <span className={`text-sm font-bold ${p.accepted ? "text-emerald-300" : "text-white/40"}`}>
+                        {p.accepted ? "✓ მზადაა" : "ელოდება…"}
+                      </span>
+                    )}
                     <span className="max-w-full truncate text-center text-base font-bold">
                       {p.profile?.nickname ?? "…"}
                       {k === 0 && <span className="ml-1 text-xs font-semibold text-amber-300">თქვენ</span>}
@@ -132,7 +186,12 @@ export function QueueLobby({
         </div>
       </section>
 
-      <div className="flex justify-center pb-8" style={rise(3)}>
+      <div className="flex flex-col items-center gap-4 pb-8" style={rise(3)}>
+        {checking && (
+          <button className={`${BTN_PRIMARY} min-w-60 text-xl`} onClick={onAccept} disabled={!!mine?.accepted}>
+            {mine?.accepted ? "ველოდებით დანარჩენებს…" : "დადასტურება"}
+          </button>
+        )}
         <button className={BTN_GHOST} onClick={onLeave}>
           გაუქმება
         </button>

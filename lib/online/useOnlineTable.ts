@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { isActivePhase, applyAction, realSeat, type Action } from "@/lib/joker/online";
 import { HAND_END_PAUSE, TRICK_PAUSE } from "@/lib/joker/useGame";
 import { getSupabase } from "@/lib/supabase";
-import { callJoker, joinTable, leaveTable, pingTable, type SeatRow, type TableRow, type ViewRow } from "./client";
+import { acceptMatch, callJoker, clockSkew, expireMatch, joinTable, leaveTable, pingTable, READY_SECONDS, type SeatRow, type TableRow, type ViewRow } from "./client";
 
 export interface SeatProfile {
   id: string;
@@ -25,12 +25,14 @@ export function useOnlineTable(code: string) {
 
   const [table, setTable] = useState<TableRow | null>(null);
   const [seats, setSeats] = useState<SeatRow[]>([]);
+  const [seatsLoaded, setSeatsLoaded] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, SeatProfile>>({});
   const [row, setRow] = useState<ViewRow | null>(null);
   const [optimistic, setOptimistic] = useState<{ version: number; view: ViewRow["view"] } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  const [skew, setSkew] = useState(0);
 
   const tableId = table?.id ?? null;
 
@@ -53,9 +55,10 @@ export function useOnlineTable(code: string) {
   const loadSeats = useCallback(async () => {
     const supabase = getSupabase();
     if (!supabase || !tableId) return;
-    const { data } = await supabase.from("table_seats").select("seat, user_id, bot").eq("table_id", tableId).order("seat");
+    const { data } = await supabase.from("table_seats").select("seat, user_id, bot, accepted").eq("table_id", tableId).order("seat");
     const list = (data ?? []) as SeatRow[];
     setSeats(list);
+    setSeatsLoaded(true);
     const missing = list.map((s) => s.user_id).filter((id) => !profiles[id]);
     if (missing.length > 0) {
       const { data: ps } = await supabase
@@ -69,7 +72,7 @@ export function useOnlineTable(code: string) {
   const loadTable = useCallback(async () => {
     const supabase = getSupabase();
     if (!supabase || !tableId) return;
-    const { data } = await supabase.from("game_tables").select("id, code, host_id, kind, status, rules").eq("id", tableId).maybeSingle();
+    const { data } = await supabase.from("game_tables").select("id, code, host_id, kind, status, rules, ready_at").eq("id", tableId).maybeSingle();
     if (data) setTable(data as TableRow);
   }, [tableId]);
 
@@ -123,6 +126,8 @@ export function useOnlineTable(code: string) {
   const mySeat = seats.find((s) => s.user_id === userId);
   const full = seats.length === 4;
   const status = table?.status ?? null;
+  // Lost the seat in a ready check that I did not accept in time.
+  const kicked = !!table && table.kind !== "private" && table.status === "waiting" && seatsLoaded && !mySeat;
 
   // While waiting at a table of random players, keep telling the server we are still here.
   const waitingPublic = !!table && table.status === "waiting" && table.kind !== "private";
@@ -135,11 +140,16 @@ export function useOnlineTable(code: string) {
     return () => clearInterval(id);
   }, [tableId, waitingPublic]);
 
-  // 3. Four players seated: the game begins (the server ignores duplicate requests).
+  // 3. Four players seated. Private table: the game begins. Table of random players: everyone must accept first
+  // (READY_SECONDS), and the game begins once all four did. The server ignores duplicate requests.
+  const isPublic = !!table && table.kind !== "private";
+  const allAccepted = full && seats.every((x) => x.accepted);
+  const readyAt = table?.ready_at ? Date.parse(table.ready_at) : null;
   const started = useRef(false);
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase || !tableId || status !== "waiting" || !full || started.current) return;
+    if (isPublic && !allAccepted) return;
     started.current = true;
     const t = setTimeout(() => {
       void callJoker(supabase, { action: "start", table_id: tableId }).then((e) => {
@@ -150,7 +160,46 @@ export function useOnlineTable(code: string) {
       });
     }, jitter(600));
     return () => clearTimeout(t);
-  }, [tableId, status, full]);
+  }, [tableId, status, full, isPublic, allAccepted]);
+
+  const accept = useCallback(async () => {
+    const supabase = getSupabase();
+    if (!supabase || !tableId) return;
+    setSeats((prev) => prev.map((x) => (x.user_id === userId ? { ...x, accepted: true } : x)));
+    await acceptMatch(supabase, tableId);
+  }, [tableId, userId]);
+
+  // The ready check's clock; when it runs out, those who did not accept lose their seats.
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase || !isPublic) return;
+    let cancelled = false;
+    clockSkew(supabase).then((ms) => {
+      if (!cancelled) setSkew(ms);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isPublic]);
+
+  const checking = isPublic && status === "waiting" && full && readyAt !== null && !allAccepted;
+  useEffect(() => {
+    if (!checking) return;
+    const id = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(id);
+  }, [checking]);
+  const readyLeft = checking && readyAt !== null ? Math.max(0, Math.ceil((readyAt + READY_SECONDS * 1000 - (now + skew)) / 1000)) : null;
+  const expired = readyLeft === 0;
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase || !tableId || !expired) return;
+    const t = setTimeout(() => void expireMatch(supabase, tableId), jitter(1200));
+    const again = setInterval(() => void expireMatch(supabase, tableId), 4000);
+    return () => {
+      clearTimeout(t);
+      clearInterval(again);
+    };
+  }, [tableId, expired]);
 
   const view = optimistic && row && optimistic.version === row.version ? optimistic.view : (row?.view ?? null);
   const version = row?.version ?? 0;
@@ -237,6 +286,9 @@ export function useOnlineTable(code: string) {
     view,
     version,
     secondsLeft,
+    readyLeft,
+    kicked,
+    accept,
     error,
     notice,
     act,

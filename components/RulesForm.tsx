@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import type { Rules } from "@/lib/joker/rules";
-
-export const FORMATS = [
-  { value: "full", big: "24", title: "სრული თამაში", hint: "4 ეტაპი: 1–8, 9×4, 8–1, 9×4" },
-  { value: "nine", big: "16", title: "ცხრაკარტიანი", hint: "ყველა ხელი 9 კარტით" },
-] as const;
+import { FORMAT_ART, FormatFan } from "./FormatArt";
 
 const RULES = [
   "4 მოთამაშე, 36 კარტი: შავი ექვსიანების ადგილას 2 ჯოკერია.",
@@ -20,19 +16,19 @@ const RULES = [
 
 export const LABEL = "mb-3 text-sm font-bold uppercase tracking-wider text-white/45";
 
-/** Game length, penalty for a khishti and the stage premium: the settings of a free-form game. */
+/** Game length and the penalty for a khishti: the settings of a free-form game. */
 export function RulesForm({ rules, onChange }: { rules: Rules; onChange: (patch: Partial<Rules>) => void }) {
   return (
     <div className="flex flex-col gap-10">
       <fieldset>
-        <legend className={LABEL}>თამაშის სიგრძე</legend>
+        <legend className={LABEL}>თამაში</legend>
         <div className="grid grid-cols-2 gap-4">
-          {FORMATS.map((f) => {
-            const on = rules.format === f.value;
+          {(["nine", "full"] as const).map((value) => {
+            const on = rules.format === value;
             return (
               <label
-                key={f.value}
-                className={`relative flex cursor-pointer flex-col items-center gap-1 rounded-3xl border px-4 py-6 text-center transition-[border-color,background-color,translate] duration-200 hover:-translate-y-0.5 ${
+                key={value}
+                className={`group relative flex cursor-pointer flex-col justify-between gap-5 overflow-hidden rounded-3xl border px-4 pb-5 pt-7 text-center transition-[border-color,background-color,translate] duration-200 hover:-translate-y-0.5 ${
                   on ? "border-amber-300 bg-amber-300/10" : "border-white/10 bg-white/[0.03] hover:border-white/30"
                 }`}
               >
@@ -41,15 +37,11 @@ export function RulesForm({ rules, onChange }: { rules: Rules; onChange: (patch:
                   name="format"
                   className="peer sr-only"
                   checked={on}
-                  onChange={() => onChange({ format: f.value })}
+                  onChange={() => onChange({ format: value })}
                 />
                 <span className="absolute inset-0 rounded-3xl peer-focus-visible:ring-2 peer-focus-visible:ring-amber-300" />
-                <span className={`text-6xl font-extrabold leading-none tabular-nums ${on ? "text-amber-300" : ""}`}>
-                  {f.big}
-                </span>
-                <span className="text-sm text-white/45">ხელი</span>
-                <b className="mt-2 text-lg">{f.title}</b>
-                <span className="text-sm leading-snug text-white/45">{f.hint}</span>
+                <FormatFan format={value} cardWidth="clamp(3.2rem, 8vw, 4.2rem)" className="h-32" />
+                <b className={`relative text-xl sm:text-2xl ${on ? "text-amber-300" : ""}`}>{FORMAT_ART[value].title}</b>
               </label>
             );
           })}
@@ -57,7 +49,7 @@ export function RulesForm({ rules, onChange }: { rules: Rules; onChange: (patch:
       </fieldset>
 
       <fieldset>
-        <legend className={LABEL}>ხიშტის ჯარიმა</legend>
+        <legend className={LABEL}>ხიშტი</legend>
         <div className="flex gap-3">
           {[100, 200, 500].map((v) => {
             const on = rules.khishti === v;
@@ -83,25 +75,7 @@ export function RulesForm({ rules, onChange }: { rules: Rules; onChange: (patch:
             );
           })}
         </div>
-        <p className="mt-3 text-sm text-white/40">როცა დაკვეთა ≥ 1 იყო და ერთი ხელიც ვერ აიღეთ</p>
       </fieldset>
-
-      <label className="flex cursor-pointer items-center justify-between gap-6 rounded-3xl border border-white/10 bg-white/[0.03] px-6 py-5">
-        <span>
-          <b className="block text-lg">ეტაპის პრემია</b>
-          <span className="text-sm text-white/45">ყველა ხელი ზუსტად → საუკეთესო ხელი ერთხელ კიდევ</span>
-        </span>
-        <span className="relative flex-none">
-          <input
-            type="checkbox"
-            className="peer sr-only"
-            checked={rules.pulkaPremium}
-            onChange={(e) => onChange({ pulkaPremium: e.target.checked })}
-          />
-          <span className="block h-8 w-14 rounded-full bg-white/15 transition-colors duration-200 peer-checked:bg-emerald-400 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-300" />
-          <span className="absolute left-1 top-1 size-6 rounded-full bg-white shadow transition-transform duration-200 peer-checked:translate-x-6" />
-        </span>
-      </label>
     </div>
   );
 }

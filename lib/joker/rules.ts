@@ -32,6 +32,11 @@ export function schedule(format: Rules["format"]): number[][] {
   ];
 }
 
+/** A khishti costs double in the nine-card hands. */
+export function khishtiFor(cards: number, rules: Rules): number {
+  return cards === 9 ? rules.khishti * 2 : rules.khishti;
+}
+
 export function handPoints(
   bid: number,
   taken: number,
@@ -44,6 +49,6 @@ export function handPoints(
   if (taken === bid) {
     return bid === cards ? bid * 100 : (bid + 1) * 50;
   }
-  if (taken === 0) return -rules.khishti;
+  if (taken === 0) return -khishtiFor(cards, rules);
   return rules.missPerTrick * taken;
 }

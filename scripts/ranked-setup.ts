@@ -45,6 +45,12 @@ async function main() {
   void outsider;
 
   const { data: t } = await players[0].from("game_tables").select("id, status, kind").eq("code", tables[0]).single();
+  // Nobody accepted yet: the server must refuse to start (only when the table is full).
+  const early = await players[1].functions.invoke("joker", { body: { action: "start", table_id: t!.id } });
+  console.log("start before accepting:", early.error ? "refused: OK" : "STARTED: WRONG");
+  const { data: ready } = await players[0].from("game_tables").select("ready_at").eq("id", t!.id).single();
+  console.log("ready check open:", ready?.ready_at ? "yes" : "no");
+  for (const c of players) await c.rpc("accept_match", { p_table_id: t!.id });
   const { error } = await players[1].functions.invoke("joker", { body: { action: "start", table_id: t!.id } });
   console.log("start:", error ? error.message : "ok", "| table", t!.status, t!.kind);
   console.log("CODE=" + tables[0]);

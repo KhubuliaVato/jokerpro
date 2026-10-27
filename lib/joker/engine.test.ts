@@ -69,7 +69,10 @@ describe("scoring", () => {
     expect(handPoints(0, 2, 5, r)).toBe(20);
     expect(handPoints(1, 2, 9, r)).toBe(20);
     expect(handPoints(3, 1, 9, r)).toBe(10);
-    expect(handPoints(2, 0, 9, r)).toBe(-200);
+    // a khishti costs double in the nine-card hands
+    expect(handPoints(2, 0, 9, r)).toBe(-400);
+    expect(handPoints(2, 0, 8, r)).toBe(-200);
+    expect(handPoints(1, 0, 1, r)).toBe(-200);
   });
 });
 

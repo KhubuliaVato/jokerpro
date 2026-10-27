@@ -2,53 +2,22 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { findTable } from "@/lib/online/client";
-import { rankFor } from "@/lib/ranks";
-import { loadRating, type RatingRow } from "@/lib/ratings";
 import { getSupabase } from "@/lib/supabase";
+import { FORMAT_ART, FormatFan } from "./FormatArt";
 import { PageShell } from "./PageShell";
-import { RankEmblem } from "./RankEmblem";
 import { BTN_PRIMARY, rise } from "./ui";
 
-const FORMATS = [
-  { value: "nine", big: "9", title: "ცხრიანები", hint: "16 ხელი, თითოეულში 9 კარტი" },
-  { value: "full", big: "24", title: "კლასიკური", hint: "24 ხელი, 4 ეტაპი: 1–8, 9×4, 8–1, 9×4" },
-] as const;
+const FORMATS = ["nine", "full"] as const;
 
-const TEXT = {
-  ranked: {
-    title: "წოდებისთვის ბრძოლა",
-    sub: "თამაში შემთხვევით მოთამაშეებთან. შედეგი ცვლის ქულას და წოდებას.",
-  },
-  friendly: {
-    title: "მეგობრული მატჩი",
-    sub: "თამაში შემთხვევით მოთამაშეებთან. ქულა არ იცვლება, თამაში ისტორიაში ჩაიწერება.",
-  },
-} as const;
-
-/** Pick the game length, then take a seat at an open table of random players. */
+/** Ranked or friendly match: pick the game length, then take a seat at an open table of random players. */
 export function FormatPicker({ kind }: { kind: "ranked" | "friendly" }) {
   const router = useRouter();
   const { configured, loading, user } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState<{ userId: string; row: RatingRow | null } | null>(null);
-
-  const userId = user?.id ?? null;
-  const rating = loaded && loaded.userId === userId ? loaded.row : null;
-  useEffect(() => {
-    const supabase = getSupabase();
-    if (!supabase || !userId || kind !== "ranked") return;
-    let cancelled = false;
-    loadRating(supabase, userId).then((row) => {
-      if (!cancelled) setLoaded({ userId, row });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [userId, kind]);
 
   const enter = async (format: "nine" | "full") => {
     const supabase = getSupabase();
@@ -61,10 +30,9 @@ export function FormatPicker({ kind }: { kind: "ranked" | "friendly" }) {
       setBusy(null);
       return;
     }
-    router.push(`/joker/table/${table.code}`);
+    // `replace`, so that "back" from the lobby does not queue the player again.
+    router.replace(`/joker/table/${table.code}`);
   };
-
-  const standing = rankFor(rating?.rating ?? 50);
 
   return (
     <PageShell width="max-w-4xl">
@@ -72,8 +40,8 @@ export function FormatPicker({ kind }: { kind: "ranked" | "friendly" }) {
         <Link href="/joker" className="w-fit text-sm font-bold uppercase tracking-wider text-white/45 hover:text-amber-300">
           ← ჯოკერი
         </Link>
-        <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl">{TEXT[kind].title}</h1>
-        <p className="text-lg text-white/55 sm:text-xl">{TEXT[kind].sub}</p>
+        <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl">{kind === "ranked" ? "წოდებისთვის ბრძოლა" : "მეგობრული მატჩი"}</h1>
+        <p className="text-lg text-white/55 sm:text-xl">{kind === "ranked" ? "შემთხვევითი მოთამაშეები · წოდება იცვლება" : "შემთხვევითი მოთამაშეები · ქულა არ იცვლება"}</p>
       </section>
 
       {!configured ? (
@@ -87,38 +55,25 @@ export function FormatPicker({ kind }: { kind: "ranked" | "friendly" }) {
         </div>
       ) : (
         <>
-          {kind === "ranked" && (
-            <div
-              className="flex items-center gap-4 rounded-3xl border bg-white/[0.04] px-5 py-4"
-              style={{ borderColor: `${standing.rank.accent}44` }}
-            >
-              <RankEmblem rank={standing.rank} className="size-14" />
-              <div>
-                <b className="text-xl" style={{ color: standing.rank.accent }}>
-                  {standing.rank.name}
-                </b>
-                <p className="text-white/55">{rating ? `${rating.rating} ქულა` : "ჯერ არ გიყვიათ რეიტინგული თამაში, იწყებთ 50 ქულით"}</p>
-              </div>
-            </div>
-          )}
-
           <section className="grid gap-5 pb-8 sm:grid-cols-2" style={rise(2)}>
             {FORMATS.map((f) => (
               <button
-                key={f.value}
-                onClick={() => enter(f.value)}
+                key={f}
+                onClick={() => enter(f)}
                 disabled={busy !== null}
                 className="group relative block text-left outline-none disabled:opacity-60"
               >
-                <span className="flex min-h-72 flex-col justify-between rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-amber-300/70 group-hover:bg-white/[0.08] group-hover:shadow-[0_26px_50px_-24px_rgb(232_196_106/0.5)] group-focus-visible:border-amber-300">
-                  <span className="text-8xl font-black leading-none tabular-nums text-amber-300">{f.big}</span>
-                  <span>
-                    <span className="block text-3xl font-extrabold">{f.title}</span>
-                    <span className="mt-1 block text-base text-white/55">{f.hint}</span>
-                    <span className="mt-5 flex items-center gap-2 text-lg font-bold text-amber-300">
-                      {busy === f.value ? "ვეძებთ…" : "მაგიდის პოვნა"}
-                      <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
-                    </span>
+                <span className="relative flex min-h-80 flex-col justify-between overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] p-8 transition-[translate,border-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-amber-300/70 group-hover:shadow-[0_26px_50px_-24px_rgb(232_196_106/0.55)] group-focus-visible:border-amber-300">
+                  <span className="pointer-events-none absolute -right-16 -top-16 size-56 rounded-full bg-amber-300/10 blur-3xl transition-opacity duration-500 group-hover:bg-amber-300/20" />
+                  <FormatFan format={f} />
+
+                  <span className="absolute right-6 top-5 flex items-center gap-2 text-xl font-bold text-amber-300">
+                    {busy === f ? "ვეძებთ…" : ""}
+                    <span className="text-3xl transition-transform duration-300 group-hover:translate-x-1.5">→</span>
+                  </span>
+
+                  <span className="relative mt-8 block text-3xl font-black tracking-tight sm:text-4xl">
+                    {FORMAT_ART[f].title}
                   </span>
                 </span>
               </button>

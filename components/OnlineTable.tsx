@@ -16,7 +16,7 @@ import { BTN_GHOST, BTN_PRIMARY, FORMAT_LABEL, rise } from "./ui";
 
 /** "სრული თამაში · ხიშტი −200" */
 export const describeRules = (r: Rules) =>
-  `${FORMAT_LABEL[r.format]} · ხიშტი −${r.khishti}${r.pulkaPremium ? " · ეტაპის პრემია" : ""}`;
+  `${FORMAT_LABEL[r.format]} · ხიშტი −${r.format === "nine" ? r.khishti * 2 : `${r.khishti} / −${r.khishti * 2}`}${r.pulkaPremium ? " · ეტაპის პრემია" : ""}`;
 
 /** The screen behind a table code: the waiting room first, the game itself once four players sit. */
 export function OnlineTable({ code }: { code: string }) {
@@ -73,6 +73,21 @@ export function OnlineTable({ code }: { code: string }) {
     );
   }
 
+  // The ready check ran out before I accepted: the seat is gone.
+  if (t.kicked) {
+    return (
+      <Message
+        title="დრო ამოიწურა"
+        text="მატჩი დროზე არ დაადასტურეთ."
+        action={
+          <Link href={`/joker/${t.table.kind}`} className={`${BTN_PRIMARY} w-fit`}>
+            ხელახლა ძებნა
+          </Link>
+        }
+      />
+    );
+  }
+
   if (t.table.status === "waiting" || !t.view) {
     if (t.table.status === "closed") return <Message title="მაგიდა დაიხურა" />;
     // Random-player tables wait in a lobby with four lamps; private ones show the code to share.
@@ -83,6 +98,8 @@ export function OnlineTable({ code }: { code: string }) {
           rules={t.table.rules}
           players={t.players}
           full={t.seats.length === 4}
+          readyLeft={t.readyLeft}
+          onAccept={() => void t.accept()}
           onLeave={leaveToMenu}
         />
       );

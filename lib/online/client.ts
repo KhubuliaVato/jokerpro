@@ -10,13 +10,18 @@ export interface TableRow {
   kind: "private" | "friendly" | "ranked";
   status: "waiting" | "playing" | "finished" | "closed";
   rules: Rules;
+  /** When the table of random players filled up: everyone then has READY_SECONDS to accept. */
+  ready_at: string | null;
 }
 
 export interface SeatRow {
   seat: number;
   user_id: string;
   bot: boolean;
+  accepted: boolean;
 }
+
+export const READY_SECONDS = 30;
 
 /** The player's own, already rotated view of the game, as the server wrote it. */
 export interface ViewRow {
@@ -80,6 +85,24 @@ export async function activeTable(supabase: SupabaseClient): Promise<TableRow | 
   const { data } = await supabase.rpc("my_active_table");
   const row = (Array.isArray(data) ? data[0] : data) as TableRow | null;
   return row && row.id ? row : null;
+}
+
+/** How far the server's clock is ahead of this device's (ms), so that deadlines are counted on the server's time. */
+export async function clockSkew(supabase: SupabaseClient): Promise<number> {
+  const before = Date.now();
+  const { data } = await supabase.rpc("server_time");
+  const after = Date.now();
+  return typeof data === "string" ? Date.parse(data) - (before + after) / 2 : 0;
+}
+
+/** "Yes, I am ready" in the ready check. */
+export async function acceptMatch(supabase: SupabaseClient, tableId: string): Promise<void> {
+  await supabase.rpc("accept_match", { p_table_id: tableId });
+}
+
+/** The 30 seconds are over: seats of those who did not accept are given up. */
+export async function expireMatch(supabase: SupabaseClient, tableId: string): Promise<void> {
+  await supabase.rpc("expire_match", { p_table_id: tableId });
 }
 
 export async function leaveTable(supabase: SupabaseClient, tableId: string): Promise<void> {
