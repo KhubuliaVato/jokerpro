@@ -48,11 +48,11 @@ export const DEFAULT_BOTS = ["levani", "nino", "mariami"];
 
 export const botById = (id: string): BotProfile => BOTS.find((b) => b.id === id) ?? BOTS[3];
 
-/** Three different bots, drawn at random from the given tier (or from everybody). */
-export function randomBots(tier?: BotTier, rng: () => number = Math.random): string[] {
+/** Different bots (three unless said otherwise), drawn at random from the given tier (or from everybody). */
+export function randomBots(tier?: BotTier, rng: () => number = Math.random, count = 3): string[] {
   const pool = BOTS.filter((b) => !tier || b.tier === tier).map((b) => b.id);
   const picked: string[] = [];
-  while (picked.length < 3 && pool.length > 0) {
+  while (picked.length < count && pool.length > 0) {
     picked.push(pool.splice(Math.floor(rng() * pool.length), 1)[0]);
   }
   return picked;

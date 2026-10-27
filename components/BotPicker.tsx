@@ -7,26 +7,35 @@ import { LABEL } from "./RulesForm";
 const TIERS: BotTier[] = ["easy", "medium", "hard"];
 const DOTS: Record<BotTier, number> = { easy: 1, medium: 2, hard: 3 };
 
-/** Choose the three opponents: nine bots on three levels, each with a face and a way of playing. */
-export function BotPicker({ selected, onChange }: { selected: string[]; onChange: (ids: string[]) => void }) {
+/** Choose the opponents: nine bots on three levels, each with a face and a way of playing. */
+export function BotPicker({
+  selected,
+  onChange,
+  count = 3,
+}: {
+  selected: string[];
+  onChange: (ids: string[]) => void;
+  /** How many opponents are needed (three at a Joker table, one or three at a Bura table). */
+  count?: number;
+}) {
   const toggle = (id: string) => {
     if (selected.includes(id)) onChange(selected.filter((x) => x !== id));
-    // A fourth pick replaces the oldest one, so three are always possible with a single click.
-    else onChange([...selected, id].slice(-3));
+    // One pick too many replaces the oldest one, so a full set is always possible with a single click.
+    else onChange([...selected, id].slice(-count));
   };
 
   return (
     <fieldset>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <legend className={`${LABEL} !mb-0`}>
-          ოპონენტები <span className="ml-2 text-amber-300">{selected.length}/3</span>
+          ოპონენტები <span className="ml-2 text-amber-300">{selected.length}/{count}</span>
         </legend>
         <div className="flex flex-wrap gap-2">
           {(
             [
-              ["შემთხვევითი", () => onChange(randomBots())],
-              ["მარტივი", () => onChange(randomBots("easy"))],
-              ["ძლიერი", () => onChange(randomBots("hard"))],
+              ["შემთხვევითი", () => onChange(randomBots(undefined, Math.random, count))],
+              ["მარტივი", () => onChange(randomBots("easy", Math.random, count))],
+              ["ძლიერი", () => onChange(randomBots("hard", Math.random, count))],
             ] as const
           ).map(([label, pick]) => (
             <button

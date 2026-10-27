@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GameState } from "@/lib/joker/engine";
+import type { BuraState } from "@/lib/bura/engine";
 import type { Rules } from "@/lib/joker/rules";
+import type { BuraRules } from "@/lib/bura/online";
 
 export interface TableRow {
   id: string;
@@ -9,7 +11,8 @@ export interface TableRow {
   /** private: friends with a code. friendly / ranked: random players (ranked changes the rating). */
   kind: "private" | "friendly" | "ranked";
   status: "waiting" | "playing" | "finished" | "closed";
-  rules: Rules;
+  game: "joker" | "bura";
+  rules: Rules | BuraRules;
   /** When the table of random players filled up: everyone then has READY_SECONDS to accept. */
   ready_at: string | null;
 }
@@ -27,7 +30,7 @@ export const READY_SECONDS = 30;
 export interface ViewRow {
   version: number;
   seat: number;
-  view: GameState;
+  view: GameState | BuraState;
   turn_deadline: string | null;
 }
 
@@ -51,7 +54,7 @@ export const cleanCode = (raw: string) => raw.replace(/[^a-zA-Z0-9]/g, "").toUpp
 
 export async function createTable(
   supabase: SupabaseClient,
-  rules: Rules,
+  rules: Rules | { game: "bura"; players: 2 | 4 },
 ): Promise<{ table: TableRow | null; error: string | null }> {
   const { data, error } = await supabase.rpc("create_table", { p_rules: rules });
   return { table: (data as TableRow | null) ?? null, error: error ? onlineMessage(error.message) : null };
@@ -69,9 +72,10 @@ export async function joinTable(
 export async function findTable(
   supabase: SupabaseClient,
   kind: "ranked" | "friendly",
-  format: "nine" | "full",
+  format: "nine" | "full" | "p2" | "p4",
+  game: "joker" | "bura" = "joker",
 ): Promise<{ table: TableRow | null; error: string | null }> {
-  const { data, error } = await supabase.rpc("find_table", { p_kind: kind, p_format: format });
+  const { data, error } = await supabase.rpc("find_table", { p_kind: kind, p_format: format, p_game: game });
   return { table: (data as TableRow | null) ?? null, error: error ? onlineMessage(error.message) : null };
 }
 
@@ -79,6 +83,9 @@ export async function findTable(
 export async function pingTable(supabase: SupabaseClient, tableId: string): Promise<void> {
   await supabase.rpc("table_ping", { p_table_id: tableId });
 }
+
+/** Where a table lives in the site: /joker/table/ABC123 or /bura/table/ABC123. */
+export const tablePath = (t: Pick<TableRow, "game" | "code">) => `/${t.game}/table/${t.code}`;
 
 /** The running game the player is part of (e.g. after closing the page), if any. */
 export async function activeTable(supabase: SupabaseClient): Promise<TableRow | null> {

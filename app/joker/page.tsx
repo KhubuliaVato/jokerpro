@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { JokerHub } from "@/components/JokerHub";
+import { ModeHub } from "@/components/ModeHub";
 
 export const metadata: Metadata = { title: "ჯოკერი" };
 
 export default function JokerPage() {
-  return <JokerHub />;
+  return <ModeHub game="joker" />;
 }

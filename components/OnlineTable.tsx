@@ -6,11 +6,15 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useOnlineTable } from "@/lib/online/useOnlineTable";
 import type { Rules } from "@/lib/joker/rules";
+import type { BuraState } from "@/lib/bura/engine";
+import type { BuraRules } from "@/lib/bura/online";
+import type { GameState } from "@/lib/joker/engine";
 import { Avatar } from "./Avatar";
 import { PlayerNamesProvider } from "./names";
 import { PageShell } from "./PageShell";
 import { QueueLobby } from "./QueueLobby";
 import { RatingResult } from "./RatingResult";
+import { BuraTable } from "./BuraTable";
 import { Table } from "./Table";
 import { BTN_GHOST, BTN_PRIMARY, FORMAT_LABEL, rise } from "./ui";
 
@@ -18,13 +22,17 @@ import { BTN_GHOST, BTN_PRIMARY, FORMAT_LABEL, rise } from "./ui";
 export const describeRules = (r: Rules) =>
   `${FORMAT_LABEL[r.format]} · ხიშტი −${r.format === "nine" ? r.khishti * 2 : `${r.khishti} / −${r.khishti * 2}`}${r.pulkaPremium ? " · ეტაპის პრემია" : ""}`;
 
+/** "2 მოთამაშე" / "4 მოთამაშე · 2×2" */
+export const describeBura = (r: BuraRules) => (r.players === 4 ? "4 მოთამაშე · 2×2" : "2 მოთამაშე");
+
 /** The screen behind a table code: the waiting room first, the game itself once four players sit. */
 export function OnlineTable({ code }: { code: string }) {
   const router = useRouter();
   const { configured, loading, user } = useAuth();
   const t = useOnlineTable(code);
 
-  const back = () => router.push("/joker");
+  const game = t.table?.game ?? "joker";
+  const back = () => router.push(`/${game}`);
   const leaveToMenu = async () => {
     await t.leave();
     back();
@@ -65,7 +73,7 @@ export function OnlineTable({ code }: { code: string }) {
         title="ადგილი ბოტმა დაიკავა"
         text="ზედიზედ ორჯერ გამოტოვეთ სვლა ან მაგიდა დატოვეთ."
         action={
-          <Link href="/joker" className={`${BTN_GHOST} w-fit`}>
+          <Link href={`/${game}`} className={`${BTN_GHOST} w-fit`}>
             ← უკან
           </Link>
         }
@@ -80,7 +88,7 @@ export function OnlineTable({ code }: { code: string }) {
         title="დრო ამოიწურა"
         text="მატჩი დროზე არ დაადასტურეთ."
         action={
-          <Link href={`/joker/${t.table.kind}`} className={`${BTN_PRIMARY} w-fit`}>
+          <Link href={`/${game}/${t.table.kind}`} className={`${BTN_PRIMARY} w-fit`}>
             ხელახლა ძებნა
           </Link>
         }
@@ -96,8 +104,9 @@ export function OnlineTable({ code }: { code: string }) {
         <QueueLobby
           kind={t.table.kind}
           rules={t.table.rules}
+          game={game}
           players={t.players}
-          full={t.seats.length === 4}
+          full={t.seats.length === t.capacity}
           readyLeft={t.readyLeft}
           onAccept={() => void t.accept()}
           onLeave={leaveToMenu}
@@ -111,7 +120,8 @@ export function OnlineTable({ code }: { code: string }) {
         players={t.players}
         hostId={t.table.host_id}
         myId={user.id}
-        starting={t.seats.length === 4}
+        starting={t.seats.length === t.capacity}
+        game={game}
         onLeave={leaveToMenu}
       />
     );
@@ -124,39 +134,64 @@ export function OnlineTable({ code }: { code: string }) {
       : null,
   );
 
+  const quitConfirm =
+    t.table.kind === "ranked"
+      ? "დარწმუნებული ხართ? თამაშიდან გასვლა წოდებისთვის ბრძოლაში −10 ქულას ნიშნავს და თქვენს ადგილს ბოტი დაიკავებს."
+      : "დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს.";
+  const note =
+    t.table.kind === "ranked" ? (
+      <RatingResult tableId={t.table.id} userId={user.id} />
+    ) : t.table.kind === "friendly" ? (
+      <span className="text-emerald-300">✓ თამაში ჩაიწერა ისტორიაში</span>
+    ) : (
+      <span className="text-white/60">კერძო თამაში არ იწერება ისტორიაში</span>
+    );
+
+  if (t.table.game === "bura") {
+    return (
+      <>
+        <BuraTable
+          game={t.view as BuraState}
+          secondsLeft={t.secondsLeft}
+          names={names}
+          avatars={avatars}
+          onPlay={(ids) => void t.playCards(ids)}
+          onNext={() => {}}
+          autoNext
+          onQuit={leaveToMenu}
+          quitConfirm={quitConfirm}
+          endNote={note}
+        />
+        {t.notice && <Notice text={t.notice} />}
+      </>
+    );
+  }
+
   return (
     <PlayerNamesProvider names={names} avatars={avatars}>
       <Table
-        game={t.view}
+        game={t.view as GameState}
         secondsLeft={t.secondsLeft}
         onBid={(bid) => void t.act({ type: "bid", bid })}
         onTrump={(suit) => void t.act({ type: "trump", suit })}
         onPlay={(option) => void t.act({ type: "play", option })}
         onQuit={leaveToMenu}
-        quitConfirm={
-          t.table.kind === "ranked"
-            ? "დარწმუნებული ხართ? თამაშიდან გასვლა წოდებისთვის ბრძოლაში −10 ქულას ნიშნავს და თქვენს ადგილს ბოტი დაიკავებს."
-            : "დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს."
-        }
-        endNote={
-          t.table.kind === "ranked" ? (
-            <RatingResult tableId={t.table.id} userId={user.id} />
-          ) : t.table.kind === "friendly" ? (
-            <span className="text-emerald-300">✓ თამაში ჩაიწერა ისტორიაში</span>
-          ) : (
-            <span className="text-white/60">კერძო თამაში არ იწერება ისტორიაში</span>
-          )
-        }
+        quitConfirm={quitConfirm}
+        endNote={note}
       />
-      {t.notice && (
-        <div
-          role="alert"
-          className="fixed inset-x-0 top-4 z-50 mx-auto w-fit max-w-[90vw] rounded-full border border-red-400/40 bg-[#2a1010] px-5 py-2.5 text-sm text-red-200 shadow-lg"
-        >
-          {t.notice}
-        </div>
-      )}
+      {t.notice && <Notice text={t.notice} />}
     </PlayerNamesProvider>
+  );
+}
+
+function Notice({ text }: { text: string }) {
+  return (
+    <div
+      role="alert"
+      className="fixed inset-x-0 top-4 z-50 mx-auto w-fit max-w-[90vw] rounded-full border border-red-400/40 bg-[#2a1010] px-5 py-2.5 text-sm text-red-200 shadow-lg"
+    >
+      {text}
+    </div>
   );
 }
 
@@ -177,6 +212,7 @@ type LobbyPlayer = ReturnType<typeof useOnlineTable>["players"][number];
 function Lobby({
   code,
   rules,
+  game,
   players,
   hostId,
   myId,
@@ -184,7 +220,8 @@ function Lobby({
   onLeave,
 }: {
   code: string;
-  rules: Rules;
+  rules: Rules | BuraRules;
+  game: "joker" | "bura";
   players: LobbyPlayer[];
   hostId: string;
   myId: string;
@@ -195,7 +232,7 @@ function Lobby({
   const seated = players.filter(Boolean).length;
 
   const copy = async (what: "code" | "link") => {
-    const text = what === "code" ? code : `${window.location.origin}/joker/table/${code}`;
+    const text = what === "code" ? code : `${window.location.origin}/${game}/table/${code}`;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(what);
@@ -210,7 +247,7 @@ function Lobby({
       <section className="flex flex-col gap-2" style={rise(1)}>
         <p className="text-sm font-bold uppercase tracking-wider text-white/45">კერძო მაგიდა</p>
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">მაგიდის კოდი</h1>
-        <p className="text-lg text-white/55">{describeRules(rules)}</p>
+        <p className="text-lg text-white/55">{game === "bura" ? describeBura(rules as BuraRules) : describeRules(rules as Rules)}</p>
       </section>
 
       <section className="flex flex-col gap-5" style={rise(2)}>
@@ -232,18 +269,18 @@ function Lobby({
             {copied === "link" ? "✓ დაკოპირდა" : "ბმულის კოპირება"}
           </button>
         </div>
-        <p className="text-white/45">გაუგზავნეთ მეგობრებს კოდი ან ბმული. როცა ოთხივე დაჯდება, თამაში თავისით დაიწყება.</p>
+        <p className="text-white/45">გაუგზავნეთ მეგობრებს კოდი ან ბმული. როცა ყველა დაჯდება, თამაში თავისით დაიწყება.</p>
       </section>
 
       <section className="flex flex-col gap-4" style={rise(3)}>
         <div className="flex items-baseline justify-between">
           <h2 className="text-2xl font-extrabold">მოთამაშეები</h2>
           <span className={`text-lg font-bold tabular-nums ${starting ? "text-emerald-300" : "text-white/50"}`}>
-            {starting ? "თამაში იწყება…" : `${seated}/4`}
+            {starting ? "თამაში იწყება…" : `${seated}/${players.length}`}
           </span>
         </div>
         <ul className="grid gap-3 sm:grid-cols-2">
-          {[0, 1, 2, 3].map((seat) => {
+          {players.map((_, seat) => {
             // `players` is ordered from my seat; the lobby lists real seats, so find by position.
             const p = players.find((x) => x?.seat === seat) ?? null;
             return p ? (

@@ -16,6 +16,8 @@ export const BTN_GHOST =
 export const FORMAT_LABEL = {
   full: "სტანდარტული",
   nine: "ცხრიანები",
+  p2: "2 მოთამაშე",
+  p4: "4 მოთამაშე",
 } as const;
 
 /** Keyframes for {@link rise}; render once per page inside a <style> tag. */

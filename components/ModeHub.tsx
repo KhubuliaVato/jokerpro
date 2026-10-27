@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { activeTable } from "@/lib/online/client";
+import { activeTable, tablePath, type TableRow } from "@/lib/online/client";
 import { rankFor, RANKS } from "@/lib/ranks";
 import { loadRating, type RatingRow } from "@/lib/ratings";
 import { getSupabase } from "@/lib/supabase";
@@ -11,8 +11,10 @@ import { PageShell } from "./PageShell";
 import { RankEmblem } from "./RankEmblem";
 import { rise } from "./ui";
 
-/** The four ways into Joker. */
-export function JokerHub() {
+const NAME = { joker: "ჯოკერი", bura: "ბურა" } as const;
+
+/** The four ways into a game (Joker or Bura). */
+export function ModeHub({ game }: { game: "joker" | "bura" }) {
   const { user, configured } = useAuth();
   const [loaded, setLoaded] = useState<{ userId: string; row: RatingRow | null } | null>(null);
 
@@ -22,28 +24,28 @@ export function JokerHub() {
     const supabase = getSupabase();
     if (!supabase || !userId) return;
     let cancelled = false;
-    loadRating(supabase, userId).then((row) => {
+    loadRating(supabase, userId, game).then((row) => {
       if (!cancelled) setLoaded({ userId, row });
     });
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, game]);
 
   // A game that is still running (the page was closed, say): offer the way back.
-  const [running, setRunning] = useState<{ userId: string; code: string | null } | null>(null);
+  const [running, setRunning] = useState<{ userId: string; table: TableRow | null } | null>(null);
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase || !userId) return;
     let cancelled = false;
     activeTable(supabase).then((t) => {
-      if (!cancelled) setRunning({ userId, code: t?.code ?? null });
+      if (!cancelled) setRunning({ userId, table: t });
     });
     return () => {
       cancelled = true;
     };
   }, [userId]);
-  const runningCode = running && running.userId === userId ? running.code : null;
+  const runningTable = running && running.userId === userId ? running.table : null;
 
   const current = rankFor(rating?.rating ?? 50).rank;
   const online = configured; // the three online modes need the database and an account
@@ -52,19 +54,19 @@ export function JokerHub() {
   return (
     <PageShell width="max-w-5xl">
       <section className="flex flex-col gap-2" style={rise(1)}>
-        <p className="text-sm font-bold uppercase tracking-wider text-white/45">ჯოკერი</p>
+        <p className="text-sm font-bold uppercase tracking-wider text-white/45">{NAME[game]}</p>
         <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl">აირჩიეთ რეჟიმი</h1>
       </section>
 
-      {runningCode && (
+      {runningTable && (
         <Link
-          href={`/joker/table/${runningCode}`}
+          href={tablePath(runningTable)}
           className="flex items-center justify-between gap-4 rounded-2xl border border-emerald-400/50 bg-emerald-400/10 px-5 py-4 transition-colors hover:bg-emerald-400/15"
           style={rise(1)}
         >
           <span>
             <b className="block text-lg text-emerald-300">თამაში გრძელდება</b>
-            <span className="text-white/60">დაბრუნდით თქვენს მაგიდასთან</span>
+            <span className="text-white/60">{NAME[runningTable.game]} · დაბრუნდით თქვენს მაგიდასთან</span>
           </span>
           <span className="text-2xl text-emerald-300">→</span>
         </Link>
@@ -72,7 +74,7 @@ export function JokerHub() {
 
       <section className="grid gap-5 pb-8 sm:grid-cols-2" style={rise(2)}>
         <ModeCard
-          href={loginFor("/joker/ranked")}
+          href={loginFor(`/${game}/ranked`)}
           title="წოდებისთვის ბრძოლა"
           text="შემთხვევითი მოთამაშეები, ქულა და წოდება იცვლება"
           accent={current.accent}
@@ -81,7 +83,7 @@ export function JokerHub() {
           art={<RankEmblem rank={user ? current : RANKS[0]} className="size-20" />}
         />
         <ModeCard
-          href={loginFor("/joker/friendly")}
+          href={loginFor(`/${game}/friendly`)}
           title="მეგობრული მატჩი"
           text="შემთხვევითი მოთამაშეები, ქულა არ იცვლება"
           accent="#7dd3fc"
@@ -89,7 +91,7 @@ export function JokerHub() {
           art={<IconCards />}
         />
         <ModeCard
-          href={loginFor("/joker/private")}
+          href={loginFor(`/${game}/private`)}
           title="კერძო მაგიდა"
           text="მხოლოდ მეგობრები, შეიყვანეთ კოდით"
           accent="#86efac"
@@ -97,7 +99,7 @@ export function JokerHub() {
           art={<IconKey />}
         />
         <ModeCard
-          href="/joker/bots"
+          href={`/${game}/bots`}
           title="ბოტებთან"
           text="სავარჯიშო თამაში, არაფერი იწერება"
           accent="#c4b5fd"

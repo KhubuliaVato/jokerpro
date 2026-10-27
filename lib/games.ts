@@ -7,6 +7,9 @@ export interface GameInfo {
 }
 
 /** Every game of the hub. Add new games here: the profile gets a stats tab for each one. */
-export const GAMES: GameInfo[] = [{ id: "joker", name: "ჯოკერი", icon: "♠", href: "/joker" }];
+export const GAMES: GameInfo[] = [
+  { id: "joker", name: "ჯოკერი", icon: "♠", href: "/joker" },
+  { id: "bura", name: "ბურა", icon: "♥", href: "/bura" },
+];
 
 export const gameName = (id: string): string => GAMES.find((g) => g.id === id)?.name ?? id;

@@ -5,6 +5,7 @@ import { playMatchFound } from "@/lib/matchSound";
 import { READY_SECONDS } from "@/lib/online/client";
 import { rankFor } from "@/lib/ranks";
 import { loadRatings, type RatingRow } from "@/lib/ratings";
+import type { BuraRules } from "@/lib/bura/online";
 import type { Rules } from "@/lib/joker/rules";
 import { getSupabase } from "@/lib/supabase";
 import type { useOnlineTable } from "@/lib/online/useOnlineTable";
@@ -29,10 +30,14 @@ const POSITION = [
   "right-0 top-1/2 -translate-y-1/2",
 ];
 
+// Two seats: me at the bottom, the other player across.
+const POSITION_2 = ["bottom-0 left-1/2 -translate-x-1/2", "left-1/2 top-0 -translate-x-1/2"];
+
 /** The waiting room of a table of random players: four lamps around a table that light up as players sit down. */
 export function QueueLobby({
   kind,
   rules,
+  game,
   players,
   full,
   readyLeft,
@@ -40,7 +45,8 @@ export function QueueLobby({
   onLeave,
 }: {
   kind: "ranked" | "friendly";
-  rules: Rules;
+  rules: Rules | BuraRules;
+  game: "joker" | "bura";
   players: Player[];
   full: boolean;
   /** Seconds left to accept the found match, or null while the table is not full (or all accepted). */
@@ -93,7 +99,7 @@ export function QueueLobby({
 
       <section className="flex flex-col gap-2" style={rise(1)}>
         <p className="text-sm font-bold uppercase tracking-wider text-white/45">
-          {kind === "ranked" ? "წოდებისთვის ბრძოლა" : "მეგობრული მატჩი"} · {FORMAT_LABEL[rules.format]}
+          {kind === "ranked" ? "წოდებისთვის ბრძოლა" : "მეგობრული მატჩი"} · {game === "bura" ? ((rules as BuraRules).players === 4 ? "4 მოთამაშე · 2×2" : "2 მოთამაშე") : FORMAT_LABEL[(rules as Rules).format]}
         </p>
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
           {checking ? "მატჩი ნაპოვნია!" : full ? "მაგიდა იღება…" : "ვეძებთ მოთამაშეებს"}
@@ -131,8 +137,8 @@ export function QueueLobby({
               </div>
             ) : (
               <div className="text-center">
-                <b className="block text-5xl font-black tabular-nums text-amber-200 sm:text-6xl">{full ? "4/4" : clock}</b>
-                <span className="text-sm text-white/55">{full ? "იწყება" : `${seated}/4 · ძებნა`}</span>
+                <b className="block text-5xl font-black tabular-nums text-amber-200 sm:text-6xl">{full ? `${players.length}/${players.length}` : clock}</b>
+                <span className="text-sm text-white/55">{full ? "იწყება" : `${seated}/${players.length} · ძებნა`}</span>
               </div>
             )}
           </div>
@@ -140,7 +146,7 @@ export function QueueLobby({
           {players.map((p, k) => {
             const standing = p ? rankFor(byId[p.user_id]?.rating ?? 50) : null;
             return (
-              <div key={k} className={`absolute flex w-28 flex-col items-center gap-2 ${POSITION[k]}`}>
+              <div key={k} className={`absolute flex w-28 flex-col items-center gap-2 ${(players.length === 2 ? POSITION_2 : POSITION)[k]}`}>
                 {p ? (
                   <>
                     <div

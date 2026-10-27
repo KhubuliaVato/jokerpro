@@ -41,21 +41,21 @@ export function StatsSection({
   name?: string;
 }) {
   const [gameId, setGameId] = useState(GAMES[0].id);
-  const [standing, setStanding] = useState<{ userId: string; row: RatingRow | null; position: number | null } | null>(null);
+  const [standing, setStanding] = useState<{ userId: string; gameId: string; row: RatingRow | null; position: number | null } | null>(null);
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase) return;
     let cancelled = false;
-    Promise.all([loadRating(supabase, userId), loadPosition(supabase, userId)]).then(([row, position]) => {
-      if (!cancelled) setStanding({ userId, row, position });
+    Promise.all([loadRating(supabase, userId, gameId), loadPosition(supabase, userId, gameId)]).then(([row, position]) => {
+      if (!cancelled) setStanding({ userId, gameId, row, position });
     });
     return () => {
       cancelled = true;
     };
-  }, [userId]);
-  const mine = standing && standing.userId === userId ? standing : null;
+  }, [userId, gameId]);
+  const mine = standing && standing.userId === userId && standing.gameId === gameId ? standing : null;
   const all = results ?? [];
-  // Charts, numbers and history show one game at a time; the rank counts every game.
+  // Rank, charts, numbers and history show one game at a time.
   const rows = all.filter((r) => r.game === gameId);
   const game = GAMES.find((g) => g.id === gameId) ?? GAMES[0];
   const stats = computeStats(rows);

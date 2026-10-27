@@ -4,41 +4,42 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { findTable } from "@/lib/online/client";
+import { findTable, tablePath } from "@/lib/online/client";
 import { getSupabase } from "@/lib/supabase";
 import { FORMAT_ART, FormatFan } from "./FormatArt";
 import { PageShell } from "./PageShell";
 import { BTN_PRIMARY, rise } from "./ui";
 
-const FORMATS = ["nine", "full"] as const;
+const FORMATS = { joker: ["nine", "full"], bura: ["p2", "p4"] } as const;
+type Format = (typeof FORMATS)[keyof typeof FORMATS][number];
 
 /** Ranked or friendly match: pick the game length, then take a seat at an open table of random players. */
-export function FormatPicker({ kind }: { kind: "ranked" | "friendly" }) {
+export function FormatPicker({ kind, game = "joker" }: { kind: "ranked" | "friendly"; game?: "joker" | "bura" }) {
   const router = useRouter();
   const { configured, loading, user } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const enter = async (format: "nine" | "full") => {
+  const enter = async (format: Format) => {
     const supabase = getSupabase();
     if (!supabase) return;
     setBusy(format);
     setError(null);
-    const { table, error: err } = await findTable(supabase, kind, format);
+    const { table, error: err } = await findTable(supabase, kind, format, game);
     if (err || !table) {
       setError(err ?? "მაგიდა ვერ მოიძებნა");
       setBusy(null);
       return;
     }
     // `replace`, so that "back" from the lobby does not queue the player again.
-    router.replace(`/joker/table/${table.code}`);
+    router.replace(tablePath(table));
   };
 
   return (
     <PageShell width="max-w-4xl">
       <section className="flex flex-col gap-2" style={rise(1)}>
-        <Link href="/joker" className="w-fit text-sm font-bold uppercase tracking-wider text-white/45 hover:text-amber-300">
-          ← ჯოკერი
+        <Link href={`/${game}`} className="w-fit text-sm font-bold uppercase tracking-wider text-white/45 hover:text-amber-300">
+          ← {game === "bura" ? "ბურა" : "ჯოკერი"}
         </Link>
         <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl">{kind === "ranked" ? "წოდებისთვის ბრძოლა" : "მეგობრული მატჩი"}</h1>
         <p className="text-lg text-white/55 sm:text-xl">{kind === "ranked" ? "შემთხვევითი მოთამაშეები · წოდება იცვლება" : "შემთხვევითი მოთამაშეები · ქულა არ იცვლება"}</p>
@@ -49,14 +50,14 @@ export function FormatPicker({ kind }: { kind: "ranked" | "friendly" }) {
       ) : loading ? null : !user ? (
         <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.03] p-6" style={rise(2)}>
           <p className="text-lg text-white/70">ამ რეჟიმისთვის საჭიროა ანგარიში.</p>
-          <Link href={`/login?next=/joker/${kind}`} className={`${BTN_PRIMARY} w-fit`}>
+          <Link href={`/login?next=/${game}/${kind}`} className={`${BTN_PRIMARY} w-fit`}>
             შესვლა
           </Link>
         </div>
       ) : (
         <>
           <section className="grid gap-5 pb-8 sm:grid-cols-2" style={rise(2)}>
-            {FORMATS.map((f) => (
+            {FORMATS[game].map((f) => (
               <button
                 key={f}
                 onClick={() => enter(f)}

@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { isActivePhase, applyAction, realSeat, type Action } from "@/lib/joker/online";
+import { playCards as playBura, type BuraState } from "@/lib/bura/engine";
+import type { BuraRules } from "@/lib/bura/online";
+import type { GameState } from "@/lib/joker/engine";
+import { applyAction, realSeat, type Action } from "@/lib/joker/online";
 import { HAND_END_PAUSE, TRICK_PAUSE } from "@/lib/joker/useGame";
 import { getSupabase } from "@/lib/supabase";
 import { acceptMatch, callJoker, clockSkew, expireMatch, joinTable, leaveTable, pingTable, READY_SECONDS, type SeatRow, type TableRow, type ViewRow } from "./client";
@@ -14,6 +17,12 @@ export interface SeatProfile {
   avatar_icon: string;
   avatar_url: string | null;
 }
+
+/** Seconds the round result of Bura stays up before the next round is dealt. */
+const ROUND_PAUSE = 6000;
+
+/** A game of this table needs a decision from somebody (Joker: trump / bid / play; Bura: play). */
+const needsMove = (v: GameState | BuraState) => ["trump", "bidding", "playing", "play"].includes(v.phase);
 
 /** A little randomness so that four browsers do not all ask the server for the same thing at once. */
 const jitter = (ms: number) => ms + Math.random() * 250;
@@ -124,7 +133,8 @@ export function useOnlineTable(code: string) {
   }, [tableId]);
 
   const mySeat = seats.find((s) => s.user_id === userId);
-  const full = seats.length === 4;
+  const capacity = table?.game === "bura" ? (table.rules as BuraRules).players : 4;
+  const full = seats.length === capacity;
   const status = table?.status ?? null;
   // Lost the seat in a ready check that I did not accept in time.
   const kicked = !!table && table.kind !== "private" && table.status === "waiting" && seatsLoaded && !mySeat;
@@ -209,20 +219,24 @@ export function useOnlineTable(code: string) {
     const supabase = getSupabase();
     if (!supabase || !tableId || !row) return;
     const phase = row.view.phase;
-    if (phase !== "trickEnd" && phase !== "handEnd") return;
+    if (phase !== "trickEnd" && phase !== "handEnd" && phase !== "roundEnd") return;
     const t = setTimeout(
       () => void callJoker(supabase, { action: "advance", table_id: tableId, version: row.version }),
-      jitter(phase === "trickEnd" ? TRICK_PAUSE : HAND_END_PAUSE),
+      jitter(phase === "trickEnd" ? TRICK_PAUSE : phase === "roundEnd" ? ROUND_PAUSE : HAND_END_PAUSE),
     );
     return () => clearTimeout(t);
   }, [tableId, row]);
 
   // 5. A bot's turn, or a player's timer ran out: the server plays for them when asked.
-  const realTurn = row ? realSeat(row.view.turn, row.seat) : -1;
+  const realTurn = row
+    ? table?.game === "bura"
+      ? (row.view.turn + row.seat) % capacity
+      : realSeat(row.view.turn, row.seat)
+    : -1;
   const turnIsBot = seats.find((s) => s.seat === realTurn)?.bot ?? false;
   useEffect(() => {
     const supabase = getSupabase();
-    if (!supabase || !tableId || !row || !isActivePhase(row.view)) return;
+    if (!supabase || !tableId || !row || !needsMove(row.view)) return;
     const deadline = row.turn_deadline ? Date.parse(row.turn_deadline) : null;
     const wait = turnIsBot ? 700 : deadline ? Math.max(0, deadline - Date.now()) + 1600 : null;
     if (wait === null) return;
@@ -231,7 +245,7 @@ export function useOnlineTable(code: string) {
   }, [tableId, row, turnIsBot]);
 
   // Countdown shown on my own turn.
-  const myDecision = !!row && isActivePhase(row.view) && row.view.turn === 0;
+  const myDecision = !!row && needsMove(row.view) && row.view.turn === 0;
   useEffect(() => {
     if (!myDecision) return;
     const id = setInterval(() => setNow(Date.now()), 250);
@@ -248,11 +262,32 @@ export function useOnlineTable(code: string) {
       const supabase = getSupabase();
       if (!supabase || !tableId || !row) return;
       try {
-        setOptimistic({ version: row.version, view: applyAction(row.view, 0, action) });
+        setOptimistic({ version: row.version, view: applyAction(row.view as GameState, 0, action) });
       } catch {
         // not predictable locally: wait for the server
       }
       const err = await callJoker(supabase, { action: "move", table_id: tableId, move: action });
+      if (err) {
+        setOptimistic(null);
+        setNotice(err);
+        setTimeout(() => setNotice(null), 3500);
+        void loadView();
+      }
+    },
+    [tableId, row, loadView],
+  );
+
+  /** Bura: put down these cards. */
+  const playCards = useCallback(
+    async (ids: string[]) => {
+      const supabase = getSupabase();
+      if (!supabase || !tableId || !row) return;
+      try {
+        setOptimistic({ version: row.version, view: playBura(row.view as BuraState, ids) });
+      } catch {
+        return;
+      }
+      const err = await callJoker(supabase, { action: "move", table_id: tableId, move: { ids } });
       if (err) {
         setOptimistic(null);
         setNotice(err);
@@ -271,11 +306,11 @@ export function useOnlineTable(code: string) {
   // Players in the order the screen shows them: me first, then clockwise.
   const players = useMemo(() => {
     const me = mySeat?.seat ?? 0;
-    return [0, 1, 2, 3].map((k) => {
-      const seat = seats.find((s) => s.seat === (me + k) % 4);
+    return Array.from({ length: capacity }, (_, k) => {
+      const seat = seats.find((s) => s.seat === (me + k) % capacity);
       return seat ? { ...seat, profile: profiles[seat.user_id] ?? null } : null;
     });
-  }, [seats, profiles, mySeat]);
+  }, [seats, profiles, mySeat, capacity]);
 
   return {
     table,
@@ -292,6 +327,8 @@ export function useOnlineTable(code: string) {
     error,
     notice,
     act,
+    playCards,
+    capacity,
     leave,
   };
 }

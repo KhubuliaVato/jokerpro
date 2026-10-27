@@ -2,6 +2,7 @@ import type { Card, Suit } from "@/lib/joker/cards";
 import { CardView } from "./CardView";
 
 const nine = (suit: Suit, id: string): Card => ({ joker: false, suit, rank: 9, id });
+const card = (suit: Suit, rank: number): Card => ({ joker: false, suit, rank: rank as 6, id: `${suit}${rank}` });
 
 /** Each game length is shown by a few cards and a short name. */
 export const FORMAT_ART = {
@@ -17,6 +18,9 @@ export const FORMAT_ART = {
       { joker: false, suit: "H", rank: 13, id: "H13" } as Card,
     ],
   },
+  // Bura: by the number of players
+  p2: { title: "2 მოთამაშე", cards: [card("H", 14), card("H", 10)] },
+  p4: { title: "4 მოთამაშე · 2×2", cards: [card("H", 14), card("S", 13), card("H", 10), card("D", 12)] },
 } as const;
 
 /** The cards of a format fanned out; they spread a little when an ancestor with the `group` class is hovered. */

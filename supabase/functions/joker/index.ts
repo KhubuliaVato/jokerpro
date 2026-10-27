@@ -4,6 +4,7 @@
 // engine the browser uses, lets bots play empty/abandoned seats, and writes each player their own *view*
 // (table_views) which the clients receive live through Realtime.
 //
+// Plays Joker and Bura tables (table.game); everything below dispatches on it.
 // Actions (POST JSON, signed-in user): start, move, advance, tick, sync.
 // Built into one file with `npm run build:functions` (esbuild), because Deno needs explicit import paths.
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -21,8 +22,11 @@ import {
   type Action,
 } from "../../../lib/joker/online";
 import type { Rules } from "../../../lib/joker/rules";
-// Private: the rating formula lives outside the public repository (see .gitignore).
+import { createGame as createBura, playCards as playBura, type BuraState } from "../../../lib/bura/engine";
+import * as bura from "../../../lib/bura/online";
+// Private: the rating formulas live outside the public repository (see .gitignore).
 import { rateGame } from "../../../lib/secret/rating";
+import { rateBura } from "../../../lib/secret/buraRating";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -45,7 +49,7 @@ const json = (body: unknown, status = 200) =>
 class UserError extends Error {}
 
 /** After a finished trick / hand the clients wait this long before asking the server to move on. */
-const MIN_PAUSE_MS = { trickEnd: 1200, handEnd: 500 } as const;
+const MIN_PAUSE_MS = { trickEnd: 1200, handEnd: 500, roundEnd: 3500 } as const;
 /** Slack on top of the turn timer, so a player's last-second move still counts. */
 const DEADLINE_GRACE_MS = 1500;
 
@@ -56,9 +60,10 @@ interface Seat {
   /** Said "yes" in the ready check of a table of random players. */
   accepted: boolean;
 }
+type AnyState = GameState | BuraState;
 interface GameRow {
   table_id: string;
-  state: GameState;
+  state: AnyState;
   version: number;
   afk: Record<string, number>;
   turn_deadline: string | null;
@@ -67,14 +72,15 @@ interface GameRow {
 interface Table {
   id: string;
   status: string;
-  rules: Rules;
+  game: "joker" | "bura";
+  rules: Rules | bura.BuraRules;
   /** private: friends with a code (nothing recorded). friendly / ranked: random players. */
   kind: "private" | "friendly" | "ranked";
 }
 
 async function loadTable(tableId: string, userId: string) {
   const [{ data: table }, { data: seats }] = await Promise.all([
-    admin.from("game_tables").select("id, status, rules, kind").eq("id", tableId).maybeSingle(),
+    admin.from("game_tables").select("id, status, game, rules, kind").eq("id", tableId).maybeSingle(),
     admin.from("table_seats").select("seat, user_id, bot, accepted").eq("table_id", tableId).order("seat"),
   ]);
   if (!table) throw new UserError("table not found");
@@ -85,9 +91,29 @@ async function loadTable(tableId: string, userId: string) {
 
 const botSeat = (seats: Seat[]) => (seat: number) => seats.find((s) => s.seat === seat)?.bot ?? true;
 
+// ---- the two games behind one interface ----
+const isBura = (t: Table) => t.game === "bura";
+const capacity = (t: Table) => (isBura(t) ? (t.rules as bura.BuraRules).players : PLAYERS);
+const create = (t: Table, isBot: (seat: number) => boolean): AnyState =>
+  isBura(t)
+    ? bura.settle(createBura((t.rules as bura.BuraRules).players), isBot)
+    : settle(createGame(t.rules as Rules), isBot);
+const viewOf = (t: Table, state: AnyState, seat: number) =>
+  isBura(t) ? bura.viewFor(state as BuraState, seat) : viewFor(state as GameState, seat);
+const active = (t: Table, state: AnyState) => (isBura(t) ? bura.isActivePhase(state as BuraState) : isActivePhase(state as GameState));
+const settleFor = (t: Table, state: AnyState, isBot: (seat: number) => boolean): AnyState =>
+  isBura(t) ? bura.settle(state as BuraState, isBot) : settle(state as GameState, isBot);
+const botOnce = (t: Table, state: AnyState): AnyState => (isBura(t) ? bura.botStep(state as BuraState) : botMove(state as GameState));
+const advanceFor = (t: Table, state: AnyState): AnyState =>
+  isBura(t) ? bura.advance(state as BuraState) : advance(state as GameState);
+const isPause = (t: Table, state: AnyState) =>
+  state.phase === "trickEnd" || (isBura(t) ? state.phase === "roundEnd" : state.phase === "handEnd");
+const resultOf = (t: Table, state: AnyState, seat: number) =>
+  isBura(t) ? bura.resultFor(state as BuraState, seat) : resultFor(state as GameState, seat);
+
 /** When the player on turn must have moved, or null if nobody has to decide (bots, pauses). */
-function deadlineFor(state: GameState, seats: Seat[]): string | null {
-  if (!isActivePhase(state) || botSeat(seats)(state.turn)) return null;
+function deadlineFor(table: Table, state: AnyState, seats: Seat[]): string | null {
+  if (!active(table, state) || botSeat(seats)(state.turn)) return null;
   return new Date(Date.now() + ONLINE_TURN_SECONDS * 1000).toISOString();
 }
 
@@ -96,11 +122,11 @@ async function save(
   table: Table,
   seats: Seat[],
   row: GameRow | null,
-  state: GameState,
+  state: AnyState,
   afk: Record<string, number>,
 ): Promise<boolean> {
   const version = (row?.version ?? 0) + 1;
-  const turn_deadline = deadlineFor(state, seats);
+  const turn_deadline = deadlineFor(table, state, seats);
   const record = { state, version, afk, turn_deadline, updated_at: new Date().toISOString() };
 
   if (row) {
@@ -122,7 +148,7 @@ async function save(
       user_id: s.user_id,
       seat: s.seat,
       version,
-      view: viewFor(state, s.seat),
+      view: viewOf(table, state, s.seat),
       turn_deadline,
     })),
   );
@@ -135,7 +161,7 @@ async function save(
  * The game is over. Private tables record nothing. Friendly matches record the result of everyone who stayed.
  * Ranked matches also rate everyone: players who left (a bot finished their seat) lose the full penalty.
  */
-async function finish(table: Table, seats: Seat[], state: GameState) {
+async function finish(table: Table, seats: Seat[], state: AnyState) {
   if (table.kind !== "private") {
     const { data: profiles } = await admin
       .from("profiles")
@@ -145,38 +171,42 @@ async function finish(table: Table, seats: Seat[], state: GameState) {
       profiles?.find((p) => p.id === seats.find((s) => s.seat === seat)?.user_id)?.nickname ?? "მოთამაშე";
 
     const ranked = table.kind === "ranked";
-    const bySeat = [0, 1, 2, 3].map((n) => seats.find((s) => s.seat === n)!);
+    const size = capacity(table);
+    const bySeat = Array.from({ length: size }, (_, n) => seats.find((s) => s.seat === n)!);
 
     // Ratings before the game, then the verdict.
-    const before: number[] = [50, 50, 50, 50];
-    let verdict: ReturnType<typeof rateGame> | null = null;
+    const before: number[] = Array(size).fill(50);
+    let verdict: { delta: number[]; detail: unknown[] } | null = null;
     const current = new Map<string, { rating: number; games: number; wins: number; peak: number }>();
     if (ranked) {
       const { data: rows } = await admin
         .from("player_ratings")
         .select("user_id, rating, games, wins, peak")
-        .eq("game", "joker")
+        .eq("game", table.game)
         .in("user_id", bySeat.map((s) => s.user_id));
       for (const r of rows ?? []) current.set(r.user_id, r);
       bySeat.forEach((s, i) => (before[i] = current.get(s.user_id)?.rating ?? 50));
-      verdict = rateGame(state, before, bySeat.map((s) => s.bot));
+      const quit = bySeat.map((s) => s.bot);
+      verdict = isBura(table)
+        ? { delta: rateBura(state as BuraState, before, quit), detail: quit.map(() => ({})) }
+        : rateGame(state as GameState, before, quit);
     }
 
     const rows = bySeat
       // Friendly matches keep nothing about players who left; ranked ones do (they are rated).
       .filter((s) => ranked || !s.bot)
       .map((s) => {
-        const r = resultFor(state, s.seat);
+        const r = resultOf(table, state, s.seat);
         const after = ranked ? Math.max(0, before[s.seat] + verdict!.delta[s.seat]) : null;
         return {
           user_id: s.user_id,
-          game: "joker",
+          game: table.game,
           format: table.rules.format,
-          hands: state.history.length,
+          hands: isBura(table) ? (state as BuraState).round + 1 : (state as GameState).history.length,
           place: r.place,
           score: r.score,
           scores: r.scores,
-          players: Array.from({ length: PLAYERS }, (_, k) => names((s.seat + k) % PLAYERS)),
+          players: Array.from({ length: size }, (_, k) => names((s.seat + k) % size)),
           online: true,
           kind: table.kind,
           rating_before: ranked ? before[s.seat] : null,
@@ -197,10 +227,10 @@ async function finish(table: Table, seats: Seat[], state: GameState) {
         if (!fresh.has(s.user_id)) continue;
         const prev = current.get(s.user_id);
         const rating = Math.max(0, before[s.seat] + verdict.delta[s.seat]);
-        const place = resultFor(state, s.seat).place;
+        const place = resultOf(table, state, s.seat).place;
         await admin.from("player_ratings").upsert({
           user_id: s.user_id,
-          game: "joker",
+          game: table.game,
           rating,
           games: (prev?.games ?? 0) + 1,
           wins: (prev?.wins ?? 0) + (place === 1 ? 1 : 0),
@@ -210,7 +240,7 @@ async function finish(table: Table, seats: Seat[], state: GameState) {
         await admin.from("rating_log").insert({
           table_id: table.id,
           user_id: s.user_id,
-          game: "joker",
+          game: table.game,
           rating_before: before[s.seat],
           rating_after: rating,
           delta: verdict.delta[s.seat],
@@ -227,7 +257,7 @@ async function withGame(
   tableId: string,
   userId: string,
   step: (ctx: { table: Table; seats: Seat[]; me: Seat; row: GameRow }) => {
-    state: GameState;
+    state: AnyState;
     afk?: Record<string, number>;
     /** Seats whose player timed out too often: a bot owns them from now on. */
     kick?: number[];
@@ -253,9 +283,9 @@ async function withGame(
 async function start(tableId: string, userId: string) {
   const { table, seats } = await loadTable(tableId, userId);
   if (table.status !== "waiting") return { ok: true, noop: true };
-  if (seats.length < PLAYERS) throw new UserError("the table is not full yet");
+  if (seats.length < capacity(table)) throw new UserError("the table is not full yet");
   if (table.kind !== "private" && !seats.every((s) => s.accepted)) throw new UserError("the match is not accepted yet");
-  const state = settle(createGame(table.rules), botSeat(seats));
+  const state = create(table, botSeat(seats));
   // `insert` loses to a concurrent start, which is exactly what we want.
   const saved = await save(table, seats, null, state, {});
   if (saved) await admin.from("game_tables").update({ status: "playing" }).eq("id", table.id).eq("status", "waiting");
@@ -269,29 +299,38 @@ async function handle(userId: string, body: Record<string, unknown>) {
       return start(tableId, userId);
 
     case "move":
-      return withGame(tableId, userId, ({ seats, me, row }) => {
-        const state = settle(applyAction(row.state, me.seat, body.move as Action), botSeat(seats));
-        return { state, afk: { ...row.afk, [me.seat]: 0 } };
+      return withGame(tableId, userId, ({ table, seats, me, row }) => {
+        let next: AnyState;
+        if (isBura(table)) {
+          const s = row.state as BuraState;
+          if (s.phase !== "play" || s.turn !== me.seat) throw new Error("not your turn");
+          const ids = (body.move as { ids?: unknown })?.ids;
+          if (!Array.isArray(ids)) throw new Error("illegal");
+          next = playBura(s, ids.map(String));
+        } else {
+          next = applyAction(row.state as GameState, me.seat, body.move as Action);
+        }
+        return { state: settleFor(table, next, botSeat(seats)), afk: { ...row.afk, [me.seat]: 0 } };
       });
 
     // The clients' pause after a finished trick/hand is over: move on (the first request wins).
     case "advance":
-      return withGame(tableId, userId, ({ seats, row }) => {
+      return withGame(tableId, userId, ({ table, seats, row }) => {
         const s = row.state;
-        if (s.phase !== "trickEnd" && s.phase !== "handEnd") return null;
+        if (!isPause(table, s)) return null;
         if (body.version !== row.version) return null;
-        if (Date.now() - Date.parse(row.updated_at) < MIN_PAUSE_MS[s.phase]) return null;
-        return { state: settle(advance(s), botSeat(seats)) };
+        if (Date.now() - Date.parse(row.updated_at) < MIN_PAUSE_MS[s.phase as keyof typeof MIN_PAUSE_MS]) return null;
+        return { state: settleFor(table, advanceFor(table, s), botSeat(seats)) };
       });
 
     // A timer ran out on someone's screen, or a seat was handed to a bot: do what is due.
     case "tick":
     case "sync":
-      return withGame(tableId, userId, ({ seats, row }) => {
+      return withGame(tableId, userId, ({ table, seats, row }) => {
         const s = row.state;
-        if (!isActivePhase(s)) return null;
+        if (!active(table, s)) return null;
         const isBot = botSeat(seats);
-        if (isBot(s.turn)) return { state: settle(s, isBot) };
+        if (isBot(s.turn)) return { state: settleFor(table, s, isBot) };
         const late = row.turn_deadline && Date.now() > Date.parse(row.turn_deadline) + DEADLINE_GRACE_MS;
         if (!late) return null;
         // The player ran out of time: a bot moves for them; after two in a row the seat is theirs no more.
@@ -302,7 +341,7 @@ async function handle(userId: string, body: Record<string, unknown>) {
           kick.push(s.turn);
           seats.find((x) => x.seat === s.turn)!.bot = true;
         }
-        return { state: settle(botMove(s), botSeat(seats)), afk, kick };
+        return { state: settleFor(table, botOnce(table, s), botSeat(seats)), afk, kick };
       });
 
     default:
