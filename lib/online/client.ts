@@ -116,9 +116,17 @@ export async function leaveTable(supabase: SupabaseClient, tableId: string): Pro
   await supabase.rpc("leave_table", { p_table_id: tableId });
 }
 
+/**
+ * The Edge Function must run in the region of the database. Left alone it runs near the player (Europe) while the
+ * database is in Seoul, and each of its half-dozen queries then crosses the planet: ~2 s per move instead of ~0.5 s.
+ * Sent as a query parameter only (the `region` option would also add an `x-region` header the function's CORS
+ * answer does not allow). If the project's database ever moves, change this to the new region.
+ */
+const GAME_SERVER_REGION = "ap-northeast-2";
+
 /** Calls the game server (Edge Function `joker`). Resolves to an error message, or null on success. */
 export async function callJoker(supabase: SupabaseClient, body: Record<string, unknown>): Promise<string | null> {
-  const { error } = await supabase.functions.invoke("joker", { body });
+  const { error } = await supabase.functions.invoke(`joker?forceFunctionRegion=${GAME_SERVER_REGION}`, { body });
   if (!error) return null;
   // The server explains refusals in the response body.
   const detail = await (error as { context?: Response }).context?.json?.().catch(() => null);
