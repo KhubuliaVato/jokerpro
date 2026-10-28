@@ -19,7 +19,7 @@ import type { Rules } from "./rules";
 export const HUMAN = 0;
 
 const BOT_DELAY = 750;
-export const TRICK_PAUSE = 1700;
+export const TRICK_PAUSE = 1200;
 /** Short beat after the last trick before the next deal. */
 export const HAND_END_PAUSE = 700;
 /** Seconds the human has for each choice or move. */
