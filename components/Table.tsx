@@ -413,40 +413,41 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
 
   return (
     <main className="felt relative flex h-dvh cursor-default select-none flex-col overflow-hidden">
-      <header className="flex items-start justify-between gap-2 px-3 py-2 text-xs sm:text-sm">
-        <div className="flex flex-col gap-1.5">
+      {/* two columns, two rows: scores and the controls on top, the stage and the trump under them (so nothing runs off a phone's edge) */}
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1.5 px-3 py-2 text-xs sm:text-sm">
+        <div className="min-w-0">
           <Scoreboard sums={sums} game={game} />
-          <div className="panel px-2 pb-2 pt-1.5">
-            <div className="grid grid-cols-3 divide-x divide-white/10 text-center">
-              {[
-                ["ეტაპი", `${loc.pulka + 1}/${pulkas.length}`],
-                ["ხელი", `${loc.inPulka + 1}/${loc.pulkaLength}`],
-                ["კარტი", String(loc.cards)],
-              ].map(([label, value]) => (
-                <div key={label} className="flex flex-col leading-tight">
-                  <span className="text-[0.65rem] font-semibold text-white/50">{label}</span>
-                  <b className="text-sm tabular-nums sm:text-base">{value}</b>
-                </div>
-              ))}
-            </div>
-            <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-amber-300 transition-[width] duration-500"
-                style={{ width: `${(game.handIndex / pulkas.flat().length) * 100}%` }}
-              />
-            </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <VolumeControl volume={volume} onChange={setVolume} />
+          <button
+            className="btn !px-3 !py-1"
+            onClick={() => window.confirm(quitConfirm ?? "დარწმუნებული ხართ? თამაში შეწყდება.") && onQuit()}
+          >
+            გასვლა
+          </button>
+        </div>
+        <div className="panel min-w-0 px-2 pb-2 pt-1.5">
+          <div className="grid grid-cols-3 divide-x divide-white/10 text-center">
+            {[
+              ["ეტაპი", `${loc.pulka + 1}/${pulkas.length}`],
+              ["ხელი", `${loc.inPulka + 1}/${loc.pulkaLength}`],
+              ["კარტი", String(loc.cards)],
+            ].map(([label, value]) => (
+              <div key={label} className="flex flex-col leading-tight">
+                <span className="text-[0.65rem] font-semibold text-white/50">{label}</span>
+                <b className="text-sm tabular-nums sm:text-base">{value}</b>
+              </div>
+            ))}
+          </div>
+          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-amber-300 transition-[width] duration-500"
+              style={{ width: `${(game.handIndex / pulkas.flat().length) * 100}%` }}
+            />
           </div>
         </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="flex items-center gap-2">
-            <VolumeControl volume={volume} onChange={setVolume} />
-            <button
-              className="btn !px-3 !py-1"
-              onClick={() => window.confirm(quitConfirm ?? "დარწმუნებული ხართ? თამაში შეწყდება.") && onQuit()}
-            >
-              გასვლა
-            </button>
-          </div>
+        <div className="justify-self-end">
           <TrumpInfo game={game} />
         </div>
       </header>
@@ -598,7 +599,7 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
   entries.reverse();
 
   return (
-    <div className="group relative w-[min(21rem,64vw)]">
+    <div className="group relative w-full max-w-[21rem]">
       <button
         type="button"
         onClick={() => setPinned((v) => !v)}
@@ -755,9 +756,9 @@ function VolumeControl({ volume, onChange }: { volume: number; onChange: (v: num
         value={Math.round(volume * 100)}
         onChange={(e) => onChange(Number(e.target.value) / 100)}
         aria-label="ხმის სიმაღლე"
-        className="h-1 w-16 cursor-pointer accent-amber-300 sm:w-24"
+        className="hidden h-1 w-16 cursor-pointer accent-amber-300 sm:block sm:w-24"
       />
-      <span className="w-8 text-right text-[0.7rem] tabular-nums opacity-70">{Math.round(volume * 100)}%</span>
+      <span className="hidden w-8 text-right text-[0.7rem] tabular-nums opacity-70 sm:block">{Math.round(volume * 100)}%</span>
     </div>
   );
 }

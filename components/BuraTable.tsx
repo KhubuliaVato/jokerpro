@@ -74,17 +74,18 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
     <main className="relative flex h-dvh flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_40%,#1b6b46,#0a2a1b_78%)] text-white select-none">
       <style>{`@keyframes bura-in{from{opacity:0;transform:translate(var(--fx,0),var(--fy,0)) scale(.8)}to{opacity:1;transform:none}}@keyframes bura-take{to{transform:translate(var(--tx,0),var(--ty,0)) scale(.55);opacity:0}}`}</style>
       {/* score */}
-      <header className="relative z-20 flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-3 text-sm sm:text-base">
+      <header className="relative z-20 flex items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3">
+        <div className="flex min-w-0 items-center gap-1.5 text-sm sm:gap-3 sm:text-base">
           <ScoreChip label={teams ? "ჩვენ" : "თქვენ"} value={game.scores[0]} target={game.target} mine />
           <ScoreChip label={teams ? "ისინი" : names[1]} value={game.scores[1]} target={game.target} />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-none items-center gap-1.5 sm:gap-3">
           <span
-            className={`rounded-full px-3 py-1.5 text-sm font-bold ${game.price > 1 ? "bg-red-500/25 text-red-200" : "bg-black/30 text-white/70"}`}
+            className={`rounded-full px-2.5 py-1 text-xs font-bold sm:px-3 sm:py-1.5 sm:text-sm ${game.price > 1 ? "bg-red-500/25 text-red-200" : "bg-black/30 text-white/70"}`}
             title="რამდენ ქულად ფასობს რაუნდი"
           >
-            რაუნდი: {game.price} ქულა
+            <span className="hidden sm:inline">რაუნდი: </span>
+            {game.price} ქულა
           </span>
           <span className="hidden rounded-full bg-black/30 px-3 py-1.5 text-sm font-bold text-amber-200 sm:inline" title="თქვენი გუნდის აღებული ხელები">
             ხელები: {game.tricks[0]}
@@ -100,7 +101,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
               </button>
             </span>
           ) : (
-            <button className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-bold text-white/70 hover:bg-white/20" onClick={() => setConfirm(true)}>
+            <button className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-white/70 hover:bg-white/20 sm:px-3 sm:py-1.5 sm:text-sm" onClick={() => setConfirm(true)}>
               გასვლა
             </button>
           )}
@@ -124,7 +125,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
           ))}
 
         {/* trump and pile */}
-        <div className="absolute left-3 top-1 z-10 flex items-center gap-3 rounded-2xl bg-black/20 p-2 sm:left-6">
+        <div className="absolute left-2 top-1 z-10 flex items-center gap-2 rounded-2xl bg-black/20 p-1.5 sm:left-6 sm:gap-3 sm:p-2">
           <div className="relative" style={{ ...cw(TRICK_CW), width: "calc(var(--cw) * 2.3)", height: "calc(var(--cw) * 1.45)" }}>
             {game.deck.length > 0 && (
               <>
@@ -141,7 +142,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
             )}
           </div>
           <div className="leading-tight">
-            <b className={`block text-3xl ${isRed(game.trump) ? "text-red-400" : "text-white"}`}>{SUIT_SYMBOL[game.trump]}</b>
+            <b className={`block text-2xl sm:text-3xl ${isRed(game.trump) ? "text-red-400" : "text-white"}`}>{SUIT_SYMBOL[game.trump]}</b>
             <span className="text-xs text-white/60">{game.deck.length} კარტი</span>
           </div>
         </div>
@@ -221,10 +222,10 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
 
 function ScoreChip({ label, value, target, mine }: { label: string; value: number; target: number; mine?: boolean }) {
   return (
-    <span className={`flex items-baseline gap-2 rounded-full px-3 py-1.5 ${mine ? "bg-amber-300/15 text-amber-200" : "bg-black/30 text-white/80"}`}>
-      <span className="max-w-24 truncate font-bold">{label}</span>
-      <b className="text-xl tabular-nums">{value}</b>
-      <span className="text-xs text-white/40">/{target}</span>
+    <span className={`flex items-baseline gap-1.5 rounded-full px-2.5 py-1 sm:gap-2 sm:px-3 sm:py-1.5 ${mine ? "bg-amber-300/15 text-amber-200" : "bg-black/30 text-white/80"}`}>
+      <span className="max-w-16 truncate text-sm font-bold sm:max-w-24 sm:text-base">{label}</span>
+      <b className="text-lg tabular-nums sm:text-xl">{value}</b>
+      <span className="hidden text-xs text-white/40 sm:inline">/{target}</span>
     </span>
   );
 }
@@ -246,7 +247,7 @@ function Opponent({
 }) {
   const place =
     where === "top"
-      ? "left-1/2 top-1 -translate-x-1/2 flex-col"
+      ? "left-[64%] top-1 -translate-x-1/2 flex-col sm:left-1/2"
       : where === "left"
         ? "left-3 top-1/2 -translate-y-1/2 flex-col"
         : "right-3 top-1/2 -translate-y-1/2 flex-col";
@@ -263,7 +264,7 @@ function Opponent({
       </div>
       <div className="flex">
         {Array.from({ length: cards }, (_, i) => (
-          <div key={i} style={{ marginLeft: i === 0 ? 0 : `calc(var(--cw) * -0.5)` }}>
+          <div key={i} className={i === 0 ? "" : "ml-[calc(var(--cw)*-0.72)] sm:ml-[calc(var(--cw)*-0.5)]"}>
             <CardView style={cw(OPP_CW)} />
           </div>
         ))}

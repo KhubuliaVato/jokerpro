@@ -81,7 +81,7 @@ export function useOnlineTable(code: string) {
   const loadTable = useCallback(async () => {
     const supabase = getSupabase();
     if (!supabase || !tableId) return;
-    const { data } = await supabase.from("game_tables").select("id, code, host_id, kind, status, rules, ready_at").eq("id", tableId).maybeSingle();
+    const { data } = await supabase.from("game_tables").select("id, code, host_id, game, kind, status, rules, ready_at").eq("id", tableId).maybeSingle();
     if (data) setTable(data as TableRow);
   }, [tableId]);
 

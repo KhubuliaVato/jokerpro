@@ -72,7 +72,7 @@ export function ModeHub({ game }: { game: "joker" | "bura" }) {
         </Link>
       )}
 
-      <section className="grid gap-5 pb-8 sm:grid-cols-2" style={rise(2)}>
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-4 pb-8 sm:grid-cols-2 sm:gap-5" style={rise(2)}>
         <ModeCard
           href={loginFor(`/${game}/ranked`)}
           title="წოდებისთვის ბრძოლა"
@@ -130,7 +130,7 @@ function ModeCard({
   return (
     <Link href={href} className="group block outline-none">
       <div
-        className="relative flex min-h-56 items-center gap-6 overflow-hidden rounded-[2rem] border bg-white/[0.04] p-6 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-1.5 group-hover:bg-white/[0.07] group-focus-visible:border-amber-300 sm:p-8"
+        className="relative flex min-h-36 items-center gap-3 overflow-hidden rounded-[2rem] border bg-white/[0.04] p-4 sm:min-h-56 sm:gap-6 sm:p-6 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-1.5 group-hover:bg-white/[0.07] group-focus-visible:border-amber-300 sm:p-8"
         style={{
           borderColor: featured ? `${accent}66` : "rgb(255 255 255 / 0.1)",
           boxShadow: featured ? `0 0 0 1px ${accent}22, 0 18px 50px -24px ${accent}88` : undefined,
@@ -140,12 +140,12 @@ function ModeCard({
           className="pointer-events-none absolute -right-10 -top-10 size-48 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100"
           style={{ background: `${accent}33` }}
         />
-        <div className="relative grid size-24 flex-none place-items-center transition-transform duration-300 group-hover:scale-110">
+        <div className="relative grid size-16 flex-none place-items-center transition-transform duration-300 group-hover:scale-110 sm:size-24 [&>*]:size-14 sm:[&>*]:size-20">
           {art}
         </div>
         <div className="relative min-w-0 flex-1">
-          <h2 className="text-2xl font-extrabold leading-tight sm:text-3xl">{title}</h2>
-          <p className="mt-1.5 text-base text-white/55">{text}</p>
+          <h2 className="text-xl font-extrabold leading-tight sm:text-3xl">{title}</h2>
+          <p className="mt-1 text-sm text-white/55 sm:mt-1.5 sm:text-base">{text}</p>
           {note && (
             <span className="mt-3 inline-block rounded-full px-3 py-1 text-sm font-bold" style={{ background: `${accent}22`, color: accent }}>
               {note}
