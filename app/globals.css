@@ -109,7 +109,7 @@ body {
   --drop: 0rem;
   rotate: var(--rot);
   translate: 0 var(--drop);
-  transition: translate 0.15s ease-out, filter 0.15s;
+  transition: translate 0.15s ease-out, rotate 0.35s ease-out, filter 0.15s;
 }
 .hand-card + .hand-card {
   margin-left: calc(var(--hand-cw) * -0.55);

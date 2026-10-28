@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
+import { useAuth } from "@/lib/auth/AuthProvider";
 
 /** Seats go clockwise: you at the bottom, then left, top and right. */
 export const PLAYER_NAMES = ["თქვენ", "ლევანი", "ნინო", "მარიამი"];
@@ -36,3 +37,13 @@ export function PlayerNamesProvider({
 
 export const usePlayerNames = () => useContext(NamesContext);
 export const usePlayerAvatars = () => useContext(AvatarsContext);
+
+/** The player's own seat in a game against bots: their nickname and photo when signed in, otherwise "თქვენ". */
+export function useMe(): { name: string; avatar: SeatAvatar | null } {
+  const { profile } = useAuth();
+  if (!profile) return { name: "თქვენ", avatar: null };
+  return {
+    name: profile.nickname,
+    avatar: { color: profile.avatar_color, icon: profile.avatar_icon, url: profile.avatar_url },
+  };
+}

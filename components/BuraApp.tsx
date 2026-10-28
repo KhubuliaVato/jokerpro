@@ -7,6 +7,7 @@ import { useBuraGame } from "@/lib/bura/useGame";
 import { BotPicker } from "./BotPicker";
 import { BuraTable } from "./BuraTable";
 import { PageShell } from "./PageShell";
+import { BotChat } from "./TableChat";
 import { BTN_PRIMARY, rise } from "./ui";
 
 /** A game of Bura against bots: nothing is rated and nothing is recorded anywhere. */
@@ -19,18 +20,21 @@ export function BuraApp() {
 
   if (game) {
     return (
-      <BuraTable
-        game={game}
-        secondsLeft={secondsLeft}
-        names={["თქვენ", ...bots.map((b) => b.name)]}
-        avatars={[null, ...bots.map((b) => ({ color: b.color, icon: b.icon }))]}
-        onPlay={play}
-        onAct={doAct}
-        onNext={next}
-        autoNext
-        onQuit={quit}
-        endNote={<span className="text-white/60">თამაში ბოტებთან არ იწერება ისტორიაში</span>}
-      />
+      <>
+        <BotChat myId="me" bots={bots.map((b) => b.name)} />
+        <BuraTable
+          game={game}
+          secondsLeft={secondsLeft}
+          names={["თქვენ", ...bots.map((b) => b.name)]}
+          avatars={[null, ...bots.map((b) => ({ color: b.color, icon: b.icon }))]}
+          onPlay={play}
+          onAct={doAct}
+          onNext={next}
+          autoNext
+          onQuit={quit}
+          endNote={<span className="text-white/60">თამაში ბოტებთან არ იწერება ისტორიაში</span>}
+        />
+      </>
     );
   }
 

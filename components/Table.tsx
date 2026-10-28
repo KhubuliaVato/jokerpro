@@ -41,9 +41,19 @@ interface Props {
   quitConfirm?: string;
 }
 
-// Hand fan: degrees between neighbouring cards, and the pivot's depth below a card (% of its height).
-const FAN_STEP = 2;
+// Hand fan: the pivot's depth below a card (% of its height). The angle between neighbours follows from how far
+// apart the cards should sit, which depends on how many are left (see fanStep).
 const FAN_PIVOT = 700;
+
+/**
+ * Degrees between neighbouring cards. A full hand overlaps tightly (each card shows about a third of its width);
+ * the fewer cards remain, the further they spread, until three or fewer lie side by side with a gap.
+ */
+function fanStep(cards: number): number {
+  const apart = Math.min(1.15, 0.34 + (9 - cards) * 0.1); // distance between neighbours, in card widths
+  const pivotDepth = (FAN_PIVOT / 100) * 1.4; // in card widths (a card is 1.4 times as tall as it is wide)
+  return (Math.atan(apart / pivotDepth) * 180) / Math.PI;
+}
 
 const suitColor = (suit: Suit) => (isRed(suit) ? "text-red-400" : "text-white");
 
@@ -508,7 +518,7 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
               const ok = canPlay && playable.has(card.id);
               // A true fan: every card sits on the same spot and is turned about a pivot far below the
               // hand, so the spacing comes from the angle and the row forms a tight, even arc.
-              const rot = (i - (myHand.length - 1) / 2) * FAN_STEP;
+              const rot = (i - (myHand.length - 1) / 2) * fanStep(myHand.length);
               return (
                 <button
                   key={card.id}
@@ -709,7 +719,7 @@ function TurnTimer({ left }: { left: number }) {
   const circ = 2 * Math.PI * r;
   return (
     <span
-      className={`relative grid size-10 place-items-center ${urgent ? "animate-pulse text-red-300" : "text-amber-200"}`}
+      className={`relative grid size-9 flex-none place-items-center sm:size-10 ${urgent ? "animate-pulse text-red-300" : "text-amber-200"}`}
       aria-label={`დარჩა ${left} წამი`}
     >
       <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90">
@@ -768,10 +778,13 @@ function PickerStage({
   title,
   secondsLeft,
   low,
+  clearSides,
   children,
 }: {
   title: string;
   secondsLeft: number | null;
+  /** On a phone, sit lower than the players at the sides so their tags do not touch the title. */
+  clearSides?: boolean;
   /** Sit at the bottom of the table instead of the middle (keeps played cards visible). */
   low?: boolean;
   children: React.ReactNode;
@@ -780,13 +793,13 @@ function PickerStage({
     <div
       className={`pointer-events-none absolute inset-0 z-10 flex justify-center ${low ? "items-end pb-2" : "items-center"}`}
     >
-      <div className="relative flex flex-col items-center gap-6">
+      <div className={`relative flex flex-col items-center gap-4 sm:translate-y-0 sm:gap-6 ${clearSides ? "translate-y-12" : ""}`}>
         <div className="absolute -inset-x-16 -inset-y-12 -z-10 rounded-[50%] bg-[radial-gradient(closest-side,rgb(0_0_0/0.4),transparent)]" />
-        <div className="flex items-center gap-3 sm:gap-4">
-          <span className="h-px w-8 bg-gradient-to-r from-transparent to-amber-300/80 sm:w-16" />
-          <span className="text-lg font-extrabold text-amber-200 sm:text-xl">{title}</span>
+        <div className="flex items-center gap-2 sm:gap-4">
+          <span className="hidden h-px w-16 bg-gradient-to-r from-transparent to-amber-300/80 sm:block" />
+          <span className="whitespace-nowrap text-base font-extrabold text-amber-200 sm:text-xl">{title}</span>
           {secondsLeft !== null && <TurnTimer left={secondsLeft} />}
-          <span className="h-px w-8 bg-gradient-to-l from-transparent to-amber-300/80 sm:w-16" />
+          <span className="hidden h-px w-16 bg-gradient-to-l from-transparent to-amber-300/80 sm:block" />
         </div>
         {children}
       </div>
@@ -807,7 +820,7 @@ function BidPicker({
   onPick: (bid: number) => void;
 }) {
   return (
-    <PickerStage title="რამდენს იტყვით?" secondsLeft={secondsLeft}>
+    <PickerStage title="რამდენს იტყვით?" secondsLeft={secondsLeft} clearSides>
       <div
         className="pointer-events-auto flex max-w-xl flex-wrap justify-center gap-2.5 sm:gap-3"
         style={{ "--from": "2rem" } as React.CSSProperties}
@@ -836,17 +849,12 @@ function BidPicker({
           );
         })}
       </div>
-      {allowed.length < cards + 1 && (
-        <p className="-mt-2 max-w-sm text-center text-xs text-white/60">
-          გადახაზული რიცხვი ბოლო დამკვეთს ეკრძალება: ჯამი არ უნდა გაუტოლდეს ხელების რაოდენობას
-        </p>
-      )}
     </PickerStage>
   );
 }
 
 /** Trump choice: five big cards dealt onto the table, no words (the joker card means "no trump"). */
-const TRUMP_TILE = "group relative block h-32 w-20 drop-in sm:h-40 sm:w-[6.5rem]";
+const TRUMP_TILE = "group relative block h-24 w-[3.6rem] drop-in min-[420px]:h-28 min-[420px]:w-16 sm:h-40 sm:w-[6.5rem]";
 
 function TrumpPicker({
   secondsLeft,
@@ -857,8 +865,8 @@ function TrumpPicker({
 }) {
   const tiles = [...SUITS, null] as const;
   return (
-    <PickerStage title="აირჩიეთ კოზირი" secondsLeft={secondsLeft}>
-      <div className="pointer-events-auto flex items-start gap-2.5 sm:gap-4" style={{ "--from": "3rem" } as React.CSSProperties}>
+    <PickerStage title="აირჩიეთ კოზირი" secondsLeft={secondsLeft} clearSides>
+      <div className="pointer-events-auto flex items-start gap-1.5 min-[420px]:gap-2.5 sm:gap-4" style={{ "--from": "3rem" } as React.CSSProperties}>
         {tiles.map((s, i) => {
           const d = i - 2;
           return (
@@ -866,7 +874,7 @@ function TrumpPicker({
               key={s ?? "none"}
               className={TRUMP_TILE}
               // Fan: tilt each card and let the outer ones sit lower, so the row forms a dome.
-              style={{ rotate: `${d * 4}deg`, translate: `0 ${d * d * 0.4}rem`, animationDelay: `${i * 70}ms` }}
+              style={{ rotate: `${d * 4}deg`, translate: `0 ${d * d * 0.3}rem`, animationDelay: `${i * 70}ms` }}
               aria-label={s ? SUIT_NAME[s] : "უკოზიროდ"}
               onClick={() => onPick(s)}
             >
@@ -874,10 +882,10 @@ function TrumpPicker({
               <span
                 className={`flex size-full flex-col items-center justify-center gap-2 rounded-xl leading-none shadow-[0_6px_16px_rgb(0_0_0/0.45)] ring-1 ring-black/10 transition-[translate,box-shadow] duration-200 ease-out group-hover:-translate-y-3 group-hover:shadow-[0_0_0_3px_#e8c46a,0_16px_24px_rgb(0_0_0/0.45)] group-active:translate-y-0 ${s ? "bg-[#fbf8ef]" : "bg-gradient-to-br from-[#fff4e0] via-[#f1ddff] to-[#d9e6ff]"}`}
               >
-                <span className={`text-5xl sm:text-6xl ${s ? (isRed(s) ? "text-red-600" : "text-neutral-900") : "text-purple-700"}`}>
+                <span className={`text-3xl min-[420px]:text-4xl sm:text-6xl ${s ? (isRed(s) ? "text-red-600" : "text-neutral-900") : "text-purple-700"}`}>
                   {s ? SUIT_SYMBOL[s] : "★"}
                 </span>
-                <span className={`text-xs font-extrabold sm:text-sm ${s ? (isRed(s) ? "text-red-700" : "text-neutral-800") : "text-purple-800"}`}>
+                <span className={`text-[10px] font-extrabold min-[420px]:text-xs sm:text-sm ${s ? (isRed(s) ? "text-red-700" : "text-neutral-800") : "text-purple-800"}`}>
                   {s ? SUIT_NAME[s] : "უკოზიროდ"}
                 </span>
               </span>

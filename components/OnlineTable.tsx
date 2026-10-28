@@ -16,6 +16,7 @@ import { QueueLobby } from "./QueueLobby";
 import { RatingResult } from "./RatingResult";
 import { BuraTable } from "./BuraTable";
 import { Table } from "./Table";
+import { TableChat } from "./TableChat";
 import { BTN_GHOST, BTN_PRIMARY, FORMAT_LABEL, rise } from "./ui";
 
 /** "სრული თამაში · ხიშტი −200" */
@@ -147,9 +148,19 @@ export function OnlineTable({ code }: { code: string }) {
       <span className="text-white/60">კერძო თამაში არ იწერება ისტორიაში</span>
     );
 
+  const chat = (
+    <TableChat
+      tableId={t.table.id}
+      over={t.table.status === "finished" || t.table.status === "closed"}
+      myId={user.id}
+      names={Object.fromEntries(t.players.flatMap((p) => (p?.profile ? [[p.user_id, p.profile.nickname]] : [])))}
+    />
+  );
+
   if (t.table.game === "bura") {
     return (
       <>
+        {chat}
         <BuraTable
           game={t.view as BuraState}
           secondsLeft={t.secondsLeft}
@@ -170,6 +181,7 @@ export function OnlineTable({ code }: { code: string }) {
 
   return (
     <PlayerNamesProvider names={names} avatars={avatars}>
+      {chat}
       <Table
         game={t.view as GameState}
         secondsLeft={t.secondsLeft}
