@@ -33,9 +33,9 @@ export function LogoMark({ className = "size-9" }: { className?: string }) {
 export function Logo({ size = "md" }: { size?: "md" | "lg" }) {
   const big = size === "lg";
   return (
-    <Link href="/" aria-label="ProJoker" className="group inline-flex items-center gap-3 outline-none">
-      <LogoMark className={`${big ? "size-14" : "size-11 sm:size-12"} drop-shadow-[0_3px_10px_rgb(232_196_106/0.4)] transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110`} />
-      <span className={`font-black leading-none tracking-tight ${big ? "text-5xl" : "text-3xl sm:text-4xl"}`}>
+    <Link href="/" aria-label="ProJoker" className="group inline-flex items-center gap-2 outline-none min-[380px]:gap-3">
+      <LogoMark className={`${big ? "size-14" : "size-9 min-[380px]:size-11 sm:size-12"} drop-shadow-[0_3px_10px_rgb(232_196_106/0.4)] transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110`} />
+      <span className={`font-black leading-none tracking-tight ${big ? "text-5xl" : "text-2xl min-[380px]:text-3xl sm:text-4xl"}`}>
         <span className="text-white">Pro</span>
         <span className="bg-gradient-to-b from-amber-100 to-amber-400 bg-clip-text text-transparent">Joker</span>
       </span>

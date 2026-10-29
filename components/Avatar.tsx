@@ -9,6 +9,8 @@ export const AVATAR_COLORS: Record<string, string> = {
 export const AVATAR_ICONS = ["♠", "♥", "♣", "♦", "★", "♛"];
 
 const SIZES = {
+  /** Opponent tags: small on a phone, the usual size from `sm` up. */
+  tag: "size-6 text-sm wide:size-9 wide:text-lg",
   sm: "size-9 text-lg",
   md: "size-12 text-2xl",
   lg: "size-24 text-5xl",

@@ -5,6 +5,9 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { act as actBura, type BuraAction, type BuraState } from "@/lib/bura/engine";
 import type { BuraRules } from "@/lib/bura/online";
 import type { GameState } from "@/lib/joker/engine";
+import type { PokerAction, PokerState } from "@/lib/poker/engine";
+import type { PokerRules } from "@/lib/poker/online";
+import { HAND_PAUSE } from "@/lib/poker/usePokerGame";
 import { applyAction, realSeat, type Action } from "@/lib/joker/online";
 import { HAND_END_PAUSE, TRICK_PAUSE } from "@/lib/joker/useGame";
 import { getSupabase } from "@/lib/supabase";
@@ -22,7 +25,7 @@ export interface SeatProfile {
 const ROUND_PAUSE = 6000;
 
 /** A game of this table needs a decision from somebody (Joker: trump / bid / play; Bura: play). */
-const needsMove = (v: GameState | BuraState) => ["trump", "bidding", "playing", "play", "call", "var"].includes(v.phase);
+const needsMove = (v: GameState | BuraState | PokerState) => ["trump", "bidding", "playing", "play", "call", "var", "betting"].includes(v.phase);
 
 /** A little randomness so that four browsers do not all ask the server for the same thing at once. */
 const jitter = (ms: number) => ms + Math.random() * 250;
@@ -133,7 +136,7 @@ export function useOnlineTable(code: string) {
   }, [tableId]);
 
   const mySeat = seats.find((s) => s.user_id === userId);
-  const capacity = table?.game === "bura" ? (table.rules as BuraRules).players : 4;
+  const capacity = table?.game === "bura" || table?.game === "poker" ? (table.rules as BuraRules | PokerRules).players : 4;
   const full = seats.length === capacity;
   const status = table?.status ?? null;
   // Lost the seat in a ready check that I did not accept in time.
@@ -222,14 +225,14 @@ export function useOnlineTable(code: string) {
     if (phase !== "trickEnd" && phase !== "handEnd" && phase !== "roundEnd") return;
     const t = setTimeout(
       () => void callJoker(supabase, { action: "advance", table_id: tableId, version: row.version }),
-      jitter(phase === "trickEnd" ? TRICK_PAUSE : phase === "roundEnd" ? ROUND_PAUSE : HAND_END_PAUSE),
+      jitter(phase === "trickEnd" ? TRICK_PAUSE : phase === "roundEnd" ? ROUND_PAUSE : table?.game === "poker" ? HAND_PAUSE : HAND_END_PAUSE),
     );
     return () => clearTimeout(t);
-  }, [tableId, row]);
+  }, [tableId, row, table?.game]);
 
   // 5. A bot's turn, or a player's timer ran out: the server plays for them when asked.
   const realTurn = row
-    ? table?.game === "bura"
+    ? table?.game === "bura" || table?.game === "poker"
       ? (row.view.turn + row.seat) % capacity
       : realSeat(row.view.turn, row.seat)
     : -1;
@@ -300,6 +303,20 @@ export function useOnlineTable(code: string) {
     },
     [tableId, row, loadView],
   );
+  /** Hold'em: fold, check, call or raise. The server answers with the next state (nothing is predicted here: the deck is secret). */
+  const pokerAct = useCallback(
+    async (action: PokerAction) => {
+      const supabase = getSupabase();
+      if (!supabase || !tableId || !row) return;
+      const err = await callJoker(supabase, { action: "move", table_id: tableId, move: action });
+      if (err) {
+        setNotice(err);
+        setTimeout(() => setNotice(null), 3500);
+        void loadView();
+      }
+    },
+    [tableId, row, loadView],
+  );
   const playCards = useCallback((ids: string[]) => buraAct({ type: "play", ids }), [buraAct]);
 
   const leave = useCallback(async () => {
@@ -333,6 +350,7 @@ export function useOnlineTable(code: string) {
     act,
     playCards,
     buraAct,
+    pokerAct,
     capacity,
     leave,
   };

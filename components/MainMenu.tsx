@@ -15,6 +15,9 @@ const ACE: Card = { joker: false, suit: "S", rank: 14, id: "S14" };
 const JOKER: Card = { joker: true, id: "J0" };
 const KING: Card = { joker: false, suit: "H", rank: 13, id: "H13" };
 
+/** A royal flush fanned out on the poker card. */
+const POKER_FAN: Card[] = [10, 11, 12, 13, 14].map((rank) => ({ joker: false, suit: "H", rank: rank as 10, id: `H${rank}` }));
+
 const BURA_FAN: Card[] = [
   { joker: false, suit: "H", rank: 14, id: "H14" },
   { joker: false, suit: "H", rank: 10, id: "H10" },
@@ -73,7 +76,7 @@ export function MainMenu() {
           </p>
         </section>
 
-        <section className="grid gap-5 sm:grid-cols-[repeat(2,minmax(0,1fr))] sm:gap-8" style={rise(2)}>
+        <section className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-[repeat(2,minmax(0,1fr))] sm:gap-8" style={rise(2)}>
           <Link href="/joker" className="group block outline-none">
             <div className="flex min-h-[min(28rem,50dvh)] flex-col justify-between rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-white/30 group-hover:bg-white/[0.07] group-hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] group-focus-visible:border-amber-300 sm:p-9">
               <div className="relative grid flex-1 place-items-center py-6">
@@ -91,7 +94,7 @@ export function MainMenu() {
               </div>
               <div className="flex items-end justify-between gap-4">
                 <div className="min-w-0">
-                  <h2 className="text-4xl font-extrabold sm:text-5xl">ჯოკერი</h2>
+                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">ჯოკერი</h2>
                   <p className="mt-1.5 text-base text-white/55">ონლაინ და ბოტებთან · 4 მოთამაშე</p>
                 </div>
                 <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
@@ -123,8 +126,38 @@ export function MainMenu() {
               </div>
               <div className="flex items-end justify-between gap-4">
                 <div className="min-w-0">
-                  <h2 className="text-4xl font-extrabold sm:text-5xl">ბურა</h2>
+                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">ბურა</h2>
                   <p className="mt-1.5 text-base text-white/55">ონლაინ და ბოტებთან · 2 ან 4 მოთამაშე</p>
+                </div>
+                <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
+                  თამაში
+                  <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
+                </span>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/poker" className="group block outline-none sm:col-span-2">
+            <div className="flex min-h-[min(18rem,40dvh)] flex-col justify-between gap-6 rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-white/30 group-hover:bg-white/[0.07] group-hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] group-focus-visible:border-amber-300 sm:flex-row sm:items-center sm:p-9">
+              <div className="relative h-28 w-full sm:h-32 sm:w-72 sm:flex-none">
+                {POKER_FAN.map((card, i) => (
+                  <div
+                    key={card.id}
+                    className="absolute bottom-0 left-1/2 origin-bottom transition-[rotate,translate] duration-500 ease-out"
+                    style={{
+                      rotate: `calc(${i - 2} * var(--spread, 7deg))`,
+                      translate: `calc(-50% + ${i - 2} * var(--gap, 2.6rem)) 0`,
+                      zIndex: i,
+                    }}
+                  >
+                    <CardView card={card} style={{ "--cw": "4.2rem" } as React.CSSProperties} />
+                  </div>
+                ))}
+              </div>
+              <div className="flex min-w-0 flex-1 items-end justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">პოკერი</h2>
+                  <p className="mt-1.5 text-base text-white/55">Texas Hold&apos;em ბოტებთან · სათამაშო ჩიპებით</p>
                 </div>
                 <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
                   თამაში

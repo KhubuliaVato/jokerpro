@@ -55,7 +55,7 @@ export function LeaderboardPage() {
   return (
     <PageShell width="max-w-4xl">
       <section className="flex flex-col gap-4" style={rise(1)}>
-        <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl">ლიდერბორდი</h1>
+        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">ლიდერბორდი</h1>
         <div className="flex flex-wrap gap-2">
           {GAMES.map((g) => (
             <button

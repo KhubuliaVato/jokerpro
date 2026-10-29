@@ -6,7 +6,7 @@ import { FORMAT_ART, FormatFan } from "./FormatArt";
 
 const RULES = [
   "4 მოთამაშე, 36 კარტი: შავი ექვსიანების ადგილას 2 ჯოკერია.",
-  "1–8 კარტიან ხელში კოზირი გახსნილი კარტის ბუნებაა (ჯოკერი — უკოზიროდ). 9 კარტიანში პირველი ხელის დამწყები მოთამაშე პირველი 3 კარტით ასახელებს კოზირს.",
+  "1–8 კარტიან ხელში კოზირი გახსნილი კარტის ბუნებაა (ჯოკერი — კოზირის გარეშე). 9 კარტიანში პირველი ხელის დამწყები მოთამაშე პირველი 3 კარტით ასახელებს კოზირს.",
   "თითოეული ამბობს, რამდენ ხელს აიღებს. ბოლო დამკვეთს არ შეუძლია ისეთი რიცხვის თქმა, რომ ჯამი კარტების რაოდენობას გაუტოლდეს.",
   "მასტი სავალდებულოა; მასტის გარეშე კოზირი უნდა დადო; ჯოკერის დადება ყოველთვის შეიძლება.",
   "მოჯოკვრა — ჯოკერი ყველაფერს იღებს. გატანება — ჯოკერი ხელს არ იღებს. ჯოკრით შესვლისას მასტს ასახელებ (მოჯოკვრაზე სხვებმა ამ მასტის უმაღლესი უნდა დადონ).",
@@ -28,7 +28,7 @@ export function RulesForm({ rules, onChange }: { rules: Rules; onChange: (patch:
             return (
               <label
                 key={value}
-                className={`group relative flex cursor-pointer flex-col justify-between gap-5 overflow-hidden rounded-3xl border px-4 pb-5 pt-7 text-center transition-[border-color,background-color,translate] duration-200 hover:-translate-y-0.5 ${
+                className={`group relative flex cursor-pointer flex-col justify-between gap-5 overflow-hidden rounded-3xl border px-2 pb-5 pt-7 text-center min-[360px]:px-4 transition-[border-color,background-color,translate] duration-200 hover:-translate-y-0.5 ${
                   on ? "border-amber-300 bg-amber-300/10" : "border-white/10 bg-white/[0.03] hover:border-white/30"
                 }`}
               >
@@ -40,8 +40,8 @@ export function RulesForm({ rules, onChange }: { rules: Rules; onChange: (patch:
                   onChange={() => onChange({ format: value })}
                 />
                 <span className="absolute inset-0 rounded-3xl peer-focus-visible:ring-2 peer-focus-visible:ring-amber-300" />
-                <FormatFan format={value} cardWidth="clamp(3.2rem, 8vw, 4.2rem)" className="h-32" />
-                <b className={`relative text-xl sm:text-2xl ${on ? "text-amber-300" : ""}`}>{FORMAT_ART[value].title}</b>
+                <FormatFan format={value} cardWidth="clamp(2.2rem, 8vw, 4.2rem)" className="h-32" />
+                <b className={`relative text-[clamp(0.9rem,4.4vw,1.25rem)] sm:text-2xl ${on ? "text-amber-300" : ""}`}>{FORMAT_ART[value].title}</b>
               </label>
             );
           })}

@@ -9,6 +9,34 @@
   --opp-cw: clamp(2.5rem, min(9vw, 8dvh), 4rem);
 }
 
+/* A phone held sideways, or any window that is wide but not tall: the table switches to its compact layout. */
+@custom-variant short {
+  @media (max-height: 520px) {
+    @slot;
+  }
+  @media (min-width: 40rem) and (max-height: 639px) {
+    @slot;
+  }
+}
+/* The header folds into one thin row whenever the window is not tall (and wide enough to hold it). */
+@custom-variant tight {
+  @media (max-height: 520px) {
+    @slot;
+  }
+  @media (min-width: 40rem) and (max-height: 820px) {
+    @slot;
+  }
+}
+/* The full table, with the players' tags at the sides: room both ways. */
+@custom-variant wide (@media (min-width: 40rem) and (min-height: 640px));
+
+@media (max-height: 520px) {
+  :root {
+    --hand-cw: clamp(2.4rem, min(15vw, 15dvh), 6.6rem);
+    --opp-cw: clamp(2rem, min(9vw, 8dvh), 4rem);
+  }
+}
+
 @theme inline {
   --font-sans: var(--font-noto-georgian), "Sylfaen", system-ui, sans-serif;
 }
@@ -29,6 +57,98 @@ body {
   background:
     radial-gradient(ellipse at 50% 45%, var(--felt-1) 0%, var(--felt-2) 75%),
     var(--felt-2);
+}
+
+/* ---------- poker room ---------- */
+.pk-room {
+  background:
+    radial-gradient(ellipse at 50% 38%, #5a1218 0%, #3a0a10 55%, #1f0508 100%),
+    #2a070b;
+}
+.pk-chip {
+  --c: #c62828;
+  --e: #fff;
+  width: var(--chip, 1.4rem);
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--c) 0 50%, var(--e) 51% 55%, transparent 56%),
+    repeating-conic-gradient(var(--e) 0 16deg, var(--c) 16deg 45deg);
+  box-shadow:
+    0 1px 0 rgb(0 0 0 / 0.55),
+    0 2px 4px rgb(0 0 0 / 0.4),
+    inset 0 0 0 1px rgb(0 0 0 / 0.3);
+}
+
+/* a slim, rounded scrollbar in the gold of the table */
+.pk-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(232 196 106 / 0.45) transparent;
+}
+.pk-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.pk-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.pk-scroll::-webkit-scrollbar-thumb {
+  background: rgb(232 196 106 / 0.4);
+  border-radius: 999px;
+}
+.pk-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(232 196 106 / 0.7);
+}
+/* a slider with a gold fill and a round knob: --p is how far it is filled */
+.pk-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e8c46a var(--p, 0%), rgb(255 255 255 / 0.14) var(--p, 0%));
+  outline: none;
+  cursor: pointer;
+}
+.pk-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgb(232 196 106 / 0.35);
+}
+.pk-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgb(232 196 106 / 0.35);
+}
+@keyframes pk-eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.pk-eq i {
+  display: block;
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: #e8c46a;
+  transform-origin: bottom;
+  animation: pk-eq 0.9s ease-in-out infinite;
+}
+.pk-eq i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.pk-eq i:nth-child(3) {
+  animation-delay: -0.6s;
 }
 
 /* ---------- playing cards ---------- */
@@ -64,38 +184,16 @@ body {
 .pc.xs {
   --cw: clamp(1.8rem, 5vw, 2.6rem);
 }
-.pc .corner {
-  position: absolute;
-  top: 7%;
-  left: 9%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: calc(var(--cw) * 0.3);
-  gap: 0.08em;
-}
-.pc .pip {
-  position: absolute;
-  right: 10%;
-  bottom: 6%;
-  font-size: calc(var(--cw) * 0.5);
-}
-.pc.joker {
-  background: linear-gradient(145deg, #fff7d6, #f4d9ff 55%, #cfe7ff);
-  color: #6b2d9c;
-}
-.pc.joker .star {
+.pc .face {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: calc(var(--cw) * 0.62);
+  width: 100%;
+  height: 100%;
 }
-.pc.joker .corner {
-  font-size: calc(var(--cw) * 0.2);
-  letter-spacing: -0.04em;
-  writing-mode: vertical-rl;
-  top: 8%;
+/* the whole face is a picture: a jester in black and red, with JOKER in the corners */
+.pc.joker {
+  background: #efe9dd url("/joker-card.webp") center / 100% 100% no-repeat;
+  overflow: hidden;
 }
 .pc.back {
   background:
@@ -285,3 +383,184 @@ body {
     transform: scaleX(1);
   }
 }
+
+/* ---------- poker table motion ---------- */
+/* a card is dealt: it flies in from the middle of the table */
+.pk-deal {
+  animation: pk-deal 0.55s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pk-deal {
+  from {
+    opacity: 0;
+    transform: translate(var(--dx, 0), var(--dy, 0)) scale(0.45) rotate(var(--rot, 200deg));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* a community card is turned over onto the board */
+.pk-board {
+  animation: pk-board 0.65s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pk-board {
+  0% {
+    opacity: 0;
+    transform: translateY(-1.4rem) rotateY(90deg) scale(0.7);
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* hole cards turned face up at the showdown */
+.pk-flip {
+  animation: pk-flip 0.5s ease-out both;
+}
+@keyframes pk-flip {
+  from {
+    transform: rotateY(90deg) scale(0.9);
+  }
+  to {
+    transform: none;
+  }
+}
+.pk-pop {
+  animation: pk-pop 0.38s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+@keyframes pk-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.4) translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* a bet slides in from its player */
+.pk-bet {
+  animation: pk-bet 0.5s cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+@keyframes pk-bet {
+  from {
+    opacity: 0;
+    transform: translate(var(--bx, 0), var(--by, 0)) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* "+120" floats up over the winner */
+.pk-win {
+  animation: pk-win 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both, pk-bob 1.6s ease-in-out 0.5s infinite;
+}
+@keyframes pk-win {
+  from {
+    opacity: 0;
+    transform: translateY(0.8rem) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes pk-bob {
+  50% {
+    transform: translateY(-0.2rem);
+  }
+}
+.pk-glow {
+  animation: pk-glow 1.1s ease-in-out infinite;
+}
+@keyframes pk-glow {
+  50% {
+    box-shadow: 0 0 0 4px #6ee7b7, 0 0 32px #6ee7b7;
+  }
+}
+/* a stack that has just changed flashes */
+.pk-up {
+  animation: pk-up 1s ease-out;
+}
+@keyframes pk-up {
+  from {
+    color: #6ee7b7;
+    transform: scale(1.25);
+  }
+}
+.pk-down {
+  animation: pk-down 1s ease-out;
+}
+@keyframes pk-down {
+  from {
+    color: #fca5a5;
+    transform: scale(1.1);
+  }
+}
+/* the three dots after "thinks" */
+.pk-dots i {
+  display: inline-block;
+  animation: pk-dot 1.1s infinite;
+  font-style: normal;
+}
+.pk-dots i:nth-child(2) {
+  animation-delay: 0.18s;
+}
+.pk-dots i:nth-child(3) {
+  animation-delay: 0.36s;
+}
+@keyframes pk-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: none;
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-0.15rem);
+  }
+}
+/* the action bar slides up when it is your turn */
+.pk-up-bar {
+  animation: pk-up-bar 0.35s ease-out both;
+}
+@keyframes pk-up-bar {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+}
+/* coins burst out of the winner */
+.pk-coin {
+  animation: pk-coin 1.5s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes pk-coin {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.6) rotate(0);
+  }
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--cx, 0), var(--cy, -6rem)) scale(1.1) rotate(var(--cr, 360deg));
+  }
+}
+.pk-turn {
+  animation: pk-turn 1.2s ease-in-out infinite;
+}
+@keyframes pk-turn {
+  50% {
+    box-shadow: 0 0 0 5px #e8c46a99, 0 0 26px rgb(232 196 106 / 0.9);
+  }
+}
+

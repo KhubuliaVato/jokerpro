@@ -4,7 +4,7 @@
 // engine the browser uses, lets bots play empty/abandoned seats, and writes each player their own *view*
 // (table_views) which the clients receive live through Realtime.
 //
-// Plays Joker and Bura tables (table.game); everything below dispatches on it.
+// Plays Joker, Bura and Hold'em tables (table.game); everything below dispatches on it.
 // Actions (POST JSON, signed-in user): start, move, advance, tick, sync.
 // Built into one file with `npm run build:functions` (esbuild), because Deno needs explicit import paths.
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -24,6 +24,8 @@ import {
 import type { Rules } from "../../../lib/joker/rules";
 import { act as actBura, createGame as createBura, type BuraState } from "../../../lib/bura/engine";
 import * as bura from "../../../lib/bura/online";
+import { act as actPoker, type PokerState } from "../../../lib/poker/engine";
+import * as poker from "../../../lib/poker/online";
 // Private: the rating formulas live outside the public repository (see .gitignore).
 import { rateGame } from "../../../lib/secret/rating";
 import { rateBura } from "../../../lib/secret/buraRating";
@@ -60,7 +62,7 @@ interface Seat {
   /** Said "yes" in the ready check of a table of random players. */
   accepted: boolean;
 }
-type AnyState = GameState | BuraState;
+type AnyState = GameState | BuraState | PokerState;
 interface GameRow {
   table_id: string;
   state: AnyState;
@@ -72,8 +74,8 @@ interface GameRow {
 interface Table {
   id: string;
   status: string;
-  game: "joker" | "bura";
-  rules: Rules | bura.BuraRules;
+  game: "joker" | "bura" | "poker";
+  rules: Rules | bura.BuraRules | poker.PokerRules;
   /** private: friends with a code (nothing recorded). friendly / ranked: random players. */
   kind: "private" | "friendly" | "ranked";
 }
@@ -91,21 +93,27 @@ async function loadTable(tableId: string, userId: string) {
 
 const botSeat = (seats: Seat[]) => (seat: number) => seats.find((s) => s.seat === seat)?.bot ?? true;
 
-// ---- the two games behind one interface ----
+// ---- the games behind one interface ----
 const isBura = (t: Table) => t.game === "bura";
-const capacity = (t: Table) => (isBura(t) ? (t.rules as bura.BuraRules).players : PLAYERS);
+const isPoker = (t: Table) => t.game === "poker";
+const capacity = (t: Table) => (isBura(t) || isPoker(t) ? (t.rules as bura.BuraRules).players : PLAYERS);
 const create = (t: Table, isBot: (seat: number) => boolean): AnyState =>
-  isBura(t)
-    ? bura.settle(createBura((t.rules as bura.BuraRules).players), isBot)
-    : settle(createGame(t.rules as Rules), isBot);
+  isPoker(t)
+    ? poker.createPoker(t.rules as poker.PokerRules)
+    : isBura(t)
+      ? bura.settle(createBura((t.rules as bura.BuraRules).players), isBot)
+      : settle(createGame(t.rules as Rules), isBot);
 const viewOf = (t: Table, state: AnyState, seat: number) =>
-  isBura(t) ? bura.viewFor(state as BuraState, seat) : viewFor(state as GameState, seat);
-const active = (t: Table, state: AnyState) => (isBura(t) ? bura.isActivePhase(state as BuraState) : isActivePhase(state as GameState));
+  isPoker(t) ? poker.viewFor(state as PokerState, seat) : isBura(t) ? bura.viewFor(state as BuraState, seat) : viewFor(state as GameState, seat);
+const active = (t: Table, state: AnyState) =>
+  isPoker(t) ? poker.isActivePhase(state as PokerState) : isBura(t) ? bura.isActivePhase(state as BuraState) : isActivePhase(state as GameState);
+// Hold'em bots move one at a time (each on its own tick), so the players can follow the betting.
 const settleFor = (t: Table, state: AnyState, isBot: (seat: number) => boolean): AnyState =>
-  isBura(t) ? bura.settle(state as BuraState, isBot) : settle(state as GameState, isBot);
-const botOnce = (t: Table, state: AnyState): AnyState => (isBura(t) ? bura.botStep(state as BuraState) : botMove(state as GameState));
+  isPoker(t) ? state : isBura(t) ? bura.settle(state as BuraState, isBot) : settle(state as GameState, isBot);
+const botOnce = (t: Table, state: AnyState): AnyState =>
+  isPoker(t) ? poker.botStep(state as PokerState) : isBura(t) ? bura.botStep(state as BuraState) : botMove(state as GameState);
 const advanceFor = (t: Table, state: AnyState): AnyState =>
-  isBura(t) ? bura.advance(state as BuraState) : advance(state as GameState);
+  isPoker(t) ? poker.advance(state as PokerState) : isBura(t) ? bura.advance(state as BuraState) : advance(state as GameState);
 const isPause = (t: Table, state: AnyState) =>
   state.phase === "trickEnd" || (isBura(t) ? state.phase === "roundEnd" : state.phase === "handEnd");
 const resultOf = (t: Table, state: AnyState, seat: number) =>
@@ -162,7 +170,8 @@ async function save(
  * Ranked matches also rate everyone: players who left (a bot finished their seat) lose the full penalty.
  */
 async function finish(table: Table, seats: Seat[], state: AnyState) {
-  if (table.kind !== "private") {
+  // Hold'em is for friends with play chips only: nothing is recorded.
+  if (table.kind !== "private" && !isPoker(table)) {
     const { data: profiles } = await admin
       .from("profiles")
       .select("id, nickname")
@@ -301,7 +310,11 @@ async function handle(userId: string, body: Record<string, unknown>) {
     case "move":
       return withGame(tableId, userId, ({ table, seats, me, row }) => {
         let next: AnyState;
-        if (isBura(table)) {
+        if (isPoker(table)) {
+          const s = row.state as PokerState;
+          if (!poker.isActivePhase(s) || s.turn !== me.seat) throw new Error("not your turn");
+          next = actPoker(s, poker.parseAction(body.move));
+        } else if (isBura(table)) {
           const s = row.state as BuraState;
           if (!bura.isActivePhase(s) || s.turn !== me.seat) throw new Error("not your turn");
           next = actBura(s, bura.parseAction(body.move));
@@ -328,7 +341,14 @@ async function handle(userId: string, body: Record<string, unknown>) {
         const s = row.state;
         if (!active(table, s)) return null;
         const isBot = botSeat(seats);
-        if (isBot(s.turn)) return { state: settleFor(table, s, isBot) };
+        if (isBot(s.turn)) {
+          // A bot's move at a Hold'em table waits a moment after the last one, however many players ask.
+          if (isPoker(table)) {
+            if (Date.now() - Date.parse(row.updated_at) < 600) return null;
+            return { state: botOnce(table, s) };
+          }
+          return { state: settleFor(table, s, isBot) };
+        }
         const late = row.turn_deadline && Date.now() > Date.parse(row.turn_deadline) + DEADLINE_GRACE_MS;
         if (!late) return null;
         // The player ran out of time: a bot moves for them; after two in a row the seat is theirs no more.

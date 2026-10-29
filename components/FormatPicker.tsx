@@ -41,7 +41,7 @@ export function FormatPicker({ kind, game = "joker" }: { kind: "ranked" | "frien
         <Link href={`/${game}`} className="w-fit text-sm font-bold uppercase tracking-wider text-white/45 hover:text-amber-300">
           ← {game === "bura" ? "ბურა" : "ჯოკერი"}
         </Link>
-        <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl">{kind === "ranked" ? "წოდებისთვის ბრძოლა" : "მეგობრული მატჩი"}</h1>
+        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">{kind === "ranked" ? "წოდებისთვის ბრძოლა" : "მეგობრული მატჩი"}</h1>
         <p className="text-lg text-white/55 sm:text-xl">{kind === "ranked" ? "შემთხვევითი მოთამაშეები · წოდება იცვლება" : "შემთხვევითი მოთამაშეები · ქულა არ იცვლება"}</p>
       </section>
 
@@ -56,7 +56,7 @@ export function FormatPicker({ kind, game = "joker" }: { kind: "ranked" | "frien
         </div>
       ) : (
         <>
-          <section className="grid gap-5 pb-8 sm:grid-cols-2" style={rise(2)}>
+          <section className="grid grid-cols-[minmax(0,1fr)] gap-5 pb-8 sm:grid-cols-2" style={rise(2)}>
             {FORMATS[game].map((f) => (
               <button
                 key={f}

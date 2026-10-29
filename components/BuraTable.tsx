@@ -6,6 +6,7 @@ import { callName, canCall, handSize, isLegal, legalPlays, MAX_PRICE, molotka, n
 import { playCardSound, playDealSound } from "@/lib/sound";
 import { Avatar } from "./Avatar";
 import { CardView } from "./CardView";
+import { MusicPlayer } from "./MusicPlayer";
 import type { SeatAvatar } from "./names";
 import { BTN_GHOST, BTN_PRIMARY } from "./ui";
 
@@ -76,12 +77,12 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
       {/* score */}
       <header className="relative z-20 flex items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3">
         <div className="flex min-w-0 items-center gap-1.5 text-sm sm:gap-3 sm:text-base">
-          <ScoreChip label={teams ? "ჩვენ" : "თქვენ"} value={game.scores[0]} target={game.target} mine />
+          <ScoreChip label={teams ? "ჩვენ" : "თქვენ"} short={teams ? undefined : "მე"} value={game.scores[0]} target={game.target} mine />
           <ScoreChip label={teams ? "ისინი" : names[1]} value={game.scores[1]} target={game.target} />
         </div>
         <div className="flex flex-none items-center gap-1.5 sm:gap-3">
           <span
-            className={`rounded-full px-2.5 py-1 text-xs font-bold sm:px-3 sm:py-1.5 sm:text-sm ${game.price > 1 ? "bg-red-500/25 text-red-200" : "bg-black/30 text-white/70"}`}
+            className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-bold min-[380px]:px-2.5 sm:px-3 sm:py-1.5 sm:text-sm ${game.price > 1 ? "bg-red-500/25 text-red-200" : "bg-black/30 text-white/70"}`}
             title="რამდენ ქულად ფასობს რაუნდი"
           >
             <span className="hidden sm:inline">რაუნდი: </span>
@@ -90,6 +91,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
           <span className="hidden rounded-full bg-black/30 px-3 py-1.5 text-sm font-bold text-amber-200 sm:inline" title="თქვენი გუნდის აღებული ხელები">
             ხელები: {game.tricks[0]}
           </span>
+          <MusicPlayer />
           {confirm ? (
             <span className="flex items-center gap-2 text-sm">
               <span className="hidden max-w-xs text-white/70 sm:inline">{quitConfirm ?? "დარწმუნებული ხართ?"}</span>
@@ -220,10 +222,12 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
   );
 }
 
-function ScoreChip({ label, value, target, mine }: { label: string; value: number; target: number; mine?: boolean }) {
+/** `short` replaces the label on very narrow phones. */
+function ScoreChip({ label, short, value, target, mine }: { label: string; short?: string; value: number; target: number; mine?: boolean }) {
   return (
-    <span className={`flex items-baseline gap-1.5 rounded-full px-2.5 py-1 sm:gap-2 sm:px-3 sm:py-1.5 ${mine ? "bg-amber-300/15 text-amber-200" : "bg-black/30 text-white/80"}`}>
-      <span className="max-w-16 truncate text-sm font-bold sm:max-w-24 sm:text-base">{label}</span>
+    <span className={`flex min-w-0 items-baseline gap-1 rounded-full px-2 py-1 min-[380px]:gap-1.5 min-[380px]:px-2.5 sm:gap-2 sm:px-3 sm:py-1.5 ${mine ? "bg-amber-300/15 text-amber-200" : "bg-black/30 text-white/80"}`}>
+      {short && <span className="text-sm font-bold min-[380px]:hidden">{short}</span>}
+      <span className={`max-w-[3.25rem] truncate text-sm font-bold min-[380px]:max-w-16 sm:max-w-24 sm:text-base ${short ? "hidden min-[380px]:inline" : ""}`}>{label}</span>
       <b className="text-lg tabular-nums sm:text-xl">{value}</b>
       <span className="hidden text-xs text-white/40 sm:inline">/{target}</span>
     </span>

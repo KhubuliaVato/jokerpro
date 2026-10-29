@@ -23,7 +23,7 @@ export function ScoreSheet({ game }: { game: GameState }) {
               {SUIT_SYMBOL[h.trump]}
             </span>
           ) : (
-            <span className="ml-1.5 text-xs">უკოზირო</span>
+            <span className="ml-1.5 text-xs">კოზირის გარეშე</span>
           )}
         </td>
         {h.points.map((pt, p) => {

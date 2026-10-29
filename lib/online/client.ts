@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GameState } from "@/lib/joker/engine";
 import type { BuraState } from "@/lib/bura/engine";
+import type { PokerState } from "@/lib/poker/engine";
+import type { PokerRules } from "@/lib/poker/online";
 import type { Rules } from "@/lib/joker/rules";
 import type { BuraRules } from "@/lib/bura/online";
 
@@ -11,8 +13,8 @@ export interface TableRow {
   /** private: friends with a code. friendly / ranked: random players (ranked changes the rating). */
   kind: "private" | "friendly" | "ranked";
   status: "waiting" | "playing" | "finished" | "closed";
-  game: "joker" | "bura";
-  rules: Rules | BuraRules;
+  game: "joker" | "bura" | "poker";
+  rules: Rules | BuraRules | PokerRules;
   /** When the table of random players filled up: everyone then has READY_SECONDS to accept. */
   ready_at: string | null;
 }
@@ -30,7 +32,7 @@ export const READY_SECONDS = 30;
 export interface ViewRow {
   version: number;
   seat: number;
-  view: GameState | BuraState;
+  view: GameState | BuraState | PokerState;
   turn_deadline: string | null;
 }
 
@@ -54,7 +56,7 @@ export const cleanCode = (raw: string) => raw.replace(/[^a-zA-Z0-9]/g, "").toUpp
 
 export async function createTable(
   supabase: SupabaseClient,
-  rules: Rules | { game: "bura"; players: 2 | 4 },
+  rules: Rules | { game: "bura"; players: 2 | 4 } | { game: "poker"; players: number; bigBlind: 10 | 20 | 50 },
 ): Promise<{ table: TableRow | null; error: string | null }> {
   const { data, error } = await supabase.rpc("create_table", { p_rules: rules });
   return { table: (data as TableRow | null) ?? null, error: error ? onlineMessage(error.message) : null };

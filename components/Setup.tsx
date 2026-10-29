@@ -24,7 +24,7 @@ export function Setup({
     <PageShell width="max-w-3xl">
       <section className="flex flex-col gap-2" style={rise(1)}>
         <p className="text-sm font-bold uppercase tracking-wider text-white/45">ჯოკერი</p>
-        <h1 className="text-5xl font-extrabold tracking-tight sm:text-7xl">ბოტებთან</h1>
+        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">ბოტებთან</h1>
         <p className="text-lg text-white/55 sm:text-xl">სავარჯიშო თამაში: ქულა და ისტორია არ იწერება</p>
       </section>
 

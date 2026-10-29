@@ -25,6 +25,7 @@ import { HUMAN, TURN_SECONDS } from "@/lib/joker/useGame";
 import { DEFAULT_VOLUME, playCardSound, playDealSound, setMasterVolume } from "@/lib/sound";
 import { Avatar } from "./Avatar";
 import { CardView } from "./CardView";
+import { MusicPlayer } from "./MusicPlayer";
 import { usePlayerAvatars, usePlayerNames } from "./names";
 import { ScoreSheet } from "./ScoreSheet";
 
@@ -68,10 +69,13 @@ function PlayerTag({
   game,
   seat,
   compact,
+  showCount,
 }: {
   game: GameState;
   seat: number;
   compact?: boolean;
+  /** Phones without the fan of cards: say how many cards this opponent still holds. */
+  showCount?: boolean;
 }) {
   const avatars = usePlayerAvatars();
   const names = usePlayerNames();
@@ -87,17 +91,17 @@ function PlayerTag({
 
   const photo = avatars?.[seat];
   const avatar = photo ? (
-    <Avatar size="sm" color={photo.color} icon={photo.icon} url={photo.url} />
+    <Avatar size={compact ? "tag" : "sm"} color={photo.color} icon={photo.icon} url={photo.url} />
   ) : (
     <span
-      className={`grid size-8 flex-none place-items-center rounded-full bg-gradient-to-br text-sm font-extrabold text-black/80 shadow-inner ring-2 ${AVATAR[seat]} ${active ? "ring-amber-300" : "ring-white/30"}`}
+      className={`grid ${compact ? "size-6 wide:size-8" : "size-8"} flex-none place-items-center rounded-full bg-gradient-to-br text-sm font-extrabold text-black/80 shadow-inner ring-2 ${AVATAR[seat]} ${active ? "ring-amber-300" : "ring-white/30"}`}
     >
       {names[seat][0]}
     </span>
   );
   const score =
     bid === null ? null : (
-      <span className={`flex items-center gap-2 text-xs tabular-nums ${compact ? "justify-center" : ""}`}>
+      <span className={`flex items-center gap-1.5 whitespace-nowrap text-xs tabular-nums sm:gap-2 ${compact ? "col-span-2 justify-center wide:col-span-1" : ""}`}>
         <span title="ნათქვამი">
           <span className="opacity-60">ნათ.</span> <b className="text-sm">{bid === 0 ? "—" : bid}</b>
         </span>
@@ -110,7 +114,11 @@ function PlayerTag({
       </span>
     );
   const startBadge = starts && (
-    <span className="rounded-full bg-amber-300 px-2 py-0.5 text-[0.65rem] font-extrabold text-black">
+    <span
+      className={`rounded-full bg-amber-300 px-2 py-0.5 text-[0.65rem] font-extrabold text-black ${
+        compact ? "absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap wide:static wide:translate-x-0" : ""
+      }`}
+    >
       ▶ იწყებს
     </span>
   );
@@ -119,14 +127,27 @@ function PlayerTag({
     <div
       className={`rounded-2xl border bg-black/35 backdrop-blur-sm transition-shadow ${
         active ? "border-amber-300 shadow-[0_0_16px_rgb(232_196_106/0.55)]" : "border-white/15"
-      } ${compact ? "flex w-full flex-col items-center gap-1 px-2 py-2" : "flex items-center gap-2.5 px-3 py-1.5"}`}
+      } ${compact ? "relative grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-1 gap-y-0.5 px-1 py-1.5 min-[360px]:gap-x-1.5 min-[360px]:px-1.5 wide:flex wide:flex-col wide:gap-1 wide:px-2 wide:py-2 short:flex short:flex-row short:justify-center short:gap-1.5 short:px-2 short:py-1" : "flex items-center gap-2.5 px-3 py-1.5"}`}
     >
       {avatar}
-      <span className={`flex ${compact ? "flex-col items-center gap-1" : "flex-col gap-0.5"}`}>
-        <b className="text-sm leading-none">{names[seat]}</b>
+      <span className={compact ? "contents wide:flex wide:flex-col wide:items-center wide:gap-1 short:flex short:min-w-0 short:flex-row short:items-center short:gap-1.5" : "flex flex-col gap-0.5"}>
+        <b className={`leading-none ${compact ? "truncate text-[0.72rem] min-[360px]:text-[0.8rem] wide:text-sm" : "text-sm"}`}>{names[seat]}</b>
         {score}
       </span>
       {startBadge}
+      {showCount && seat === 2 && (
+        <span className="col-span-2 text-center text-[0.65rem] font-bold text-white/60 wide:hidden short:hidden [@media(min-height:760px)]:hidden">
+          კარტი: {game.hands[seat].length}
+        </span>
+      )}
+      {showCount && (
+        <span
+          title="კარტი ხელში"
+          className="hidden h-5 min-w-4 flex-none place-items-center rounded-[0.2rem] bg-[#234fae] px-1 text-[0.65rem] font-extrabold leading-none ring-1 ring-white/70 short:grid"
+        >
+          {game.hands[seat].length}
+        </span>
+      )}
     </div>
   );
 }
@@ -134,22 +155,22 @@ function PlayerTag({
 function TrumpInfo({ game }: { game: GameState }) {
   const { phase, trump, trumpCard } = game;
   return (
-    <div className="panel flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-2.5">
-      <span className="rotate-180 text-xs font-bold tracking-wide opacity-70 [writing-mode:vertical-rl]">
+    <div className="panel flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-2.5 tight:gap-2 tight:px-3 tight:py-1">
+      <span className="rotate-180 text-xs font-bold tracking-wide opacity-70 [writing-mode:vertical-rl] tight:hidden">
         კოზირი
       </span>
       {phase === "trump" ? (
         <span className="text-sm opacity-80">ირჩევა…</span>
       ) : (
         <>
-          {trumpCard && <CardView card={trumpCard} size="sm" />}
+          {trumpCard && <CardView card={trumpCard} size="sm" className="tight:!hidden" />}
           {trump ? (
-            <span className={`flex flex-col items-center leading-none ${suitColor(trump)}`}>
-              <span className="text-4xl sm:text-5xl">{SUIT_SYMBOL[trump]}</span>
-              <span className="mt-1 text-xs font-bold sm:text-sm">{SUIT_NAME[trump]}</span>
+            <span className={`flex flex-col items-center leading-none tight:flex-row tight:gap-1.5 ${suitColor(trump)}`}>
+              <span className="text-4xl sm:text-5xl tight:text-3xl">{SUIT_SYMBOL[trump]}</span>
+              <span className="mt-1 text-xs font-bold sm:text-sm tight:mt-0">{SUIT_NAME[trump]}</span>
             </span>
           ) : (
-            <span className="text-lg font-extrabold sm:text-xl">უკოზიროდ</span>
+            <span className="text-center text-base font-extrabold leading-tight sm:text-xl">კოზირის<br />გარეშე</span>
           )}
         </>
       )}
@@ -218,8 +239,7 @@ function wobble(id: string) {
 function TrickArea({ game }: { game: GameState }) {
   return (
     <div
-      className="relative h-[min(17rem,36dvh)] w-full max-w-[26rem]"
-      style={{ "--tcw": "clamp(3.4rem, min(15vw, 11.5dvh), 6.2rem)" } as React.CSSProperties}
+      className="relative h-full max-h-[17rem] w-full max-w-[26rem] [--tcw:clamp(2.6rem,min(15vw,calc((100dvh-24.5rem)/3.2)),6.2rem)] wide:[--tcw:clamp(3.4rem,min(15vw,11.5dvh),6.2rem)]"
     >
       <style>{`@keyframes deal-in{from{opacity:0;transform:translate(var(--fx),var(--fy)) scale(.8)}to{opacity:1;transform:none}}@keyframes take-trick{to{translate:calc(-50% + var(--tcw) * var(--tx)) calc(-50% + var(--tcw) * var(--ty));scale:.55;opacity:0}}`}</style>
       {game.trick.map((p, i) => {
@@ -329,7 +349,7 @@ function OpponentHand({ count, seat }: { count: number; seat: number }) {
 function Overlay({ children }: { children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-3">
-      <div className="panel w-full max-w-3xl p-4 sm:p-5">{children}</div>
+      <div className="panel max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto p-4 sm:p-5">{children}</div>
     </div>
   );
 }
@@ -424,11 +444,12 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
   return (
     <main className="felt relative flex h-dvh cursor-default select-none flex-col overflow-hidden">
       {/* two columns, two rows: scores and the controls on top, the stage and the trump under them (so nothing runs off a phone's edge) */}
-      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1.5 px-3 py-2 text-xs sm:text-sm">
-        <div className="min-w-0">
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-2 gap-y-1.5 px-3 py-2 text-xs sm:text-sm tight:flex tight:gap-2 tight:py-1.5">
+        <div className="order-1 min-w-0 sm:order-none tight:order-1 tight:w-[min(19rem,38vw)] tight:flex-none">
           <Scoreboard sums={sums} game={game} />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="order-4 flex items-center gap-2 justify-self-end sm:order-none tight:order-4 tight:ml-auto">
+          <MusicPlayer />
           <VolumeControl volume={volume} onChange={setVolume} />
           <button
             className="btn !px-3 !py-1"
@@ -437,7 +458,7 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
             გასვლა
           </button>
         </div>
-        <div className="panel min-w-0 px-2 pb-2 pt-1.5">
+        <div className="panel order-3 min-w-0 px-2 pb-2 pt-1.5 sm:order-none sm:w-full sm:max-w-[21rem] tight:order-2 tight:!w-36 tight:flex-none tight:px-3 tight:py-1 tight:max-[680px]:hidden">
           <div className="grid grid-cols-3 divide-x divide-white/10 text-center">
             {[
               ["ეტაპი", `${loc.pulka + 1}/${pulkas.length}`],
@@ -450,29 +471,58 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
               </div>
             ))}
           </div>
-          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
+          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10 tight:hidden">
             <div
               className="h-full rounded-full bg-amber-300 transition-[width] duration-500"
               style={{ width: `${(game.handIndex / pulkas.flat().length) * 100}%` }}
             />
           </div>
         </div>
-        <div className="justify-self-end">
+        <div className="order-2 justify-self-end sm:order-none tight:order-3">
           <TrumpInfo game={game} />
         </div>
       </header>
 
       <section className="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_1fr] items-center gap-x-2 px-2">
-        <div className="col-span-3 flex flex-col items-center gap-1">
-          <PlayerTag game={game} seat={2} />
-          <OpponentHand count={game.hands[2].length} seat={2} />
+        <div className="col-span-3 flex w-full flex-col items-center gap-1 [@media(min-width:1100px)_and_(min-height:821px)]:absolute [@media(min-width:1100px)_and_(min-height:821px)]:left-1/2 [@media(min-width:1100px)_and_(min-height:821px)]:top-2 [@media(min-width:1100px)_and_(min-height:821px)]:z-10 [@media(min-width:1100px)_and_(min-height:821px)]:w-auto [@media(min-width:1100px)_and_(min-height:821px)]:-translate-x-1/2">
+          {/* phones: the three opponents side by side, so the middle of the table stays free for the pickers */}
+          <div className="grid w-full grid-cols-3 gap-1.5 wide:hidden short:mx-auto short:max-w-xl">
+            <PlayerTag game={game} seat={1} compact showCount />
+            <PlayerTag game={game} seat={2} compact showCount />
+            <PlayerTag game={game} seat={3} compact showCount />
+          </div>
+          <div className="hidden wide:block">
+            <PlayerTag game={game} seat={2} />
+          </div>
+          {/* the fan across the table only where there is height for it */}
+          <div className="hidden wide:block [@media(min-height:760px)]:block">
+            <OpponentHand count={game.hands[2].length} seat={2} />
+          </div>
         </div>
-        <div className="flex w-[5rem] flex-col items-center gap-2 sm:w-28">
-          <PlayerTag game={game} seat={1} compact />
+        <div className="col-start-1 row-start-2 flex flex-col items-center gap-2 wide:w-28 short:hidden">
+          <div className="hidden w-full wide:block">
+            <PlayerTag game={game} seat={1} compact />
+          </div>
           <OpponentHand count={game.hands[1].length} seat={1} />
         </div>
-        <div className="relative grid self-stretch place-items-center">
+        <div className="relative col-start-2 row-start-2 grid self-stretch place-items-center">
           <TrickArea game={game} />
+        </div>
+        <div className="col-start-3 row-start-2 flex flex-col items-center gap-2 wide:w-28 short:hidden">
+          <div className="hidden w-full wide:block">
+            <PlayerTag game={game} seat={3} compact />
+          </div>
+          <OpponentHand count={game.hands[3].length} seat={3} />
+        </div>
+        {/* phones: the status line sits at the bottom of the stage */}
+        <div className="pointer-events-none relative col-span-3 col-start-1 row-start-2 flex items-end justify-center self-stretch wide:hidden">
+          <div className="flex items-center gap-2 text-sm font-bold text-amber-200">
+            {status}
+            {myTurn && game.phase === "playing" && secondsLeft !== null && <TurnTimer left={secondsLeft} />}
+          </div>
+        </div>
+        {/* the pickers float over the whole stage, not just its middle column */}
+        <div className="relative col-span-3 col-start-1 row-start-2 self-stretch">
           {myTurn && game.phase === "trump" && (
             <TrumpPicker secondsLeft={secondsLeft} onPick={onTrump} />
           )}
@@ -488,31 +538,27 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
             />
           )}
         </div>
-        <div className="flex w-[5rem] flex-col items-center gap-2 sm:w-28">
-          <PlayerTag game={game} seat={3} compact />
-          <OpponentHand count={game.hands[3].length} seat={3} />
-        </div>
       </section>
 
-      <footer className="relative flex flex-col items-center gap-2 px-2 pb-3">
-        <div className="flex min-h-9 items-center gap-3 text-sm font-bold text-amber-200">
+      <footer className="relative flex flex-col items-center gap-1.5 px-2 pb-2 sm:gap-2 sm:pb-3">
+        <div className="hidden min-h-9 items-center gap-3 text-sm font-bold text-amber-200 wide:flex">
           {status}
           {myTurn && game.phase === "playing" && secondsLeft !== null && <TurnTimer left={secondsLeft} />}
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:hidden">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:hidden short:hidden">
           <PlayerTag game={game} seat={HUMAN} />
           {game.lastTrick && (
             <LastTrickDock trick={game.lastTrick} open={lastOpen} onToggle={setLastOpen} />
           )}
         </div>
-        <div className="absolute bottom-3 left-3 hidden flex-col items-start gap-2 sm:flex">
+        <div className="absolute bottom-3 left-3 hidden flex-col items-start gap-2 sm:flex short:flex">
           {game.lastTrick && (
             <LastTrickDock trick={game.lastTrick} open={lastOpen} onToggle={setLastOpen} />
           )}
           <PlayerTag game={game} seat={HUMAN} />
         </div>
-        <div className="flex max-w-full justify-center px-2 pb-10 pt-3">
+        <div className="flex max-w-full justify-center px-2 pb-6 pt-2 sm:pb-10 sm:pt-3 short:pb-3 short:pt-1">
           <div className="relative flex items-end">
             {myHand.map((card, i) => {
               const ok = canPlay && playable.has(card.id);
@@ -582,7 +628,7 @@ function Standings({ sums }: { sums: number[] }) {
 
 const GOOD = "text-emerald-300";
 const BAD = "text-red-300";
-const COLS = "grid grid-cols-[1.4rem_repeat(4,minmax(0,1fr))] items-center";
+const COLS = "grid grid-cols-4 items-center";
 
 type Entry =
   | { kind: "hand"; h: GameState["history"][number]; n: number }
@@ -613,27 +659,25 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
       <button
         type="button"
         onClick={() => setPinned((v) => !v)}
-        className="panel block w-full px-3 py-2.5 text-left"
+        className="panel block w-full px-2 py-2 text-left sm:px-3 sm:py-2.5 tight:py-1"
         aria-label="ქულების სია"
         aria-expanded={pinned}
       >
-        <div className={`${COLS} mb-1 text-center text-xs font-bold sm:text-sm`}>
-          <span />
+        <div className={`${COLS} mb-0.5 text-center text-[0.7rem] font-bold min-[360px]:text-xs sm:mb-1 sm:text-sm tight:!text-xs`}>
           {names.map((name, p) => (
             <span key={name} className={`truncate ${sums[p] === top && started ? "text-amber-300" : ""}`}>
               {name}
             </span>
           ))}
         </div>
-        <div className={`${COLS} text-center text-lg font-extrabold tabular-nums sm:text-2xl`}>
-          <span />
+        <div className={`${COLS} text-center text-base font-extrabold tabular-nums min-[360px]:text-lg sm:text-2xl tight:!text-lg`}>
           {sums.map((v, p) => (
             <span key={p} className={v === top && started ? "text-amber-300" : ""}>
               {v}
             </span>
           ))}
         </div>
-        <div className="mt-0.5 text-center text-[0.6rem] leading-none opacity-40 transition-opacity group-hover:opacity-0">
+        <div className="mt-0.5 text-center text-[0.6rem] leading-none opacity-40 transition-opacity group-hover:opacity-0 tight:hidden">
           ▾
         </div>
       </button>
@@ -655,8 +699,7 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
               ) : (
                 <>
                   <div className={`${COLS} pb-1 text-center text-[0.65rem] opacity-60`}>
-                    <span />
-                    {names.map((name) => (
+                              {names.map((name) => (
                       <span key={name} className="grid grid-cols-2 border-l border-white/30">
                         <span>ნათ.</span>
                         <span>წაღ.</span>
@@ -667,9 +710,9 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
                     e.kind === "premium" ? (
                       <div
                         key={`pr${e.pulka}`}
-                        className={`${COLS} border-t border-amber-300/30 py-1.5 text-center text-xs font-bold text-amber-300`}
+                        className={`${COLS} relative border-t border-amber-300/30 py-1.5 text-center text-xs font-bold text-amber-300`}
                       >
-                        <span>★</span>
+                        <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 text-[0.6rem]">★</span>
                         {game.premiums[e.pulka].map((v, p) => (
                           <span key={p} className="border-l border-white/30">
                             {v > 0 ? `+${v}` : ""}
@@ -677,8 +720,8 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
                         ))}
                       </div>
                     ) : (
-                      <div key={e.n} className={`${COLS} border-t border-white/10 py-1.5 text-center`}>
-                        <span className="text-[0.65rem] opacity-40">{e.h.cards}</span>
+                      <div key={e.n} className={`${COLS} relative border-t border-white/10 py-1.5 text-center`}>
+                        <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 text-[0.6rem] opacity-40">{e.h.cards}</span>
                         {e.h.bids.map((bid, p) => {
                           const taken = e.h.taken[p];
                           return (
@@ -766,9 +809,9 @@ function VolumeControl({ volume, onChange }: { volume: number; onChange: (v: num
         value={Math.round(volume * 100)}
         onChange={(e) => onChange(Number(e.target.value) / 100)}
         aria-label="ხმის სიმაღლე"
-        className="hidden h-1 w-16 cursor-pointer accent-amber-300 sm:block sm:w-24"
+        className="hidden h-1 w-16 cursor-pointer accent-amber-300 sm:block sm:w-24 tight:max-[900px]:!hidden"
       />
-      <span className="hidden w-8 text-right text-[0.7rem] tabular-nums opacity-70 sm:block">{Math.round(volume * 100)}%</span>
+      <span className="hidden w-8 text-right text-[0.7rem] tabular-nums opacity-70 sm:block tight:max-[900px]:!hidden">{Math.round(volume * 100)}%</span>
     </div>
   );
 }
@@ -778,13 +821,10 @@ function PickerStage({
   title,
   secondsLeft,
   low,
-  clearSides,
   children,
 }: {
   title: string;
   secondsLeft: number | null;
-  /** On a phone, sit lower than the players at the sides so their tags do not touch the title. */
-  clearSides?: boolean;
   /** Sit at the bottom of the table instead of the middle (keeps played cards visible). */
   low?: boolean;
   children: React.ReactNode;
@@ -793,11 +833,11 @@ function PickerStage({
     <div
       className={`pointer-events-none absolute inset-0 z-10 flex justify-center ${low ? "items-end pb-2" : "items-center"}`}
     >
-      <div className={`relative flex flex-col items-center gap-4 sm:translate-y-0 sm:gap-6 ${clearSides ? "translate-y-12" : ""}`}>
+      <div className="relative flex max-w-full flex-col items-center gap-2 sm:gap-6 [@media(min-height:700px)]:gap-4">
         <div className="absolute -inset-x-16 -inset-y-12 -z-10 rounded-[50%] bg-[radial-gradient(closest-side,rgb(0_0_0/0.4),transparent)]" />
         <div className="flex items-center gap-2 sm:gap-4">
           <span className="hidden h-px w-16 bg-gradient-to-r from-transparent to-amber-300/80 sm:block" />
-          <span className="whitespace-nowrap text-base font-extrabold text-amber-200 sm:text-xl">{title}</span>
+          <span className="whitespace-nowrap text-sm font-extrabold text-amber-200 min-[400px]:text-base sm:text-xl">{title}</span>
           {secondsLeft !== null && <TurnTimer left={secondsLeft} />}
           <span className="hidden h-px w-16 bg-gradient-to-l from-transparent to-amber-300/80 sm:block" />
         </div>
@@ -820,10 +860,17 @@ function BidPicker({
   onPick: (bid: number) => void;
 }) {
   return (
-    <PickerStage title="რამდენს იტყვით?" secondsLeft={secondsLeft} clearSides>
+    <PickerStage title="რამდენს იტყვით?" secondsLeft={secondsLeft}>
+      {/* one or two even rows: 6 choices become 3 + 3, not 5 + 1 */}
       <div
-        className="pointer-events-auto flex max-w-xl flex-wrap justify-center gap-2.5 sm:gap-3"
-        style={{ "--from": "2rem" } as React.CSSProperties}
+        className="pointer-events-auto grid justify-center gap-x-2 gap-y-2 [--bw:clamp(2.6rem,min(15vw,8.5dvh),4.5rem)] [grid-template-columns:repeat(var(--c2),var(--bw))] sm:gap-3 short:[grid-template-columns:repeat(var(--c1),var(--bw))]"
+        style={
+          {
+            "--from": "2rem",
+            "--c1": cards + 1,
+            "--c2": cards + 1 <= 5 ? cards + 1 : Math.ceil((cards + 1) / 2),
+          } as React.CSSProperties
+        }
       >
         {Array.from({ length: cards + 1 }, (_, n) => {
           const ok = allowed.includes(n);
@@ -833,7 +880,7 @@ function BidPicker({
               disabled={!ok}
               onClick={() => onPick(n)}
               style={{ animationDelay: `${n * 35}ms` }}
-              className="group relative block h-[4.5rem] w-14 drop-in disabled:cursor-not-allowed sm:h-24 sm:w-[4.5rem]"
+              className="group relative block h-[calc(var(--bw)*1.25)] w-[var(--bw)] drop-in disabled:cursor-not-allowed"
               aria-label={n === 0 ? "პასი" : String(n)}
             >
               <span
@@ -841,7 +888,7 @@ function BidPicker({
                   ok
                     ? "bg-[#fbf8ef] text-neutral-900 shadow-[0_6px_16px_rgb(0_0_0/0.45)] ring-1 ring-black/10 group-hover:-translate-y-3 group-hover:shadow-[0_0_0_3px_#e8c46a,0_16px_24px_rgb(0_0_0/0.45)] group-active:translate-y-0"
                     : "bg-black/20 text-white/25 ring-1 ring-white/10 line-through"
-                } ${n === 0 ? "text-sm sm:text-base" : "text-3xl sm:text-4xl"}`}
+                } ${n === 0 ? "text-[calc(var(--bw)*0.3)]" : "text-[calc(var(--bw)*0.56)]"}`}
               >
                 {n === 0 ? "პასი" : n}
               </span>
@@ -854,7 +901,7 @@ function BidPicker({
 }
 
 /** Trump choice: five big cards dealt onto the table, no words (the joker card means "no trump"). */
-const TRUMP_TILE = "group relative block h-24 w-[3.6rem] drop-in min-[420px]:h-28 min-[420px]:w-16 sm:h-40 sm:w-[6.5rem]";
+const TRUMP_TILE = "group relative block h-[calc(var(--tw)*1.5)] w-[var(--tw)] drop-in";
 
 function TrumpPicker({
   secondsLeft,
@@ -865,8 +912,8 @@ function TrumpPicker({
 }) {
   const tiles = [...SUITS, null] as const;
   return (
-    <PickerStage title="აირჩიეთ კოზირი" secondsLeft={secondsLeft} clearSides>
-      <div className="pointer-events-auto flex items-start gap-1.5 min-[420px]:gap-2.5 sm:gap-4" style={{ "--from": "3rem" } as React.CSSProperties}>
+    <PickerStage title="აირჩიეთ კოზირი" secondsLeft={secondsLeft}>
+      <div className="pointer-events-auto flex items-start gap-1.5 [--tw:clamp(3.1rem,min(17vw,10dvh),6.5rem)] min-[420px]:gap-2.5 sm:gap-4" style={{ "--from": "3rem" } as React.CSSProperties}>
         {tiles.map((s, i) => {
           const d = i - 2;
           return (
@@ -875,18 +922,18 @@ function TrumpPicker({
               className={TRUMP_TILE}
               // Fan: tilt each card and let the outer ones sit lower, so the row forms a dome.
               style={{ rotate: `${d * 4}deg`, translate: `0 ${d * d * 0.3}rem`, animationDelay: `${i * 70}ms` }}
-              aria-label={s ? SUIT_NAME[s] : "უკოზიროდ"}
+              aria-label={s ? SUIT_NAME[s] : "კოზირის გარეშე"}
               onClick={() => onPick(s)}
             >
               {/* The outer button keeps a fixed hit area; only this face moves on hover. */}
               <span
                 className={`flex size-full flex-col items-center justify-center gap-2 rounded-xl leading-none shadow-[0_6px_16px_rgb(0_0_0/0.45)] ring-1 ring-black/10 transition-[translate,box-shadow] duration-200 ease-out group-hover:-translate-y-3 group-hover:shadow-[0_0_0_3px_#e8c46a,0_16px_24px_rgb(0_0_0/0.45)] group-active:translate-y-0 ${s ? "bg-[#fbf8ef]" : "bg-gradient-to-br from-[#fff4e0] via-[#f1ddff] to-[#d9e6ff]"}`}
               >
-                <span className={`text-3xl min-[420px]:text-4xl sm:text-6xl ${s ? (isRed(s) ? "text-red-600" : "text-neutral-900") : "text-purple-700"}`}>
+                <span className={`text-[calc(var(--tw)*0.55)] ${s ? (isRed(s) ? "text-red-600" : "text-neutral-900") : "text-purple-700"}`}>
                   {s ? SUIT_SYMBOL[s] : "★"}
                 </span>
-                <span className={`text-[10px] font-extrabold min-[420px]:text-xs sm:text-sm ${s ? (isRed(s) ? "text-red-700" : "text-neutral-800") : "text-purple-800"}`}>
-                  {s ? SUIT_NAME[s] : "უკოზიროდ"}
+                <span className={`text-[calc(var(--tw)*0.17)] text-center font-extrabold leading-tight ${s ? (isRed(s) ? "text-red-700" : "text-neutral-800") : "text-purple-800"}`}>
+                  {s ? SUIT_NAME[s] : <>კოზირის<br />გარეშე</>}
                 </span>
               </span>
             </button>
@@ -921,16 +968,16 @@ function JokerMenu({
     <PickerStage title="ჯოკერი" secondsLeft={null} low>
       <div
         data-joker
-        className="pointer-events-auto flex flex-col gap-4"
+        className="pointer-events-auto flex flex-col gap-2 min-[400px]:gap-4"
         style={{ "--from": "2rem" } as React.CSSProperties}
       >
         {leading ? (
           modes.map(({ mode, label }, r) => (
-            <div key={mode} className="drop-in flex items-center gap-4 sm:gap-5" style={{ animationDelay: `${r * 80}ms` }}>
-              <span className={`w-24 text-base font-extrabold sm:w-28 sm:text-lg ${mode === "high" ? "text-amber-300" : "text-white"}`}>
+            <div key={mode} className="drop-in flex items-center gap-2 min-[400px]:gap-4 sm:gap-5" style={{ animationDelay: `${r * 80}ms` }}>
+              <span className={`w-[4.5rem] text-sm font-extrabold min-[400px]:w-24 min-[400px]:text-base sm:w-28 sm:text-lg ${mode === "high" ? "text-amber-300" : "text-white"}`}>
                 {label}
               </span>
-              <span className="flex gap-2.5 sm:gap-3">
+              <span className="flex gap-2 min-[400px]:gap-2.5 sm:gap-3">
                 {options
                   .filter((o) => o.mode === mode)
                   .map((o) => (
@@ -939,10 +986,10 @@ function JokerMenu({
                       onClick={() => onPick(o)}
                       aria-label={`${label} ${SUIT_NAME[o.suit as Suit]}`}
                       title={SUIT_NAME[o.suit as Suit]}
-                      className="group relative block size-14 sm:size-16"
+                      className="group relative block size-[clamp(2.4rem,min(10.5vw,9dvh),4rem)]"
                     >
                       <span
-                        className={`grid size-full place-items-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#fffdf6,#efe8d3)] text-4xl leading-none shadow-[0_3px_8px_rgb(0_0_0/0.45)] transition-[translate,box-shadow] duration-150 ease-out group-hover:-translate-y-1.5 group-hover:shadow-[0_0_0_3px_#e8c46a,0_10px_16px_rgb(0_0_0/0.45)] group-active:translate-y-0 ${
+                        className={`grid size-full place-items-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#fffdf6,#efe8d3)] text-[clamp(1.5rem,6.5vw,2.25rem)] leading-none shadow-[0_3px_8px_rgb(0_0_0/0.45)] transition-[translate,box-shadow] duration-150 ease-out group-hover:-translate-y-1.5 group-hover:shadow-[0_0_0_3px_#e8c46a,0_10px_16px_rgb(0_0_0/0.45)] group-active:translate-y-0 ${
                           mode === "high" ? "ring-[3px] ring-amber-300/90" : "opacity-90 ring-2 ring-white/25"
                         } ${isRed(o.suit as Suit) ? "text-red-600" : "text-neutral-900"}`}
                       >
@@ -962,7 +1009,7 @@ function JokerMenu({
                 <button
                   key={mode}
                   onClick={() => onPick(opt)}
-                  className="group relative block h-20 w-36 drop-in sm:h-24 sm:w-44"
+                  className="group relative block h-16 w-[clamp(6rem,38vw,9rem)] drop-in min-[400px]:h-20 sm:h-24 sm:w-44"
                   style={{ animationDelay: `${i * 80}ms` }}
                 >
                   <span

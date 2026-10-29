@@ -1,3 +1,4 @@
+import { CardFace } from "./CardFace";
 import {
   isRed,
   rankLabel,
@@ -26,10 +27,7 @@ export function CardView({ card, size = "md", className = "", style }: Props) {
         className={`pc joker ${sizeClass} ${className}`}
         style={style}
         aria-label="ჯოკერი"
-      >
-        <div className="corner">JOKER</div>
-        <div className="star">★</div>
-      </div>
+      />
     );
   }
   return (
@@ -38,11 +36,7 @@ export function CardView({ card, size = "md", className = "", style }: Props) {
       style={style}
       aria-label={`${rankLabel(card.rank)} ${SUIT_SYMBOL[card.suit]}`}
     >
-      <div className="corner">
-        <span>{rankLabel(card.rank)}</span>
-        <span>{SUIT_SYMBOL[card.suit]}</span>
-      </div>
-      <div className="pip">{SUIT_SYMBOL[card.suit]}</div>
+      <CardFace card={card} />
     </div>
   );
 }

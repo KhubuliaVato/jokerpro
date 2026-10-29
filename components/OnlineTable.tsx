@@ -9,12 +9,15 @@ import type { Rules } from "@/lib/joker/rules";
 import type { BuraState } from "@/lib/bura/engine";
 import type { BuraRules } from "@/lib/bura/online";
 import type { GameState } from "@/lib/joker/engine";
+import type { PokerState } from "@/lib/poker/engine";
+import type { PokerRules } from "@/lib/poker/online";
 import { Avatar } from "./Avatar";
 import { PlayerNamesProvider } from "./names";
 import { PageShell } from "./PageShell";
 import { QueueLobby } from "./QueueLobby";
 import { RatingResult } from "./RatingResult";
 import { BuraTable } from "./BuraTable";
+import { PokerTable } from "./PokerTable";
 import { Table } from "./Table";
 import { TableChat } from "./TableChat";
 import { BTN_GHOST, BTN_PRIMARY, FORMAT_LABEL, rise } from "./ui";
@@ -25,6 +28,9 @@ export const describeRules = (r: Rules) =>
 
 /** "2 მოთამაშე" / "4 მოთამაშე · 2×2" */
 export const describeBura = (r: BuraRules) => (r.players === 4 ? "4 მოთამაშე · 2×2" : "2 მოთამაშე");
+
+/** "Texas Hold'em · 4 მოთამაშე · ბლაინდები 10/20" */
+export const describePoker = (r: PokerRules) => `Texas Hold'em · ${r.players} მოთამაშე · ბლაინდები ${r.smallBlind}/${r.bigBlind} · ${r.startStack} ჩიპი`;
 
 /** The screen behind a table code: the waiting room first, the game itself once four players sit. */
 export function OnlineTable({ code }: { code: string }) {
@@ -104,8 +110,8 @@ export function OnlineTable({ code }: { code: string }) {
       return (
         <QueueLobby
           kind={t.table.kind}
-          rules={t.table.rules}
-          game={game}
+          rules={t.table.rules as Rules | BuraRules}
+          game={game as "joker" | "bura"}
           players={t.players}
           full={t.seats.length === t.capacity}
           readyLeft={t.readyLeft}
@@ -125,6 +131,37 @@ export function OnlineTable({ code }: { code: string }) {
         game={game}
         onLeave={leaveToMenu}
       />
+    );
+  }
+
+  if (t.table.game === "poker") {
+    const others = t.players.slice(1).map((p) => ({
+      name: (p?.profile?.nickname ?? "…") + (p?.bot ? " · ბოტი" : ""),
+      color: p?.profile?.avatar_color,
+      icon: p?.profile?.avatar_icon,
+      url: p?.profile?.avatar_url ?? null,
+    }));
+    return (
+      <>
+        <PokerTable
+          game={t.view as PokerState}
+          opponents={others}
+          me={{
+            name: t.players[0]?.profile?.nickname ?? "თქვენ",
+            avatar: t.players[0]?.profile
+              ? { color: t.players[0].profile.avatar_color, icon: t.players[0].profile.avatar_icon, url: t.players[0].profile.avatar_url }
+              : null,
+          }}
+          secondsLeft={t.secondsLeft}
+          onPlay={(action) => void t.pokerAct(action)}
+          onNext={() => {}}
+          autoNext
+          onQuit={() => {
+            if (window.confirm("დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს.")) void leaveToMenu();
+          }}
+        />
+        {t.notice && <Notice text={t.notice} />}
+      </>
     );
   }
 
@@ -233,8 +270,8 @@ function Lobby({
   onLeave,
 }: {
   code: string;
-  rules: Rules | BuraRules;
-  game: "joker" | "bura";
+  rules: Rules | BuraRules | PokerRules;
+  game: "joker" | "bura" | "poker";
   players: LobbyPlayer[];
   hostId: string;
   myId: string;
@@ -260,7 +297,7 @@ function Lobby({
       <section className="flex flex-col gap-2" style={rise(1)}>
         <p className="text-sm font-bold uppercase tracking-wider text-white/45">კერძო მაგიდა</p>
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">მაგიდის კოდი</h1>
-        <p className="text-lg text-white/55">{game === "bura" ? describeBura(rules as BuraRules) : describeRules(rules as Rules)}</p>
+        <p className="text-lg text-white/55">{game === "poker" ? describePoker(rules as PokerRules) : game === "bura" ? describeBura(rules as BuraRules) : describeRules(rules as Rules)}</p>
       </section>
 
       <section className="flex flex-col gap-5" style={rise(2)}>

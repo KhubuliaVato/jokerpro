@@ -139,7 +139,7 @@ function ChatView({
   return (
     <div className="fixed bottom-3 right-3 z-50 flex flex-col items-end gap-2">
       {open && (
-        <div className="flex h-72 w-72 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0b2a1b]/95 shadow-2xl backdrop-blur">
+        <div className="flex h-72 max-h-[calc(100dvh-5rem)] w-72 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0b2a1b]/95 shadow-2xl backdrop-blur">
           <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-sm font-bold">
             ჩათი
             <button onClick={toggle} aria-label="ჩათის დახურვა" className="px-1 text-lg leading-none text-white/60 hover:text-white">
