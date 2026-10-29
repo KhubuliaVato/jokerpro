@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "build:poker": "esbuild supabase/functions/poker/index.ts --bundle --format=esm --platform=neutral --minify --external:npm:* --outfile=supabase/functions/poker/dist/index.js",
     "build:functions": "esbuild supabase/functions/joker/index.ts --bundle --format=esm --platform=neutral --minify --external:npm:* --outfile=supabase/functions/joker/dist/index.js",
     "sim:online": "esbuild scripts/online-sim.ts --bundle --platform=node --format=cjs --outfile=.sim/online-sim.cjs --log-level=warning && node .sim/online-sim.cjs",
     "sim:friends": "esbuild scripts/online-friends.ts --bundle --platform=node --format=cjs --outfile=.sim/online-friends.cjs --log-level=warning && node .sim/online-friends.cjs",

@@ -126,9 +126,9 @@ export async function leaveTable(supabase: SupabaseClient, tableId: string): Pro
  */
 const GAME_SERVER_REGION = "ap-northeast-2";
 
-/** Calls the game server (Edge Function `joker`). Resolves to an error message, or null on success. */
-export async function callJoker(supabase: SupabaseClient, body: Record<string, unknown>): Promise<string | null> {
-  const { error } = await supabase.functions.invoke(`joker?forceFunctionRegion=${GAME_SERVER_REGION}`, { body });
+/** Calls the game server: Edge Function `joker` (Joker and Bura) or `poker` (Hold'em). Resolves to an error message, or null on success. */
+export async function callJoker(supabase: SupabaseClient, body: Record<string, unknown>, server: "joker" | "poker" = "joker"): Promise<string | null> {
+  const { error } = await supabase.functions.invoke(`${server}?forceFunctionRegion=${GAME_SERVER_REGION}`, { body });
   if (!error) return null;
   // The server explains refusals in the response body.
   const detail = await (error as { context?: Response }).context?.json?.().catch(() => null);

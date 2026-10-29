@@ -47,6 +47,8 @@ export function useOnlineTable(code: string) {
   const [skew, setSkew] = useState(0);
 
   const tableId = table?.id ?? null;
+  /** Which game server referees this table. */
+  const server = table?.game === "poker" ? "poker" : "joker";
 
   // 1. Sit down (or come back to) the table behind this code.
   useEffect(() => {
@@ -165,7 +167,7 @@ export function useOnlineTable(code: string) {
     if (isPublic && !allAccepted) return;
     started.current = true;
     const t = setTimeout(() => {
-      void callJoker(supabase, { action: "start", table_id: tableId }).then((e) => {
+      void callJoker(supabase, { action: "start", table_id: tableId }, server).then((e) => {
         if (e) {
           started.current = false;
           setError(e);
@@ -173,7 +175,7 @@ export function useOnlineTable(code: string) {
       });
     }, jitter(600));
     return () => clearTimeout(t);
-  }, [tableId, status, full, isPublic, allAccepted]);
+  }, [tableId, status, full, isPublic, allAccepted, server]);
 
   const accept = useCallback(async () => {
     const supabase = getSupabase();
@@ -224,11 +226,11 @@ export function useOnlineTable(code: string) {
     const phase = row.view.phase;
     if (phase !== "trickEnd" && phase !== "handEnd" && phase !== "roundEnd") return;
     const t = setTimeout(
-      () => void callJoker(supabase, { action: "advance", table_id: tableId, version: row.version }),
+      () => void callJoker(supabase, { action: "advance", table_id: tableId, version: row.version }, server),
       jitter(phase === "trickEnd" ? TRICK_PAUSE : phase === "roundEnd" ? ROUND_PAUSE : table?.game === "poker" ? HAND_PAUSE : HAND_END_PAUSE),
     );
     return () => clearTimeout(t);
-  }, [tableId, row, table?.game]);
+  }, [tableId, row, server, table?.game]);
 
   // 5. A bot's turn, or a player's timer ran out: the server plays for them when asked.
   const realTurn = row
@@ -243,9 +245,9 @@ export function useOnlineTable(code: string) {
     const deadline = row.turn_deadline ? Date.parse(row.turn_deadline) : null;
     const wait = turnIsBot ? 700 : deadline ? Math.max(0, deadline - Date.now()) + 1600 : null;
     if (wait === null) return;
-    const t = setTimeout(() => void callJoker(supabase, { action: "tick", table_id: tableId }), jitter(wait));
+    const t = setTimeout(() => void callJoker(supabase, { action: "tick", table_id: tableId }, server), jitter(wait));
     return () => clearTimeout(t);
-  }, [tableId, row, turnIsBot]);
+  }, [tableId, row, turnIsBot, server]);
 
   // Countdown shown on my own turn.
   const myDecision = !!row && needsMove(row.view) && row.view.turn === 0;
@@ -269,7 +271,7 @@ export function useOnlineTable(code: string) {
       } catch {
         // not predictable locally: wait for the server
       }
-      const err = await callJoker(supabase, { action: "move", table_id: tableId, move: action });
+      const err = await callJoker(supabase, { action: "move", table_id: tableId, move: action }, server);
       if (err) {
         setOptimistic(null);
         setNotice(err);
@@ -277,7 +279,7 @@ export function useOnlineTable(code: string) {
         void loadView();
       }
     },
-    [tableId, row, loadView],
+    [tableId, row, loadView, server],
   );
 
   /** Bura: cards, a call, an answer to a call or "var". */
@@ -293,7 +295,7 @@ export function useOnlineTable(code: string) {
           return;
         }
       }
-      const err = await callJoker(supabase, { action: "move", table_id: tableId, move: action });
+      const err = await callJoker(supabase, { action: "move", table_id: tableId, move: action }, server);
       if (err) {
         setOptimistic(null);
         setNotice(err);
@@ -301,21 +303,21 @@ export function useOnlineTable(code: string) {
         void loadView();
       }
     },
-    [tableId, row, loadView],
+    [tableId, row, loadView, server],
   );
   /** Hold'em: fold, check, call or raise. The server answers with the next state (nothing is predicted here: the deck is secret). */
   const pokerAct = useCallback(
     async (action: PokerAction) => {
       const supabase = getSupabase();
       if (!supabase || !tableId || !row) return;
-      const err = await callJoker(supabase, { action: "move", table_id: tableId, move: action });
+      const err = await callJoker(supabase, { action: "move", table_id: tableId, move: action }, server);
       if (err) {
         setNotice(err);
         setTimeout(() => setNotice(null), 3500);
         void loadView();
       }
     },
-    [tableId, row, loadView],
+    [tableId, row, loadView, server],
   );
   const playCards = useCallback((ids: string[]) => buraAct({ type: "play", ids }), [buraAct]);
 
