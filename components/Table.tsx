@@ -69,11 +69,14 @@ function PlayerTag({
   game,
   seat,
   compact,
+  side,
   showCount,
 }: {
   game: GameState;
   seat: number;
   compact?: boolean;
+  /** Next to the pile of its own cards at the side of the table: on a phone avatar, name and numbers stack up. */
+  side?: boolean;
   /** Phones without the fan of cards: say how many cards this opponent still holds. */
   showCount?: boolean;
 }) {
@@ -101,7 +104,11 @@ function PlayerTag({
   );
   const score =
     bid === null ? null : (
-      <span className={`flex items-center gap-1.5 whitespace-nowrap text-xs tabular-nums sm:gap-2 ${compact ? "col-span-2 justify-center wide:col-span-1" : ""}`}>
+      <span
+        className={`flex items-center gap-1.5 whitespace-nowrap text-xs tabular-nums sm:gap-2 ${
+          side ? "flex-col !gap-0 leading-tight wide:!flex-row wide:!gap-1.5" : compact ? "col-span-2 justify-center wide:col-span-1" : ""
+        }`}
+      >
         <span title="ნათქვამი">
           <span className="opacity-60">ნათ.</span> <b className="text-sm">{bid === 0 ? "—" : bid}</b>
         </span>
@@ -127,11 +134,11 @@ function PlayerTag({
     <div
       className={`rounded-2xl border bg-black/35 backdrop-blur-sm transition-shadow ${
         active ? "border-amber-300 shadow-[0_0_16px_rgb(232_196_106/0.55)]" : "border-white/15"
-      } ${compact ? "relative grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-1 gap-y-0.5 px-1 py-1.5 min-[360px]:gap-x-1.5 min-[360px]:px-1.5 wide:flex wide:flex-col wide:gap-1 wide:px-2 wide:py-2 short:flex short:flex-row short:justify-center short:gap-1.5 short:px-2 short:py-1" : "flex items-center gap-2.5 px-3 py-1.5"}`}
+      } ${compact ? `relative ${side ? "flex flex-col items-center gap-0.5 px-1 py-1.5" : "grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-1 gap-y-0.5 px-1 py-1.5 min-[360px]:gap-x-1.5 min-[360px]:px-1.5"} wide:flex wide:flex-col wide:gap-1 wide:px-2 wide:py-2 short:flex short:flex-row short:justify-center short:gap-1.5 short:px-2 short:py-1` : "flex items-center gap-2.5 px-3 py-1.5"}`}
     >
       {avatar}
       <span className={compact ? "contents wide:flex wide:flex-col wide:items-center wide:gap-1 short:flex short:min-w-0 short:flex-row short:items-center short:gap-1.5" : "flex flex-col gap-0.5"}>
-        <b className={`leading-none ${compact ? "truncate text-[0.72rem] min-[360px]:text-[0.8rem] wide:text-sm" : "text-sm"}`}>{names[seat]}</b>
+        <b className={`leading-none ${compact ? `truncate wide:text-sm ${side ? "max-w-full text-[0.66rem] min-[400px]:text-[0.8rem]" : "text-[0.72rem] min-[360px]:text-[0.8rem]"}` : "text-sm"}`}>{names[seat]}</b>
         {score}
       </span>
       {startBadge}
@@ -448,18 +455,25 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
         <div className="order-1 min-w-0 sm:order-none tight:order-1 tight:w-[min(19rem,38vw)] tight:flex-none">
           <Scoreboard sums={sums} game={game} />
         </div>
-        <div className="order-4 flex items-center gap-2 justify-self-end sm:order-none tight:order-4 tight:ml-auto">
+        <div className="order-2 flex items-center gap-1.5 justify-self-end sm:order-none sm:gap-2 tight:order-4 tight:ml-auto">
           <MusicPlayer />
-          <VolumeControl volume={volume} onChange={setVolume} />
+          {/* on narrow phones the scoreboard gets the room (the phone has its own volume keys) */}
+          <div className="max-[400px]:hidden">
+            <VolumeControl volume={volume} onChange={setVolume} />
+          </div>
           <button
-            className="btn !px-3 !py-1"
+            className="btn !px-3 !py-1 max-sm:grid max-sm:size-9 max-sm:place-items-center max-sm:!p-0"
+            aria-label="გასვლა"
             onClick={() => window.confirm(quitConfirm ?? "დარწმუნებული ხართ? თამაში შეწყდება.") && onQuit()}
           >
-            გასვლა
+            <span className="sm:hidden" aria-hidden>
+              ✕
+            </span>
+            <span className="max-sm:hidden">გასვლა</span>
           </button>
         </div>
-        <div className="panel order-3 min-w-0 px-2 pb-2 pt-1.5 sm:order-none sm:w-full sm:max-w-[21rem] tight:order-2 tight:!w-36 tight:flex-none tight:px-3 tight:py-1 tight:max-[680px]:hidden">
-          <div className="grid grid-cols-3 divide-x divide-white/10 text-center">
+        <div className="panel order-3 col-span-2 min-w-0 px-2 pb-2 pt-1.5 sm:order-none sm:col-span-1 tight:col-span-1 sm:w-full sm:max-w-[21rem] tight:order-2 tight:!w-36 tight:flex-none tight:px-3 tight:py-1 tight:max-[680px]:hidden">
+          <div className="grid grid-cols-4 divide-x divide-white/10 text-center sm:grid-cols-3 tight:grid-cols-3">
             {[
               ["ეტაპი", `${loc.pulka + 1}/${pulkas.length}`],
               ["ხელი", `${loc.inPulka + 1}/${loc.pulkaLength}`],
@@ -470,6 +484,19 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
                 <b className="text-sm tabular-nums sm:text-base">{value}</b>
               </div>
             ))}
+            {/* portrait phones: the trump is one more cell of this strip instead of a panel of its own */}
+            <div className="flex flex-col leading-tight sm:hidden tight:hidden">
+              <span className="text-[0.65rem] font-semibold text-white/50">კოზირი</span>
+              {game.phase === "trump" ? (
+                <b className="text-sm opacity-70">…</b>
+              ) : game.trump ? (
+                <b className={`text-sm ${suitColor(game.trump)}`}>
+                  {SUIT_SYMBOL[game.trump]} {SUIT_NAME[game.trump]}
+                </b>
+              ) : (
+                <b className="whitespace-nowrap text-[0.7rem]">კოზირის გარეშე</b>
+              )}
+            </div>
           </div>
           <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10 tight:hidden">
             <div
@@ -478,18 +505,22 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
             />
           </div>
         </div>
-        <div className="order-2 justify-self-end sm:order-none tight:order-3">
+        <div className="order-4 hidden justify-self-end sm:order-none sm:block tight:order-3 tight:block">
           <TrumpInfo game={game} />
         </div>
       </header>
 
       <section className="grid min-h-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-[auto_1fr] items-center gap-x-2 px-2">
         <div className="col-span-3 flex w-full flex-col items-center gap-1 [@media(min-width:1100px)_and_(min-height:821px)]:absolute [@media(min-width:1100px)_and_(min-height:821px)]:left-1/2 [@media(min-width:1100px)_and_(min-height:821px)]:top-2 [@media(min-width:1100px)_and_(min-height:821px)]:z-10 [@media(min-width:1100px)_and_(min-height:821px)]:w-auto [@media(min-width:1100px)_and_(min-height:821px)]:-translate-x-1/2">
-          {/* phones: the three opponents side by side, so the middle of the table stays free for the pickers */}
-          <div className="grid w-full grid-cols-3 gap-1.5 wide:hidden short:mx-auto short:max-w-xl">
+          {/* landscape phones: no room beside the stage, so the three opponents sit side by side on top */}
+          <div className="hidden w-full grid-cols-3 gap-1.5 short:mx-auto short:grid short:max-w-xl">
             <PlayerTag game={game} seat={1} compact showCount />
             <PlayerTag game={game} seat={2} compact showCount />
             <PlayerTag game={game} seat={3} compact showCount />
+          </div>
+          {/* portrait phones: every opponent next to their own cards; this one is above the cards across the table */}
+          <div className="w-[min(13rem,60vw)] wide:hidden short:hidden">
+            <PlayerTag game={game} seat={2} compact showCount />
           </div>
           <div className="hidden wide:block">
             <PlayerTag game={game} seat={2} />
@@ -499,18 +530,18 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
             <OpponentHand count={game.hands[2].length} seat={2} />
           </div>
         </div>
-        <div className="col-start-1 row-start-2 flex flex-col items-center gap-2 wide:w-28 short:hidden">
-          <div className="hidden w-full wide:block">
-            <PlayerTag game={game} seat={1} compact />
+        <div className="col-start-1 row-start-2 flex w-[4.9rem] flex-col items-center gap-2 wide:w-28 short:hidden">
+          <div className="w-full">
+            <PlayerTag game={game} seat={1} compact side />
           </div>
           <OpponentHand count={game.hands[1].length} seat={1} />
         </div>
         <div className="relative col-start-2 row-start-2 grid self-stretch place-items-center">
           <TrickArea game={game} />
         </div>
-        <div className="col-start-3 row-start-2 flex flex-col items-center gap-2 wide:w-28 short:hidden">
-          <div className="hidden w-full wide:block">
-            <PlayerTag game={game} seat={3} compact />
+        <div className="col-start-3 row-start-2 flex w-[4.9rem] flex-col items-center gap-2 wide:w-28 short:hidden">
+          <div className="w-full">
+            <PlayerTag game={game} seat={3} compact side />
           </div>
           <OpponentHand count={game.hands[3].length} seat={3} />
         </div>
