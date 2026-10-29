@@ -202,6 +202,7 @@ export function MusicPlayer() {
       >
         <Icon d={NOTE} />
       </button>
+      {open && <button type="button" aria-label="დახურვა" className="fixed inset-0 z-30 cursor-default" onClick={() => setOpen(false)} />}
       {open && (
         <div className="pk-up-bar pk-scroll fixed inset-x-3 top-12 z-40 flex max-h-[calc(100dvh-4rem)] flex-col overflow-y-auto rounded-3xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[21rem] border border-amber-200/15 bg-[linear-gradient(160deg,rgb(38_16_20/0.96),rgb(14_8_10/0.97))] text-sm shadow-[0_24px_60px_rgb(0_0_0/0.65),inset_0_1px_0_rgb(255_255_255/0.08)] backdrop-blur-xl">
           {/* what is playing */}
@@ -221,6 +222,16 @@ export function MusicPlayer() {
                 <i />
               </span>
             )}
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="დახურვა"
+              className="grid size-8 flex-none place-items-center rounded-full bg-white/10 text-white/70 transition-colors hover:bg-white/20 hover:text-white"
+            >
+              <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+                <path d="M6 6l12 12M18 6 6 18" />
+              </svg>
+            </button>
           </div>
 
           <div className="flex flex-col gap-1 px-4">
