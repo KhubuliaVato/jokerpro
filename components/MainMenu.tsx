@@ -34,7 +34,7 @@ function NardiArt() {
     return <polygon key={`${i}${top}`} points={top ? `${x},4 ${x + 18},4 ${x + 9},50` : `${x},96 ${x + 18},96 ${x + 9},50`} fill={(i + (top ? 0 : 1)) % 2 ? "#8b3a2f" : "#d9b878"} />;
   };
   return (
-    <svg viewBox="0 0 252 100" className="h-full max-w-full transition-transform duration-500 group-hover:scale-105" aria-hidden>
+    <svg viewBox="0 0 252 100" className="h-full max-w-full " aria-hidden>
       <rect x="0" y="0" width="252" height="100" rx="12" fill="#6b4423" />
       <rect x="4" y="2" width="244" height="96" rx="8" fill="#12362a" />
       {Array.from({ length: 12 }, (_, i) => tri(i, true))}
@@ -197,8 +197,9 @@ export function MainMenu() {
             </div>
           </Link>
 
-          <Link href="/nardi" className="group block outline-none">
-            <div className="flex min-h-[min(18rem,40dvh)] flex-col justify-between gap-6 rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-white/30 group-hover:bg-white/[0.07] group-hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] group-focus-visible:border-amber-300 sm:p-9">
+          {/* not open yet: dimmed and not a link */}
+          <div aria-disabled className="block cursor-not-allowed select-none opacity-45 saturate-50">
+            <div className="flex min-h-[min(18rem,40dvh)] flex-col justify-between gap-6 rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 sm:p-9">
               <div className="relative grid h-28 w-full place-items-center sm:h-32">
                 <NardiArt />
               </div>
@@ -207,13 +208,12 @@ export function MainMenu() {
                   <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">{t("ნარდი", "Nardi", "Нарды")}</h2>
                   <p className="mt-1.5 text-base text-white/55">{t("ნარდი ბოტებთან", "Nardi vs bots", "Нарды с ботами")}</p>
                 </div>
-                <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
-                  {t("თამაში", "Play", "Играть")}
-                  <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
+                <span className="whitespace-nowrap rounded-full border border-white/25 px-3 py-1 text-sm font-bold text-white/80">
+                  {t("მალე დაემატება", "Coming soon", "Скоро")}
                 </span>
               </div>
             </div>
-          </Link>
+          </div>
         </section>
 
         {!configured && (

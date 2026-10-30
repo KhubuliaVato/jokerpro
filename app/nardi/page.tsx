@@ -1,8 +1,6 @@
-import type { Metadata } from "next";
-import { NardiApp } from "@/components/NardiApp";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "ნარდი" };
-
+/** Nardi is not open yet: the page (and its code in components/NardiApp.tsx) waits for the launch. */
 export default function NardiPage() {
-  return <NardiApp />;
+  redirect("/");
 }
