@@ -1,7 +1,7 @@
 import { isRed, rankLabel, type NormalCard, type Suit } from "@/lib/joker/cards";
 
 const INK = "#141418";
-const RED = "#b01820";
+const RED = "#d3141c";
 
 /** Suit outlines on a 100 × 100 grid. */
 const SUIT_PATH: Record<Suit, string> = {
@@ -11,40 +11,12 @@ const SUIT_PATH: Record<Suit, string> = {
   C: "M50 6A19 19 0 0 1 61 41A19 19 0 1 1 55 62C55 76 58 88 66 96H34C42 88 45 76 45 62A19 19 0 1 1 39 41A19 19 0 0 1 50 6Z",
 };
 
-/** Where the black half ends and the red half begins (percent of the glyph's width): red suits lean red, black suits lean black. */
-const SPLIT: Record<Suit, number> = { H: 44, D: 44, S: 64, C: 64 };
-
-/** Clip paths shared by all the glyphs of one card; `x` is the split in the card's own units. */
-function SuitDefs() {
-  return (
-    <defs>
-      {(["H", "D", "S", "C"] as const).map((s) => (
-        <g key={s}>
-          <clipPath id={`cf-${s}-l`}>
-            <rect x="0" y="0" width={SPLIT[s]} height="100" />
-          </clipPath>
-          <clipPath id={`cf-${s}-r`}>
-            <rect x={SPLIT[s]} y="0" width={100 - SPLIT[s]} height="100" />
-          </clipPath>
-        </g>
-      ))}
-      <clipPath id="cf-text-l">
-        <rect x="0" y="0" width="50" height="140" />
-      </clipPath>
-      <clipPath id="cf-text-r">
-        <rect x="50" y="0" width="50" height="140" />
-      </clipPath>
-    </defs>
-  );
-}
-
-/** A suit, split down its length into black and red, centred on (x, y) and `size` units wide. */
+/** A suit in its own colour (red suits red, black suits black), centred on (x, y) and `size` units wide. */
 function Glyph({ suit, x, y, size, flip }: { suit: Suit; x: number; y: number; size: number; flip?: boolean }) {
   const k = size / 100;
   return (
     <g transform={`translate(${x} ${y}) rotate(${flip ? 180 : 0}) scale(${k}) translate(-50 -50)`}>
-      <path d={SUIT_PATH[suit]} fill={INK} clipPath={`url(#cf-${suit}-l)`} />
-      <path d={SUIT_PATH[suit]} fill={RED} clipPath={`url(#cf-${suit}-r)`} />
+      <path d={SUIT_PATH[suit]} fill={isRed(suit) ? RED : INK} />
     </g>
   );
 }
@@ -67,7 +39,7 @@ const PIPS: Record<number, [number, number][]> = {
 
 const SERIF = 'ui-serif, "Iowan Old Style", "Palatino Linotype", Georgia, "Times New Roman", serif';
 
-/** The printed face of a normal card, drawn in two inks: black and red suits and numerals on cream paper. */
+/** The printed face of a normal card, drawn in red suits and numerals in red, black ones in black, on cream paper. */
 export function CardFace({ card }: { card: NormalCard }) {
   const label = rankLabel(card.rank);
   const ink = isRed(card.suit) ? RED : INK;
@@ -83,28 +55,15 @@ export function CardFace({ card }: { card: NormalCard }) {
 
   return (
     <svg viewBox="0 0 100 140" className="face" aria-hidden>
-      <SuitDefs />
       {corner(false)}
       {corner(true)}
       {card.rank === 14 && <Glyph suit={card.suit} x={50} y={70} size={52} />}
       {court && (
         <g>
           <Glyph suit={card.suit} x={50} y={38} size={22} />
-          {(["l", "r"] as const).map((half) => (
-            <text
-              key={half}
-              x="50"
-              y="94"
-              textAnchor="middle"
-              fontSize="62"
-              fontWeight="700"
-              fontFamily={SERIF}
-              fill={half === "l" ? INK : RED}
-              clipPath={`url(#cf-text-${half})`}
-            >
-              {label}
-            </text>
-          ))}
+          <text x="50" y="94" textAnchor="middle" fontSize="62" fontWeight="700" fontFamily={SERIF} fill={ink}>
+            {label}
+          </text>
           <Glyph suit={card.suit} x={50} y={110} size={22} flip />
         </g>
       )}

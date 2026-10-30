@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useJokerGame } from "@/lib/joker/useGame";
 import { PlayerNamesProvider, useMe } from "./names";
 import { Setup } from "./Setup";
@@ -10,6 +11,7 @@ import { BotChat } from "./TableChat";
 export function JokerApp() {
   const { game, secondsLeft, kicked, bots, start, quit, bid, pickTrump, play } = useJokerGame();
   const me = useMe();
+  const t = useT();
   if (!game) return <Setup onStart={start} kicked={kicked} />;
   return (
     <PlayerNamesProvider
@@ -24,7 +26,7 @@ export function JokerApp() {
         onTrump={pickTrump}
         onPlay={play}
         onQuit={quit}
-        endNote={<span className="text-white/60">თამაში ბოტებთან არ იწერება ისტორიაში</span>}
+        endNote={<span className="text-white/60">{t("თამაში ბოტებთან არ იწერება ისტორიაში", "Games vs bots are not recorded in the history", "Игры с ботами не записываются в историю")}</span>}
       />
     </PlayerNamesProvider>
   );

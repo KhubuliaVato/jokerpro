@@ -1,3 +1,4 @@
+import { tt } from "@/lib/lang";
 import { CardFace } from "./CardFace";
 import {
   isRed,
@@ -26,7 +27,7 @@ export function CardView({ card, size = "md", className = "", style }: Props) {
       <div
         className={`pc joker ${sizeClass} ${className}`}
         style={style}
-        aria-label="ჯოკერი"
+        aria-label={tt("ჯოკერი", "Joker", "Джокер")}
       />
     );
   }

@@ -1,5 +1,6 @@
 "use client";
 
+import { tt, useLang } from "@/lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /** Music for the background, from the free Audius catalogue: no sign-in, no ads. */
@@ -7,22 +8,29 @@ const API = "https://api.audius.co/v1";
 const APP = "ProJoker";
 
 /** Genres to pick from: the name Audius knows, and its label for the player. */
-const GENRES: { id: string; label: string }[] = [
-  { id: "", label: "პოპულარული" },
-  { id: "Hip-Hop/Rap", label: "ჰიპ-ჰოპი" },
-  { id: "Lo-Fi", label: "ლოუ-ფაი" },
-  { id: "Electronic", label: "ელექტრონული" },
-  { id: "R&B/Soul", label: "R&B / სოულ" },
-  { id: "Jazz", label: "ჯაზი" },
-  { id: "Pop", label: "პოპი" },
-  { id: "Rock", label: "როკი" },
-  { id: "Ambient", label: "ემბიენტი" },
-  { id: "Funk", label: "ფანკი" },
-  { id: "Blues", label: "ბლუზი" },
-  { id: "Classical", label: "კლასიკური" },
-  { id: "Latin", label: "ლათინო" },
-  { id: "Reggae", label: "რეგი" },
+const GENRE_DATA: { id: string; names: [string, string, string] }[] = [
+  { id: "", names: ["პოპულარული", "Popular", "Популярное"] },
+  { id: "Hip-Hop/Rap", names: ["ჰიპ-ჰოპი", "Hip-Hop / Rap", "Хип-хоп / Рэп"] },
+  { id: "Lo-Fi", names: ["ლოუ-ფაი", "Lo-Fi", "Лоу-фай"] },
+  { id: "Electronic", names: ["ელექტრონული", "Electronic", "Электронная"] },
+  { id: "R&B/Soul", names: ["R&B / სოულ", "R&B / Soul", "R&B / Соул"] },
+  { id: "Jazz", names: ["ჯაზი", "Jazz", "Джаз"] },
+  { id: "Pop", names: ["პოპი", "Pop", "Поп"] },
+  { id: "Rock", names: ["როკი", "Rock", "Рок"] },
+  { id: "Ambient", names: ["ემბიენტი", "Ambient", "Эмбиент"] },
+  { id: "Funk", names: ["ფანკი", "Funk", "Фанк"] },
+  { id: "Blues", names: ["ბლუზი", "Blues", "Блюз"] },
+  { id: "Classical", names: ["კლასიკური", "Classical", "Классика"] },
+  { id: "Latin", names: ["ლათინო", "Latin", "Латино"] },
+  { id: "Reggae", names: ["რეგი", "Reggae", "Регги"] },
 ];
+
+const GENRES: { id: string; label: string }[] = GENRE_DATA.map((g) => ({
+  id: g.id,
+  get label() {
+    return tt(...g.names);
+  },
+}));
 
 interface Track {
   id: string;
@@ -93,6 +101,7 @@ const PREV = "M6 5h2v14H6zM20 5.7v12.6a.8.8 0 0 1-1.25.66L9.6 12.66a.8.8 0 0 1 0
 const NEXT = "M16 5h2v14h-2zM4 5.7v12.6a.8.8 0 0 0 1.25.66l9.15-6.3a.8.8 0 0 0 0-1.32L5.25 5.04A.8.8 0 0 0 4 5.7Z";
 
 export function MusicPlayer() {
+  useLang(); // genre names follow the language
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [genre, setGenre] = useState<string | null>(null);
@@ -198,11 +207,11 @@ export function MusicPlayer() {
         className={`${ROUND_BTN} ${playing || open ? "!border-amber-300/70 !text-amber-200 shadow-[0_0_14px_rgb(232_196_106/0.35)]" : ""}`}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        aria-label="მუსიკა"
+        aria-label={tt("მუსიკა", "Music", "Музыка")}
       >
         <Icon d={NOTE} />
       </button>
-      {open && <button type="button" aria-label="დახურვა" className="fixed inset-0 z-30 cursor-default" onClick={() => setOpen(false)} />}
+      {open && <button type="button" aria-label={tt("დახურვა", "Close", "Закрыть")} className="fixed inset-0 z-30 cursor-default" onClick={() => setOpen(false)} />}
       {open && (
         <div className="pk-up-bar pk-scroll fixed inset-x-3 top-12 z-40 flex max-h-[calc(100dvh-4rem)] flex-col overflow-y-auto rounded-3xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[21rem] border border-amber-200/15 bg-[linear-gradient(160deg,rgb(38_16_20/0.96),rgb(14_8_10/0.97))] text-sm shadow-[0_24px_60px_rgb(0_0_0/0.65),inset_0_1px_0_rgb(255_255_255/0.08)] backdrop-blur-xl">
           {/* what is playing */}
@@ -212,8 +221,8 @@ export function MusicPlayer() {
               {current?.art ? <img src={current.art} alt="" className="size-full object-cover" /> : <span className="grid size-full place-items-center text-2xl text-white/40">♪</span>}
             </div>
             <div className="min-w-0 flex-1">
-              <b className="block truncate text-base leading-tight">{current ? current.title : "აირჩიეთ სიმღერა"}</b>
-              <span className="block truncate text-xs text-white/55">{current ? current.artist : "ჟანრი ან ძიება ქვემოთ"}</span>
+              <b className="block truncate text-base leading-tight">{current ? current.title : tt("აირჩიეთ სიმღერა", "Choose a song", "Выберите песню")}</b>
+              <span className="block truncate text-xs text-white/55">{current ? current.artist : tt("ჟანრი ან ძიება ქვემოთ", "Pick a genre or search below", "Выберите жанр или поиск ниже")}</span>
             </div>
             {playing && (
               <span aria-hidden className="pk-eq flex h-4 flex-none items-end gap-[2px]">
@@ -225,7 +234,7 @@ export function MusicPlayer() {
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label="დახურვა"
+              aria-label={tt("დახურვა", "Close", "Закрыть")}
               className="grid size-8 flex-none place-items-center rounded-full bg-white/10 text-white/70 transition-colors hover:bg-white/20 hover:text-white"
             >
               <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
@@ -243,7 +252,7 @@ export function MusicPlayer() {
               value={Math.min(time.now, Number.isFinite(time.total) ? time.total : 0)}
               onChange={(e) => seek(Number(e.target.value))}
               disabled={!current}
-              aria-label="დაკვრის პოზიცია"
+              aria-label={tt("დაკვრის პოზიცია", "Playback position", "Позиция воспроизведения")}
               className="pk-range w-full"
               style={{ "--p": `${progress}%` } as React.CSSProperties}
             />
@@ -254,18 +263,18 @@ export function MusicPlayer() {
           </div>
 
           <div className="flex items-center gap-1 px-3 pb-2">
-            <button className={CTRL} onClick={() => step(-1)} disabled={tracks.length === 0} aria-label="წინა">
+            <button className={CTRL} onClick={() => step(-1)} disabled={tracks.length === 0} aria-label={tt("წინა", "Previous", "Назад")}>
               <Icon d={PREV} />
             </button>
             <button
               className="grid size-11 flex-none place-items-center rounded-full bg-amber-300 text-black shadow-[0_4px_16px_rgb(232_196_106/0.35)] transition-transform hover:scale-105 disabled:opacity-40"
               onClick={toggle}
               disabled={tracks.length === 0}
-              aria-label={playing ? "პაუზა" : "დაკვრა"}
+              aria-label={playing ? tt("პაუზა", "Pause", "Пауза") : tt("დაკვრა", "Play", "Играть")}
             >
               <Icon d={playing ? PAUSE : PLAY} />
             </button>
-            <button className={CTRL} onClick={() => step(1)} disabled={tracks.length === 0} aria-label="შემდეგი">
+            <button className={CTRL} onClick={() => step(1)} disabled={tracks.length === 0} aria-label={tt("შემდეგი", "Next", "Вперёд")}>
               <Icon d={NEXT} />
             </button>
             <span aria-hidden className="ml-auto text-white/40">
@@ -278,7 +287,7 @@ export function MusicPlayer() {
               step={0.05}
               value={volume}
               onChange={(e) => setVol(Number(e.target.value))}
-              aria-label="მუსიკის ხმა"
+              aria-label={tt("მუსიკის ხმა", "Music volume", "Громкость музыки")}
               className="pk-range w-20 flex-none"
               style={{ "--p": `${volume * 100}%` } as React.CSSProperties}
             />
@@ -311,20 +320,20 @@ export function MusicPlayer() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="სიმღერა ან არტისტი…"
+                placeholder={tt("სიმღერა ან არტისტი…", "Song or artist…", "Песня или исполнитель…")}
                 className="w-full rounded-full border border-white/10 bg-white/[0.06] py-2 pl-4 pr-16 outline-none transition-colors placeholder:text-white/35 focus:border-amber-300/70"
               />
               <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold hover:bg-white/20">
-                ძიება
+                {tt("ძიება", "Search", "Поиск")}
               </button>
             </form>
           </div>
 
           {listed && (
           <ul className="pk-scroll flex max-h-52 flex-col gap-0.5 overflow-y-auto px-2 pb-3">
-            {status === "loading" && <li className="px-2 py-4 text-center text-white/55">იძებნება…</li>}
-            {status === "error" && <li className="px-2 py-4 text-center text-red-200">ძიება ვერ მოხერხდა, სცადეთ ხელახლა</li>}
-            {status === "idle" && tracks.length === 0 && <li className="px-2 py-4 text-center text-white/55">ვერაფერი მოიძებნა</li>}
+            {status === "loading" && <li className="px-2 py-4 text-center text-white/55">{tt("იძებნება…", "Searching…", "Поиск…")}</li>}
+            {status === "error" && <li className="px-2 py-4 text-center text-red-200">{tt("ძიება ვერ მოხერხდა, სცადეთ ხელახლა", "Search failed, try again", "Поиск не удался, попробуйте снова")}</li>}
+            {status === "idle" && tracks.length === 0 && <li className="px-2 py-4 text-center text-white/55">{tt("ვერაფერი მოიძებნა", "Nothing found", "Ничего не найдено")}</li>}
             {status === "idle" &&
               tracks.map((t, i) => (
                 <li key={t.id}>
@@ -344,7 +353,7 @@ export function MusicPlayer() {
               ))}
           </ul>
           )}
-          <p className="pb-2 text-center text-[0.62rem] tracking-wide text-white/30">მუსიკა: Audius</p>
+          <p className="pb-2 text-center text-[0.62rem] tracking-wide text-white/30">{tt("მუსიკა", "Music", "Музыка")}: Audius</p>
         </div>
       )}
     </div>

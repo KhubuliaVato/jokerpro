@@ -1,3 +1,4 @@
+import { localizedList } from "../lang";
 import { shuffle, SUITS, type NormalCard, type Rng } from "../joker/cards";
 import { bestHand, compareHands, type HandValue } from "./eval";
 
@@ -44,7 +45,12 @@ export type Phase =
 
 /** 0 pre-flop, 1 flop, 2 turn, 3 river. */
 export type Street = 0 | 1 | 2 | 3;
-export const STREET_NAME = ["პრეფლოპი", "ფლოპი", "ტერნი", "რივერი"] as const;
+export const STREET_NAME = localizedList([
+  ["პრეფლოპი", "Preflop", "Префлоп"],
+  ["ფლოპი", "Flop", "Флоп"],
+  ["ტერნი", "Turn", "Тёрн"],
+  ["რივერი", "River", "Ривер"],
+]);
 
 export interface Payout {
   seat: number;

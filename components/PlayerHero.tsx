@@ -1,3 +1,4 @@
+import { useT } from "@/lib/i18n";
 import { formatDate } from "@/lib/format";
 import type { PlayerSummary } from "@/lib/search";
 import { Avatar } from "./Avatar";
@@ -14,6 +15,7 @@ export function PlayerHero({
   subtitle?: string;
   children?: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <section
       className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-6 sm:p-10"
@@ -31,7 +33,7 @@ export function PlayerHero({
           <p className="mt-1 truncate text-base text-white/50">
             {subtitle}
             {subtitle && player && " · "}
-            {player && <>წევრია {formatDate(new Date(player.created_at))}-დან</>}
+            {player && <>{t(`წევრია ${formatDate(new Date(player.created_at))}-დან`, `Member since ${formatDate(new Date(player.created_at))}`, `Участник с ${formatDate(new Date(player.created_at))}`)}</>}
           </p>
         </div>
         {children && <div className="flex gap-3 sm:flex-col">{children}</div>}

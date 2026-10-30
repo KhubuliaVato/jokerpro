@@ -1,5 +1,6 @@
 import type { GameInfo } from "@/lib/games";
 import Link from "next/link";
+import { useT } from "@/lib/i18n";
 import { rankFor } from "@/lib/ranks";
 import type { RatingRow } from "@/lib/ratings";
 import type { Achievement } from "@/lib/stats";
@@ -27,6 +28,7 @@ export function Panel({
 
 /** Rank, rating and the way to the next rank. `row` is null for a player without a ranked game. */
 export function RatingCard({ row, position }: { row: RatingRow | null; position: number | null }) {
+  const t = useT();
   const rating = row?.rating ?? 50;
   const { rank, next, progress, toNext } = rankFor(rating);
   return (
@@ -45,7 +47,7 @@ export function RatingCard({ row, position }: { row: RatingRow | null; position:
               {rank.name}
             </b>
             <span className="text-3xl font-black tabular-nums">{row ? rating : "—"}</span>
-            <span className="text-white/45">ქულა</span>
+            <span className="text-white/45">{t("ქულა", "points", "очков")}</span>
           </div>
 
           <div className="mt-4 h-3 overflow-hidden rounded-full bg-white/10">
@@ -56,7 +58,7 @@ export function RatingCard({ row, position }: { row: RatingRow | null; position:
           </div>
           <div className="mt-2 flex justify-between text-sm text-white/50">
             <span>{rank.name}</span>
-            <span>{next ? `${next.name}-მდე ${toNext} ქულა` : "უმაღლესი წოდება"}</span>
+            <span>{next ? t(`${next.name}-მდე ${toNext} ქულა`, `${toNext} pts to ${next.name}`, `${toNext} очк. до ${next.name}`) : t("უმაღლესი წოდება", "Top rank", "Высший ранг")}</span>
           </div>
 
           <div className="mt-4 flex flex-wrap justify-center gap-3 sm:justify-start">
@@ -65,13 +67,13 @@ export function RatingCard({ row, position }: { row: RatingRow | null; position:
                 href="/leaderboard"
                 className="rounded-full border border-white/15 px-4 py-1.5 text-sm font-bold transition-colors hover:border-amber-300 hover:text-amber-300"
               >
-                ადგილი ლიდერბორდზე: #{position}
+                {t("ადგილი ლიდერბორდზე", "Leaderboard place", "Место в рейтинге")}: #{position}
               </Link>
             )}
-            {row && <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm text-white/60">საუკეთესო: {row.peak}</span>}
+            {row && <span className="rounded-full bg-white/10 px-4 py-1.5 text-sm text-white/60">{t("საუკეთესო", "Best", "Лучший")}: {row.peak}</span>}
             {!row && (
               <span className="text-sm text-white/45">
-                ჯერ არ გაქვთ რეიტინგული თამაში. წოდებისთვის ბრძოლაში იწყებთ 50 ქულით.
+                {t("ჯერ არ გაქვთ რეიტინგული თამაში. წოდებისთვის ბრძოლაში იწყებთ 50 ქულით.", "You have no ranked games yet. In ranked play you start with 50 points.", "У вас ещё нет рейтинговых игр. В рейтинговой игре вы начнёте с 50 очков.")}
               </span>
             )}
           </div>
@@ -114,12 +116,13 @@ export function Donut({ percent, label }: { percent: number; label: string }) {
 
 /** How often each place was taken. */
 export function PlaceBars({ counts }: { counts: number[] }) {
+  const t = useT();
   const max = Math.max(1, ...counts);
   return (
     <ul className="flex min-w-0 flex-1 flex-col gap-3">
       {counts.map((n, i) => (
         <li key={i} className="flex items-center gap-3">
-          <span className="w-20 flex-none whitespace-nowrap text-sm text-white/55">{i + 1} ადგილი</span>
+          <span className="w-20 flex-none whitespace-nowrap text-sm text-white/55">{t(`${i + 1} ადგილი`, `Place ${i + 1}`, `${i + 1} место`)}</span>
           <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/10">
             <span
               className="block h-full rounded-full transition-[width] duration-700 ease-out"
@@ -135,10 +138,11 @@ export function PlaceBars({ counts }: { counts: number[] }) {
 
 /** Scores of the last games, oldest on the left. */
 export function Sparkline({ values }: { values: number[] }) {
+  const t = useT();
   if (values.length < 2) {
     return (
       <div className="grid h-36 place-items-center text-center text-sm text-white/35">
-        გრაფიკისთვის საჭიროა მინიმუმ 2 თამაში
+        {t("გრაფიკისთვის საჭიროა მინიმუმ 2 თამაში", "The chart needs at least 2 games", "Для графика нужно минимум 2 игры")}
       </div>
     );
   }
@@ -155,7 +159,7 @@ export function Sparkline({ values }: { values: number[] }) {
   const last = values.length - 1;
   return (
     <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-36 w-full overflow-visible" role="img" aria-label="ბოლო თამაშების ქულები">
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-36 w-full overflow-visible" role="img" aria-label={t("ბოლო თამაშების ქულები", "Scores of recent games", "Очки последних игр")}>
         <defs>
           <linearGradient id="spark-fill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#fcd34d" stopOpacity="0.35" />
@@ -170,9 +174,9 @@ export function Sparkline({ values }: { values: number[] }) {
         <circle cx={x(last)} cy={y(values[last])} r="5" fill="#fcd34d" stroke="#0a2418" strokeWidth="2" />
       </svg>
       <div className="mt-2 flex justify-between text-xs text-white/40">
-        <span>ადრე</span>
+        <span>{t("ადრე", "Earlier", "Раньше")}</span>
         <span>
-          ბოლო: <b className="text-white/80">{values[last]}</b>
+          {t("ბოლო", "Latest", "Последний")}: <b className="text-white/80">{values[last]}</b>
         </span>
       </div>
     </div>
@@ -181,9 +185,10 @@ export function Sparkline({ values }: { values: number[] }) {
 
 /** Unlocked and locked achievements. */
 export function Achievements({ items }: { items: Achievement[] }) {
+  const t = useT();
   const done = items.filter((a) => a.done).length;
   return (
-    <Panel title={`მიღწევები · ${done}/${items.length}`}>
+    <Panel title={`${t("მიღწევები", "Achievements", "Достижения")} · ${done}/${items.length}`}>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {items.map((a) => (
           <li
@@ -219,9 +224,10 @@ export function GameTabs({
   value: string;
   onChange: (id: string) => void;
 }) {
+  const t = useT();
   return (
-    <div role="tablist" aria-label="თამაში" className="flex flex-wrap items-center gap-3">
-      <span className="text-sm font-bold uppercase tracking-wider text-white/45">სტატისტიკა</span>
+    <div role="tablist" aria-label={t("თამაში", "Game", "Игра")} className="flex flex-wrap items-center gap-3">
+      <span className="text-sm font-bold uppercase tracking-wider text-white/45">{t("სტატისტიკა", "Stats", "Статистика")}</span>
       <div className="flex flex-wrap gap-2 rounded-full border border-white/10 bg-white/[0.04] p-1.5">
         {games.map((g) => (
           <button
@@ -237,7 +243,7 @@ export function GameTabs({
             {g.name}
           </button>
         ))}
-        <span className="flex items-center rounded-full px-4 py-2 text-sm text-white/25">მალე სხვა თამაშებიც</span>
+        <span className="flex items-center rounded-full px-4 py-2 text-sm text-white/25">{t("მალე სხვა თამაშებიც", "More games soon", "Скоро будут другие игры")}</span>
       </div>
     </div>
   );

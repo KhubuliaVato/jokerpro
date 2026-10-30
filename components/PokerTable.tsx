@@ -1,5 +1,6 @@
 "use client";
 
+import { tt, useLang } from "@/lib/i18n";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { NormalCard } from "@/lib/joker/cards";
@@ -53,12 +54,24 @@ const stackSpot = ([x, y]: Pos): Pos => {
 };
 
 const LAST: Record<string, string> = {
-  check: "ჩეკი",
-  call: "ქოლი",
-  bet: "ბეთი",
-  raise: "რეიზი",
-  fold: "ფოლდი",
-  allin: "ოლ-ინი",
+  get check() {
+    return tt("ჩეკი", "Check", "Чек");
+  },
+  get call() {
+    return tt("ქოლი", "Call", "Колл");
+  },
+  get bet() {
+    return tt("ბეთი", "Bet", "Бет");
+  },
+  get raise() {
+    return tt("რეიზი", "Raise", "Рейз");
+  },
+  get fold() {
+    return tt("ფოლდი", "Fold", "Фолд");
+  },
+  get allin() {
+    return tt("ოლ-ინი", "All-in", "Олл-ин");
+  },
 };
 
 /** A number that rolls to its new value instead of jumping. */
@@ -146,7 +159,7 @@ function Stack({ value, out }: { value: number; out?: boolean }) {
     <span className="flex items-center justify-center gap-1 text-[0.7rem] font-bold tabular-nums sm:text-xs">
       <Coin />
       <span key={tick} className={dir === "up" ? "pk-up" : dir === "down" ? "pk-down" : ""}>
-        {out ? "გავარდა" : shown}
+        {out ? tt("გავარდა", "Out", "Выбыл") : shown}
       </span>
     </span>
   );
@@ -259,7 +272,7 @@ function Seat({
           {index === game.dealer && !seat.out && (
             <span
               key={game.handNo}
-              title="დილერი"
+              title={tt("დილერი", "Dealer", "Дилер")}
               className="pk-pop absolute -right-2 -top-1 grid size-5 place-items-center rounded-full bg-white text-[0.65rem] font-black text-black shadow"
             >
               D
@@ -327,6 +340,7 @@ function CoinBurst() {
 }
 
 export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, autoNext, onQuit }: Props) {
+  useLang(); // the table re-renders when the language is switched
   const names = [me.name, ...opponents.map((b) => b.name)];
   const avatars: (SeatAvatar | null)[] = [me.avatar, ...opponents.map((b) => ({ color: b.color, icon: b.icon, url: b.url }))];
   const mine = game.seats[HUMAN];
@@ -419,7 +433,7 @@ export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, a
     !mine.out && !mine.folded && mine.hole.length > 0 ? CATEGORY_NAME[bestHand([...mine.hole, ...game.community]).value.category] : null;
   const winningCards = new Set(result?.showdown ? result.payouts.flatMap((p) => p.best) : []);
   const thinking = game.phase === "betting" && !myTurn ? names[game.turn] : null;
-  const raiseWord = o?.opening ? "ბეთი" : "რეიზი";
+  const raiseWord = o?.opening ? tt("ბეთი", "Bet", "Бет") : tt("რეიზი", "Raise", "Рейз");
   const allInRaise = o ? raiseTo >= o.maxRaiseTo : false;
   const step = game.config.smallBlind;
   const iWon = result?.payouts.some((p) => p.seat === HUMAN) ?? false;
@@ -434,26 +448,26 @@ export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, a
         <div className="flex min-w-0 items-center gap-2 text-xs sm:text-sm">
           <span className="chip px-3 py-1 font-bold">Texas Hold&apos;em</span>
           <span className="hidden text-white/60 min-[420px]:inline">
-            ბლაინდები {game.config.smallBlind}/{game.config.bigBlind} · ხელი {game.handNo}
+            {tt("ბლაინდები", "Blinds", "Блайнды")} {game.config.smallBlind}/{game.config.bigBlind} · {tt("ხელი", "Hand", "Раздача")} {game.handNo}
           </span>
         </div>
         {confirmQuit ? (
           <div className="flex items-center gap-2 text-sm">
             <button className="rounded-full bg-red-500/80 px-3 py-1.5 font-bold" onClick={onQuit}>
-              გასვლა
+              {tt("გასვლა", "Leave", "Выйти")}
             </button>
             <button className="rounded-full bg-white/10 px-3 py-1.5 font-bold" onClick={() => setConfirmQuit(false)}>
-              დარჩენა
+              {tt("დარჩენა", "Stay", "Остаться")}
             </button>
           </div>
         ) : (
           <div className="flex items-center gap-2">
             <MusicPlayer />
-            <button className={ROUND_BTN} onClick={toggleSound} aria-pressed={!muted} aria-label={muted ? "ხმის ჩართვა" : "ხმის გამორთვა"}>
+            <button className={ROUND_BTN} onClick={toggleSound} aria-pressed={!muted} aria-label={muted ? tt("ხმის ჩართვა", "Unmute", "Включить звук") : tt("ხმის გამორთვა", "Mute", "Выключить звук")}>
               <SpeakerIcon off={muted} />
             </button>
             <button className="btn !px-3 !py-1" onClick={() => setConfirmQuit(true)}>
-              გასვლა
+              {tt("გასვლა", "Leave", "Выйти")}
             </button>
           </div>
         )}
@@ -478,7 +492,7 @@ export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, a
         <div className="absolute left-1/2 top-[47%] z-10 flex w-full max-w-[26rem] -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1.5 px-2 text-center short:gap-0.5">
           <div className="flex min-h-[1.5rem] items-end justify-center">{pot > 0 && <ChipStack amount={pot} size="clamp(1rem, 4.5vw, 1.5rem)" />}</div>
           <span className="flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1 text-sm font-extrabold tabular-nums ring-1 ring-amber-300/30 sm:text-base">
-            ბანკი {potShown}
+            {tt("ბანკი", "Pot", "Банк")} {potShown}
           </span>
           <div className="flex items-center justify-center gap-[0.25rem] sm:gap-1.5" style={{ "--cw": boardCw } as React.CSSProperties}>
             {board.map((c, i) => (
@@ -500,7 +514,7 @@ export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, a
           {!result && <p className="text-[0.7rem] font-bold uppercase tracking-wider text-white/55 sm:text-xs">{STREET_NAME[game.street]}</p>}
           {thinking && (
             <p className="text-xs font-bold text-amber-200 sm:text-sm">
-              {thinking} ფიქრობს
+              {tt(`${thinking} ფიქრობს`, `${thinking} is thinking`, `${thinking} думает`)}
               <span className="pk-dots">
                 <i>.</i>
                 <i>.</i>
@@ -512,14 +526,35 @@ export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, a
             <div key={game.handNo} className="panel pk-pop flex max-w-sm flex-col items-center gap-0.5 px-3 py-2 text-xs sm:text-sm">
               {result.payouts.map((p) => (
                 <p key={p.seat} className="font-bold">
-                  <span className="text-amber-300">{names[p.seat]}</span> იღებს {p.amount}
+                  <span className="text-amber-300">{names[p.seat]}</span> {tt("იღებს", "wins", "забирает")} {p.amount}
                   {p.value && <span className="text-white/70"> · {CATEGORY_NAME[p.value.category]}</span>}
-                  {!result.showdown && <span className="text-white/60"> · დანარჩენებმა გადაყარეს</span>}
+                  {!result.showdown && <span className="text-white/60"> · {tt("დანარჩენებმა გადაყარეს", "everyone else folded", "остальные сбросили")}</span>}
                 </p>
               ))}
+              {result.showdown && (
+                <div className="my-1 flex flex-wrap items-start justify-center gap-x-3 gap-y-1.5">
+                  {result.revealed
+                    .filter((s) => s !== HUMAN)
+                    .map((s) => (
+                      <div key={s} className="flex flex-col items-center gap-0.5">
+                        <span className={`text-[0.7rem] font-bold ${result.payouts.some((p) => p.seat === s) ? "text-emerald-300" : "text-white/60"}`}>{names[s]}</span>
+                        <div className="flex gap-0.5">
+                          {game.seats[s].hole.map((c) => (
+                            <CardView
+                              key={c.id}
+                              card={c}
+                              className={winningCards.has(c.id) ? "win-glow" : ""}
+                              style={{ "--cw": "clamp(2.2rem, 9vw, 3.2rem)" } as React.CSSProperties}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
               {!autoNext && (
                 <button className="btn btn-primary mt-1 !py-1 text-xs" onClick={onNext}>
-                  შემდეგი ხელი →
+                  {tt("შემდეგი ხელი", "Next hand", "Следующая раздача")} →
                 </button>
               )}
             </div>
@@ -578,7 +613,7 @@ export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, a
                 {secondsLeft}
               </span>
             )}
-            {mine.folded && !mine.out && <span className="text-white/60">გადაყარეთ</span>}
+            {mine.folded && !mine.out && <span className="text-white/60">{tt("გადაყარეთ", "You folded", "Вы сбросили")}</span>}
           </div>
 
           <div className="flex items-end justify-center gap-2">
@@ -612,16 +647,16 @@ export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, a
                       step={Math.max(1, Math.min(step, o.maxRaiseTo - o.minRaiseTo || 1))}
                       value={raiseTo}
                       onChange={(e) => setRaise(Number(e.target.value))}
-                      aria-label="ფსონის ზომა"
+                      aria-label={tt("ფსონის ზომა", "Bet size", "Размер ставки")}
                       className="h-2 min-w-0 flex-1 cursor-pointer accent-amber-300"
                     />
                     <span className="w-16 text-right text-sm font-extrabold tabular-nums text-amber-200">{raiseTo}</span>
                   </div>
                   <div className="flex gap-1.5 text-xs font-bold">
                     {[
-                      ["½ ბანკი", potRaise(0.5)],
-                      ["ბანკი", potRaise(1)],
-                      ["მაქსიმუმი", o.maxRaiseTo],
+                      [tt("½ ბანკი", "½ pot", "½ банка"), potRaise(0.5)],
+                      [tt("ბანკი", "Pot", "Банк"), potRaise(1)],
+                      [tt("მაქსიმუმი", "Max", "Макс."), o.maxRaiseTo],
                     ].map(([label, to]) => (
                       <button
                         key={label}
@@ -637,16 +672,16 @@ export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, a
               )}
               <div className="flex min-h-11 gap-2">
                 <button className="btn flex-1 !px-2 !py-2.5 !text-base" onClick={() => onPlay({ type: "fold" })}>
-                  ფოლდი
+                  {tt("ფოლდი", "Fold", "Фолд")}
                 </button>
                 {o.canCheck ? (
                   <button className="btn flex-1 !px-2 !py-2.5 !text-base" onClick={() => onPlay({ type: "check" })}>
-                    ჩეკი
+                    {tt("ჩეკი", "Check", "Чек")}
                   </button>
                 ) : (
                   <button className="btn flex-1 !px-2 !py-2.5 !text-base" onClick={() => onPlay({ type: "call" })}>
-                    ქოლი {o.callCost}
-                    {o.callCost < o.toCall ? " · ოლ-ინ" : ""}
+                    {tt("ქოლი", "Call", "Колл")} {o.callCost}
+                    {o.callCost < o.toCall ? " · " + tt("ოლ-ინ", "All-in", "Олл-ин") : ""}
                   </button>
                 )}
                 <button
@@ -654,7 +689,7 @@ export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, a
                   disabled={!o.canRaise}
                   onClick={() => onPlay({ type: "raise", to: raiseTo })}
                 >
-                  {allInRaise ? `ოლ-ინ ${raiseTo}` : `${raiseWord} ${raiseTo}`}
+                  {allInRaise ? `${tt("ოლ-ინ", "All-in", "Олл-ин")} ${raiseTo}` : `${raiseWord} ${raiseTo}`}
                 </button>
               </div>
             </div>
@@ -666,14 +701,14 @@ export function PokerTable({ game, opponents, me, secondsLeft, onPlay, onNext, a
         <div className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-3">
           <div className="panel pk-pop flex w-full max-w-sm flex-col items-center gap-3 p-5 text-center">
             <h2 className="text-2xl font-extrabold text-amber-200">
-              {game.winner === HUMAN ? "გილოცავთ, ყველა ჩიპი თქვენია! 🎉" : game.winner === null ? "ჩიპები გაგითავდათ" : `${names[game.winner]} დარჩა ერთადერთი`}
+              {game.winner === HUMAN ? tt("გილოცავთ, ყველა ჩიპი თქვენია! 🎉", "Congratulations, all the chips are yours! 🎉", "Поздравляем, все фишки ваши! 🎉") : game.winner === null ? tt("ჩიპები გაგითავდათ", "You ran out of chips", "У вас закончились фишки") : tt(`${names[game.winner]} დარჩა ერთადერთი`, `${names[game.winner]} is the last one standing`, `${names[game.winner]} остался единственным`)}
             </h2>
-            <p className="text-white/70">{game.handNo} ხელი ითამაშეთ.</p>
+            <p className="text-white/70">{tt(`${game.handNo} ხელი ითამაშეთ.`, `You played ${game.handNo} hands.`, `Сыграно раздач: ${game.handNo}.`)}</p>
             <button className="btn btn-primary w-full" onClick={onQuit}>
-              ახალი თამაში
+              {tt("ახალი თამაში", "New game", "Новая игра")}
             </button>
             <Link href="/" className="btn block w-full text-center">
-              მთავარი მენიუ
+              {tt("მთავარი მენიუ", "Main menu", "Главное меню")}
             </Link>
           </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { tt, useLang } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { isRed, SUIT_SYMBOL, sortHand, type NormalCard } from "@/lib/joker/cards";
 import { callName, canCall, handSize, isLegal, legalPlays, MAX_PRICE, molotka, needOf, nextLevel, teamOf, type BuraAction, type BuraState } from "@/lib/bura/engine";
@@ -56,6 +57,7 @@ const EDGE = { bottom: [0, 30], top: [0, -30], left: [-45, 0], right: [45, 0] } 
 const move = (from: readonly number[], to: readonly number[]) => ({ x: `${to[0] - from[0]}vw`, y: `${to[1] - from[1]}dvh` });
 
 export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, onNext, autoNext, onQuit, endNote, quitConfirm }: Props) {
+  useLang(); // the table re-renders when the language is switched
   const [confirm, setConfirm] = useState(false);
   const teams = game.players === 4;
 
@@ -77,34 +79,34 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
       {/* score */}
       <header className="relative z-20 flex items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3">
         <div className="flex min-w-0 items-center gap-1.5 text-sm sm:gap-3 sm:text-base">
-          <ScoreChip label={teams ? "ჩვენ" : "თქვენ"} short={teams ? undefined : "მე"} value={game.scores[0]} target={game.target} mine />
-          <ScoreChip label={teams ? "ისინი" : names[1]} value={game.scores[1]} target={game.target} />
+          <ScoreChip label={teams ? tt("ჩვენ", "Us", "Мы") : tt("თქვენ", "You", "Вы")} short={teams ? undefined : tt("მე", "Me", "Я")} value={game.scores[0]} target={game.target} mine />
+          <ScoreChip label={teams ? tt("ისინი", "Them", "Они") : names[1]} value={game.scores[1]} target={game.target} />
         </div>
         <div className="flex flex-none items-center gap-1.5 sm:gap-3">
           <span
             className={`whitespace-nowrap rounded-full px-2 py-1 text-xs font-bold min-[380px]:px-2.5 sm:px-3 sm:py-1.5 sm:text-sm ${game.price > 1 ? "bg-red-500/25 text-red-200" : "bg-black/30 text-white/70"}`}
-            title="რამდენ ქულად ფასობს რაუნდი"
+            title={tt("რამდენ ქულად ფასობს რაუნდი", "How many points the round is worth", "Сколько очков стоит раунд")}
           >
-            <span className="hidden sm:inline">რაუნდი: </span>
-            {game.price} ქულა
+            <span className="hidden sm:inline">{tt("რაუნდი", "Round", "Раунд")}: </span>
+            {game.price} {tt("ქულა", "pts", "очк.")}
           </span>
-          <span className="hidden rounded-full bg-black/30 px-3 py-1.5 text-sm font-bold text-amber-200 sm:inline" title="თქვენი გუნდის აღებული ხელები">
-            ხელები: {game.tricks[0]}
+          <span className="hidden rounded-full bg-black/30 px-3 py-1.5 text-sm font-bold text-amber-200 sm:inline" title={tt("თქვენი გუნდის აღებული ხელები", "Tricks taken by your team", "Взятки вашей команды")}>
+            {tt("ხელები", "Tricks", "Взятки")}: {game.tricks[0]}
           </span>
           <MusicPlayer />
           {confirm ? (
             <span className="flex items-center gap-2 text-sm">
-              <span className="hidden max-w-xs text-white/70 sm:inline">{quitConfirm ?? "დარწმუნებული ხართ?"}</span>
+              <span className="hidden max-w-xs text-white/70 sm:inline">{quitConfirm ?? tt("დარწმუნებული ხართ?", "Are you sure?", "Вы уверены?")}</span>
               <button className="rounded-full bg-red-500/80 px-3 py-1.5 font-bold" onClick={onQuit}>
-                გასვლა
+                {tt("გასვლა", "Leave", "Выйти")}
               </button>
               <button className="rounded-full bg-white/10 px-3 py-1.5 font-bold" onClick={() => setConfirm(false)}>
-                დარჩენა
+                {tt("დარჩენა", "Stay", "Остаться")}
               </button>
             </span>
           ) : (
             <button className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-bold text-white/70 hover:bg-white/20 sm:px-3 sm:py-1.5 sm:text-sm" onClick={() => setConfirm(true)}>
-              გასვლა
+              {tt("გასვლა", "Leave", "Выйти")}
             </button>
           )}
         </div>
@@ -145,7 +147,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
           </div>
           <div className="leading-tight">
             <b className={`block text-2xl sm:text-3xl ${isRed(game.trump) ? "text-red-400" : "text-white"}`}>{SUIT_SYMBOL[game.trump]}</b>
-            <span className="text-xs text-white/60">{game.deck.length} კარტი</span>
+            <span className="text-xs text-white/60">{game.deck.length} {tt("კარტი", "cards", "карт")}</span>
           </div>
         </div>
 
@@ -197,7 +199,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
               game.turn === 0 ? "bg-amber-300/20 text-amber-200" : "bg-black/25 text-white/60"
             }`}
           >
-            {game.turn === 0 ? "თქვენ იწყებთ" : `${names[game.turn]} იწყებს`}
+            {game.turn === 0 ? tt("თქვენ იწყებთ", "You lead", "Вы заходите") : tt(`${names[game.turn]} იწყებს`, `${names[game.turn]} leads`, `${names[game.turn]} заходит`)}
           </p>
         )}
 
@@ -263,7 +265,7 @@ function Opponent({
         </span>
         <span className="max-w-28 truncate text-sm font-bold">
           {name}
-          {partner && <span className="ml-1 text-xs text-emerald-300">გუნდელი</span>}
+          {partner && <span className="ml-1 text-xs text-emerald-300">{tt("გუნდელი", "Partner", "Партнёр")}</span>}
         </span>
       </div>
       <div className="flex">
@@ -326,20 +328,20 @@ function Hand({
         {active ? (
           <>
             <button className={`${BTN_PRIMARY} !px-6 !py-2`} disabled={!ready} onClick={() => onPlay(forced ?? selected)}>
-              {need && need > 1 && !forced ? `ითამაშე ${selected.length}/${need}` : "ითამაშე"}
+              {need && need > 1 && !forced ? tt(`ითამაშე ${selected.length}/${need}`, `Play ${selected.length}/${need}`, `Сыграть ${selected.length}/${need}`) : tt("ითამაშე", "Play", "Сыграть")}
             </button>
             {canCall(game, 0) && (
               <button
                 className="rounded-full border border-red-300/60 bg-red-500/20 px-5 py-2 font-bold text-red-100 transition-colors hover:bg-red-500/40"
                 onClick={() => onAct({ type: "call" })}
-                title={`რაუნდი გახდება ${nextLevel(game)} ქულის`}
+                title={tt(`რაუნდი გახდება ${nextLevel(game)} ქულის`, `The round will be worth ${nextLevel(game)} points`, `Раунд будет стоить ${nextLevel(game)} очк.`)}
               >
                 {callName(nextLevel(game))}
               </button>
             )}
             {mol && (
-              <button className={`${BTN_GHOST} !px-5 !py-2`} onClick={() => onPlay(mol.map((c) => c.id))} title="მთელი ხელი ერთად">
-                მოლოტკა
+              <button className={`${BTN_GHOST} !px-5 !py-2`} onClick={() => onPlay(mol.map((c) => c.id))} title={tt("მთელი ხელი ერთად", "The whole hand at once", "Вся рука сразу")}>
+                {tt("მოლოტკა", "Molotka", "Молотка")}
               </button>
             )}
             {secondsLeft !== null && (
@@ -347,7 +349,7 @@ function Hand({
             )}
           </>
         ) : (
-          <span className="text-white/40">{game.phase === "play" || game.phase === "call" || game.phase === "var" ? "ელოდებით…" : ""}</span>
+          <span className="text-white/40">{game.phase === "play" || game.phase === "call" || game.phase === "var" ? tt("ელოდებით…", "Waiting…", "Ожидание…") : ""}</span>
         )}
       </div>
       <div className="flex min-h-[8rem] items-end justify-center gap-2">
@@ -397,37 +399,37 @@ function Decision({
       <div className="absolute left-1/2 top-[58%] z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-3xl border border-amber-300/30 bg-[#0c2a1c]/95 px-7 py-5 text-center shadow-2xl">
         {mine ? (
           <>
-            <p className="text-lg font-bold">ხელი თქვენია. ვარ?</p>
-            <p className="max-w-64 text-sm text-white/60">თუ გუნდს 31 ქულა აქვს, რაუნდს იგებთ. თუ არა — აგებთ.</p>
+            <p className="text-lg font-bold">{tt("ხელი თქვენია. ვარ?", "The trick is yours. Var?", "Взятка ваша. Вар?")}</p>
+            <p className="max-w-64 text-sm text-white/60">{tt("თუ გუნდს 31 ქულა აქვს, რაუნდს იგებთ. თუ არა — აგებთ.", "If your team has 31 points you win the round. If not, you lose it.", "Если у команды 31 очко, вы выигрываете раунд. Если нет — проигрываете.")}</p>
             <div className="flex items-center gap-3">
               <button className={`${BTN_PRIMARY} !px-7 !py-2`} onClick={() => onAct({ type: "var", say: true })}>
-                ვარ!
+                {tt("ვარ!", "Var!", "Вар!")}
               </button>
               <button className={`${BTN_GHOST} !px-6 !py-2`} onClick={() => onAct({ type: "var", say: false })}>
-                ვაგრძელებ
+                {tt("ვაგრძელებ", "Continue", "Продолжаю")}
               </button>
               {timer}
             </div>
           </>
         ) : (
-          <p className="text-white/70">{names[game.turn]} ფიქრობს: ვარ თუ გააგრძელოს?</p>
+          <p className="text-white/70">{tt(`${names[game.turn]} ფიქრობს: ვარ თუ გააგრძელოს?`, `${names[game.turn]} is thinking: var or continue?`, `${names[game.turn]} думает: вар или продолжать?`)}</p>
         )}
       </div>
     );
   }
 
   const call = game.call!;
-  const caller = call.by === 0 ? "თქვენ" : (names[call.by] ?? "…");
+  const caller = call.by === 0 ? tt("თქვენ", "You", "Вы") : (names[call.by] ?? "…");
   return (
     <div className="absolute left-1/2 top-[58%] z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-3 rounded-3xl border border-red-300/40 bg-[#2a1010]/95 px-7 py-5 text-center shadow-2xl">
       <p className="text-2xl font-extrabold text-red-200">{callName(call.level)}!</p>
       <p className="text-white/70">
-        {caller} {call.by === 0 ? "ამბობთ" : "ამბობს"}: რაუნდი ღირს {call.level} ქულა
+        {caller} {call.by === 0 ? tt("ამბობთ", "say", "говорите") : tt("ამბობს", "says", "говорит")}: {tt(`რაუნდი ღირს ${call.level} ქულა`, `the round is worth ${call.level} points`, `раунд стоит ${call.level} очк.`)}
       </p>
       {mine ? (
         <div className="flex flex-wrap items-center justify-center gap-3">
           <button className={`${BTN_PRIMARY} !px-6 !py-2`} onClick={() => onAct({ type: "answer", answer: "accept" })}>
-            მივიღებ
+            {tt("მივიღებ", "Accept", "Принимаю")}
           </button>
           {call.level < MAX_PRICE && (
             <button
@@ -437,34 +439,48 @@ function Decision({
               {callName(call.level + 1)}
             </button>
           )}
-          <button className={`${BTN_GHOST} !px-5 !py-2`} onClick={() => onAct({ type: "answer", answer: "fold" })} title={`მოწინააღმდეგე ${game.price} ქულას აიღებს`}>
-            ვთმობ
+          <button className={`${BTN_GHOST} !px-5 !py-2`} onClick={() => onAct({ type: "answer", answer: "fold" })} title={tt(`მოწინააღმდეგე ${game.price} ქულას აიღებს`, `The opponent takes ${game.price} points`, `Соперник возьмёт ${game.price} очк.`)}>
+            {tt("ვთმობ", "Give up", "Уступаю")}
           </button>
           {timer}
         </div>
       ) : (
-        <p className="text-sm text-white/50">{names[game.turn]} ფიქრობს…</p>
+        <p className="text-sm text-white/50">{tt(`${names[game.turn]} ფიქრობს…`, `${names[game.turn]} is thinking…`, `${names[game.turn]} думает…`)}</p>
       )}
     </div>
   );
 }
 
 /** What the round came to, as a strip over the table (the next deal follows by itself). */
+type BuraResult = NonNullable<BuraState["result"]>;
+
+const varText = (r: BuraResult, names: string[]) => {
+  const n = names[r.by ?? 0] ?? "";
+  const who = r.by === 0 ? tt("თქვენ თქვით", "You said", "Вы сказали") : tt(`${n} თქვა`, `${n} said`, `${n} сказал`);
+  const had = (r.winner === 0) === (r.by === 0);
+  return `${who}: ${tt("ვარ!", "Var!", "Вар!")} ${had ? tt("31 ქულა ჰქონდა", "had 31 points", "было 31 очко") : tt("31 ქულა არ ჰქონდა", "did not have 31 points", "не было 31 очка")}`;
+};
+
+const foldText = (r: BuraResult, names: string[]) => {
+  const n = names[r.by ?? 0] ?? "";
+  return r.by === 0 ? tt("თქვენს გამოძახებას დათმეს", "Your call was given up", "Ваш вызов уступили") : tt(`${n}-ის გამოძახებას დათმეს`, `${n}'s call was given up`, `Вызов ${n} уступили`);
+};
+
+const buraText = (who: string) => tt(`${who}: ხელში მხოლოდ კოზირებია`, `${who}: only trumps in hand`, `${who}: в руке одни козыри`);
+
 function RoundBanner({ game, names }: { game: BuraState; names: string[] }) {
   const r = game.result;
   const mine = r?.winner === 0;
   const teams = game.players === 4;
   const title =
-    r?.winner === null ? "ფრე: 60 / 60" : r?.how === "bura" ? (mine ? "ბურა თქვენია!" : "ბურა მოწინააღმდეგეს") : mine ? "რაუნდი თქვენია" : "რაუნდი წააგეთ";
+    r?.winner === null ? tt("ფრე: 60 / 60", "Draw: 60 / 60", "Ничья: 60 / 60") : r?.how === "bura" ? (mine ? tt("ბურა თქვენია!", "Bura is yours!", "Бура ваша!") : tt("ბურა მოწინააღმდეგეს", "Bura to the opponent", "Бура у соперника")) : mine ? tt("რაუნდი თქვენია", "The round is yours", "Раунд ваш") : tt("რაუნდი წააგეთ", "You lost the round", "Вы проиграли раунд");
   const why =
     r?.how === "var" && r.by !== null
-      ? `${r.by === 0 ? "თქვენ თქვით" : `${names[r.by] ?? ""} თქვა`}: ვარ! ${(r.winner === 0) === (r.by === 0) ? "31 ქულა ჰქონდა" : "31 ქულა არ ჰქონდა"}`
+      ? varText(r, names)
       : r?.how === "fold" && r.by !== null
-        ? r.by === 0
-          ? "თქვენს გამოძახებას დათმეს"
-          : `${names[r.by] ?? ""}-ის გამოძახებას დათმეს`
+        ? foldText(r, names)
         : r?.how === "bura" && r.bura !== null
-          ? `${r.bura === 0 ? "თქვენ" : (names[r.bura] ?? "")}: ხელში მხოლოდ კოზირებია`
+          ? buraText(r.bura === 0 ? tt("თქვენ", "You", "Вы") : (names[r.bura] ?? ""))
           : r && r.winner !== null
             ? `${r.piles[0]} : ${r.piles[1]}`
             : "";
@@ -476,7 +492,7 @@ function RoundBanner({ game, names }: { game: BuraState; names: string[] }) {
         {r && r.winner !== null && (
           <span className="text-sm text-white/60">
             {mine ? "+" : ""}
-            {r.gain} ქულა {mine ? "" : teams ? "მეტოქეებს" : (names[1] ?? "")}
+            {r.gain} {tt("ქულა", "points", "очков")} {mine ? "" : teams ? tt("მეტოქეებს", "to the opponents", "соперникам") : (names[1] ?? "")}
           </span>
         )}
         <span className="text-lg font-bold tabular-nums">
@@ -511,28 +527,28 @@ function RoundResult({
   const teams = game.players === 4;
   const title = final
     ? game.scores[0] >= game.target
-      ? "გამარჯვება!"
-      : "დამარცხება"
+      ? tt("გამარჯვება!", "Victory!", "Победа!")
+      : tt("დამარცხება", "Defeat", "Поражение")
     : r?.winner === null
-      ? "ფრე: 60 / 60"
+      ? tt("ფრე: 60 / 60", "Draw: 60 / 60", "Ничья: 60 / 60")
       : mine
-        ? "რაუნდი თქვენია"
-        : "რაუნდი წააგეთ";
+        ? tt("რაუნდი თქვენია", "The round is yours", "Раунд ваш")
+        : tt("რაუნდი წააგეთ", "You lost the round", "Вы проиграли раунд");
   return (
     <div className={`absolute inset-0 z-30 grid place-items-center p-4 ${final ? "bg-black/55 backdrop-blur-sm" : "bg-black/35"}`}>
       <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-3xl border border-white/15 bg-[#0c2a1c]/95 p-7 text-center shadow-2xl">
         <h2 className={`text-4xl font-extrabold ${final ? (game.scores[0] >= game.target ? "text-amber-300" : "text-white/80") : ""}`}>{title}</h2>
         {r?.bura !== null && r !== null && (
-          <p className="text-lg font-bold text-amber-200">ბურა! {names[r.bura!] ?? ""} ხელში მხოლოდ კოზირებია</p>
+          <p className="text-lg font-bold text-amber-200">{tt("ბურა!", "Bura!", "Бура!")} {buraText(names[r.bura!] ?? "")}</p>
         )}
         {r && r.how === "var" && r.by !== null && (
           <p className="text-lg font-bold text-amber-200">
-            {r.by === 0 ? "თქვენ თქვით" : `${names[r.by] ?? ""} თქვა`}: ვარ! {(r.winner === 0) === (r.by === 0) ? "31 ქულა ჰქონდა" : "31 ქულა არ ჰქონდა"}
+            {varText(r, names)}
           </p>
         )}
         {r && r.how === "fold" && r.by !== null && (
           <p className="text-lg font-bold text-red-200">
-            {r.by === 0 ? "თქვენს გამოძახებას დათმეს" : `${names[r.by] ?? ""}-ის გამოძახებას დათმეს`}
+            {foldText(r, names)}
           </p>
         )}
         {r && r.bura === null && r.how !== "fold" && (
@@ -543,7 +559,7 @@ function RoundResult({
         {r && r.winner !== null && (
           <p className="text-white/60">
             {mine ? "+" : ""}
-            {r.gain} {mine ? "ქულა" : `ქულა ${teams ? "მეტოქეებს" : names[1]}`}
+            {r.gain} {mine ? tt("ქულა", "points", "очков") : `${tt("ქულა", "points", "очков")} ${teams ? tt("მეტოქეებს", "to the opponents", "соперникам") : names[1]}`}
           </p>
         )}
         <p className="text-xl tabular-nums text-white/80">
@@ -553,25 +569,25 @@ function RoundResult({
         <div className="flex gap-3 pt-1">
           {final ? (
             <button className={BTN_PRIMARY} onClick={onQuit}>
-              დასრულება
+              {tt("დასრულება", "Finish", "Завершить")}
             </button>
           ) : (
             <>
               {autoNext ? (
                 <span className="flex w-56 flex-col items-center gap-2 text-sm text-white/60">
-                  შემდეგი რაუნდი იწყება…
+                  {tt("შემდეგი რაუნდი იწყება…", "The next round is starting…", "Следующий раунд начинается…")}
                   <span className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                     <span className="block h-full origin-left animate-[bura-fill_5s_linear_forwards] rounded-full bg-amber-300" />
                   </span>
                 </span>
               ) : (
                 <button className={BTN_PRIMARY} onClick={onNext}>
-                  შემდეგი რაუნდი
+                  {tt("შემდეგი რაუნდი", "Next round", "Следующий раунд")}
                 </button>
               )}
               {!autoNext && (
                 <button className={BTN_GHOST} onClick={onQuit}>
-                  გასვლა
+                  {tt("გასვლა", "Leave", "Выйти")}
                 </button>
               )}
             </>

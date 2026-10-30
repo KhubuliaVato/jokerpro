@@ -1,3 +1,4 @@
+import { tt } from "../lang";
 export type Suit = "S" | "C" | "D" | "H";
 export type Rank = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14;
 
@@ -26,10 +27,18 @@ export const SUIT_SYMBOL: Record<Suit, string> = {
 };
 
 export const SUIT_NAME: Record<Suit, string> = {
-  S: "ყვავი",
-  C: "ჯვარი",
-  D: "აგური",
-  H: "გული",
+  get S() {
+    return tt("ყვავი", "Spades", "Пики");
+  },
+  get C() {
+    return tt("ჯვარი", "Clubs", "Трефы");
+  },
+  get D() {
+    return tt("აგური", "Diamonds", "Бубны");
+  },
+  get H() {
+    return tt("გული", "Hearts", "Червы");
+  },
 };
 
 export const isRed = (suit: Suit) => suit === "D" || suit === "H";

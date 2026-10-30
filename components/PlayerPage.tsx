@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useT } from "@/lib/i18n";
 import { loadResults } from "@/lib/results";
 import { loadPlayer, type PlayerSummary } from "@/lib/search";
 import type { GameResult } from "@/lib/stats";
@@ -17,6 +18,7 @@ import { BTN_GHOST, rise } from "./ui";
 export function PlayerPage() {
   const { id } = useParams<{ id: string }>();
   const { configured } = useAuth();
+  const t = useT();
   const [player, setPlayer] = useState<PlayerSummary | null | undefined>(undefined);
   const [results, setResults] = useState<GameResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,17 +46,17 @@ export function PlayerPage() {
     <PageShell width="max-w-5xl">
       <div style={rise(1)}>
         <Link href="/profile" className={`${BTN_GHOST} inline-flex w-fit items-center gap-2`}>
-          <span>←</span> ძიება
+          <span>←</span> {t("ძიება", "Search", "Поиск")}
         </Link>
       </div>
 
       {!configured ? (
-        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">პროფილები ჯერ არ არის ჩართული</h1>
+        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">{t("პროფილები ჯერ არ არის ჩართული", "Profiles are not enabled yet", "Профили пока не включены")}</h1>
       ) : player === undefined ? (
         <div className="h-48 animate-pulse rounded-3xl bg-white/[0.06]" />
       ) : player === null ? (
         <section className="flex flex-col gap-3" style={rise(1)}>
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">მოთამაშე ვერ მოიძებნა</h1>
+          <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl">{t("მოთამაშე ვერ მოიძებნა", "Player not found", "Игрок не найден")}</h1>
           {error && <p className="text-sm text-red-300">{error}</p>}
         </section>
       ) : (

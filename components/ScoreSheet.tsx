@@ -1,3 +1,4 @@
+import { useT } from "@/lib/i18n";
 import { SUIT_SYMBOL } from "@/lib/joker/cards";
 import { locateHand, PLAYERS, totals, type GameState } from "@/lib/joker/engine";
 import { usePlayerNames } from "./names";
@@ -6,6 +7,7 @@ const fmt = (n: number) => (n > 0 ? `+${n}` : String(n));
 
 /** Hand-by-hand score table: made bids in green, missed or overtaken ones in red. */
 export function ScoreSheet({ game }: { game: GameState }) {
+  const t = useT();
   const names = usePlayerNames();
   const { history, premiums, rules } = game;
   const rows: React.ReactNode[] = [];
@@ -23,7 +25,7 @@ export function ScoreSheet({ game }: { game: GameState }) {
               {SUIT_SYMBOL[h.trump]}
             </span>
           ) : (
-            <span className="ml-1.5 text-xs">კოზირის გარეშე</span>
+            <span className="ml-1.5 text-xs">{t("კოზირის გარეშე", "No trump", "Без козыря")}</span>
           )}
         </td>
         {h.points.map((pt, p) => {
@@ -38,7 +40,7 @@ export function ScoreSheet({ game }: { game: GameState }) {
                 }`}
               >
                 <div className="text-xs opacity-80">
-                  {h.bids[p] === 0 ? "პასი" : h.bids[p]} / {h.taken[p]}
+                  {h.bids[p] === 0 ? t("პასი", "Pass", "Пас") : h.bids[p]} / {h.taken[p]}
                 </div>
                 <div className="text-lg font-extrabold leading-tight">{fmt(pt)}</div>
               </div>
@@ -53,12 +55,12 @@ export function ScoreSheet({ game }: { game: GameState }) {
       rows.push(
         <tr key={`p${h.pulka}`} className="border-y border-amber-300/50 bg-amber-300/10">
           <td className="px-3 py-2 text-left text-sm font-bold text-amber-200 whitespace-nowrap">
-            ეტაპი {h.pulka + 1}
+            {t("ეტაპი", "Round", "Этап")} {h.pulka + 1}
           </td>
           {sum.map((v, p) => (
             <td key={p} className="px-2 py-2">
               {bonus[p] > 0 && (
-                <div className="text-xs font-bold text-emerald-300">პრემია {fmt(bonus[p])}</div>
+                <div className="text-xs font-bold text-emerald-300">{t("პრემია", "Bonus", "Премия")} {fmt(bonus[p])}</div>
               )}
               <div className="text-lg font-extrabold text-amber-200">{v}</div>
             </td>
@@ -76,7 +78,7 @@ export function ScoreSheet({ game }: { game: GameState }) {
       <table className="w-full min-w-[22rem] text-center tabular-nums">
         <thead className="sticky top-0 z-10 bg-[#0c2a1b]">
           <tr>
-            <th className="px-3 py-2.5 text-left text-xs font-normal opacity-70">ხელი</th>
+            <th className="px-3 py-2.5 text-left text-xs font-normal opacity-70">{t("ხელი", "Hand", "Раздача")}</th>
             {names.map((n) => (
               <th key={n} className="px-2 py-2.5 text-base">
                 {n}
@@ -87,7 +89,7 @@ export function ScoreSheet({ game }: { game: GameState }) {
         <tbody>{rows}</tbody>
         <tfoot className="sticky bottom-0 bg-[#0c2a1b]">
           <tr className="border-t-2 border-amber-300/70">
-            <td className="px-3 py-3 text-left text-sm font-bold">სულ</td>
+            <td className="px-3 py-3 text-left text-sm font-bold">{t("სულ", "Total", "Итого")}</td>
             {sums.map((v, p) => (
               <td
                 key={p}
@@ -100,7 +102,7 @@ export function ScoreSheet({ game }: { game: GameState }) {
         </tfoot>
       </table>
       {history.length === 0 && (
-        <p className="py-6 text-center opacity-60">ქულები პირველი ხელის შემდეგ გამოჩნდება</p>
+        <p className="py-6 text-center opacity-60">{t("ქულები პირველი ხელის შემდეგ გამოჩნდება", "Scores appear after the first hand", "Очки появятся после первой раздачи")}</p>
       )}
     </div>
   );

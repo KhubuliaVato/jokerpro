@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { Card } from "@/lib/joker/cards";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useT } from "@/lib/i18n";
 import { loadResults } from "@/lib/results";
 import { computeStats, type Stats } from "@/lib/stats";
 import { getSupabase } from "@/lib/supabase";
@@ -26,8 +27,37 @@ const BURA_FAN: Card[] = [
 
 const CARD_SIZE = { ["--cw" as string]: "clamp(5.5rem, 14vw, 7.5rem)" } as React.CSSProperties;
 
+/** A tiny nardi board on the menu card: a row of points with a few checkers and two dice. */
+function NardiArt() {
+  const tri = (i: number, top: boolean) => {
+    const x = 6 + i * 20;
+    return <polygon key={`${i}${top}`} points={top ? `${x},4 ${x + 18},4 ${x + 9},50` : `${x},96 ${x + 18},96 ${x + 9},50`} fill={(i + (top ? 0 : 1)) % 2 ? "#8b3a2f" : "#d9b878"} />;
+  };
+  return (
+    <svg viewBox="0 0 252 100" className="h-full max-w-full transition-transform duration-500 group-hover:scale-105" aria-hidden>
+      <rect x="0" y="0" width="252" height="100" rx="12" fill="#6b4423" />
+      <rect x="4" y="2" width="244" height="96" rx="8" fill="#12362a" />
+      {Array.from({ length: 12 }, (_, i) => tri(i, true))}
+      {Array.from({ length: 12 }, (_, i) => tri(i, false))}
+      {[0, 1, 2].map((k) => <circle key={`w${k}`} cx="235" cy={14 + k * 11} r="5.3" fill="#f5efe0" stroke="#b9ad92" />)}
+      {[0, 1].map((k) => <circle key={`b${k}`} cx="15" cy={86 - k * 11} r="5.3" fill="#26262c" stroke="#000" />)}
+      <circle cx="75" cy="14" r="5.3" fill="#f5efe0" stroke="#b9ad92" />
+      <circle cx="175" cy="86" r="5.3" fill="#26262c" stroke="#000" />
+      <g transform="translate(106 38) rotate(-10 12 12)">
+        <rect width="24" height="24" rx="5" fill="#fbf8ef" stroke="#bbb2a0" />
+        <circle cx="7" cy="7" r="2.2" fill="#1d1d24" /><circle cx="17" cy="17" r="2.2" fill="#1d1d24" /><circle cx="12" cy="12" r="2.2" fill="#1d1d24" />
+      </g>
+      <g transform="translate(138 40) rotate(12 12 12)">
+        <rect width="24" height="24" rx="5" fill="#fbf8ef" stroke="#bbb2a0" />
+        <circle cx="7" cy="7" r="2.2" fill="#1d1d24" /><circle cx="17" cy="7" r="2.2" fill="#1d1d24" /><circle cx="7" cy="17" r="2.2" fill="#1d1d24" /><circle cx="17" cy="17" r="2.2" fill="#1d1d24" />
+      </g>
+    </svg>
+  );
+}
+
 export function MainMenu() {
   const { user, profile, configured } = useAuth();
+  const t = useT();
   const [loaded, setLoaded] = useState<{ userId: string; stats: Stats } | null>(null);
 
   const userId = user?.id ?? null;
@@ -49,7 +79,7 @@ export function MainMenu() {
       <style>{RISE_CSS}</style>
 
       <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-8 px-5 py-6 sm:gap-12 sm:px-8 sm:py-8">
-        <div style={rise(0)}>
+        <div className="relative z-30" style={rise(0)}>
           <SiteHeader />
         </div>
 
@@ -57,21 +87,21 @@ export function MainMenu() {
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
             {user ? (
               <>
-                გამარჯობა, <span className="text-amber-300">{profile?.nickname ?? "მოთამაშე"}</span>
+                {t("გამარჯობა", "Hello", "Привет")}, <span className="text-amber-300">{profile?.nickname ?? t("მოთამაშე", "Player", "Игрок")}</span>
               </>
             ) : (
-              "თამაშები"
+              t("თამაშები", "Games", "Игры")
             )}
           </h1>
           <p className="text-lg text-white/55 sm:text-xl">
             {user && stats && stats.played > 0 ? (
               <>
-                {stats.played} თამაში · {stats.wins} გამარჯვება · {stats.winRate}%
+                {stats.played} {t("თამაში", "games", "игр")} · {stats.wins} {t("გამარჯვება", "wins", "побед")} · {stats.winRate}%
               </>
             ) : user ? (
-              "აირჩიეთ თამაში და დაიწყეთ."
+              t("აირჩიეთ თამაში და დაიწყეთ.", "Pick a game and get started.", "Выберите игру и начинайте.")
             ) : (
-              "აირჩიეთ თამაში."
+              t("აირჩიეთ თამაში.", "Pick a game.", "Выберите игру.")
             )}
           </p>
         </section>
@@ -94,11 +124,11 @@ export function MainMenu() {
               </div>
               <div className="flex items-end justify-between gap-4">
                 <div className="min-w-0">
-                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">ჯოკერი</h2>
-                  <p className="mt-1.5 text-base text-white/55">ონლაინ და ბოტებთან · 4 მოთამაშე</p>
+                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">{t("ჯოკერი", "Joker", "Джокер")}</h2>
+                  <p className="mt-1.5 text-base text-white/55">{t("ონლაინ და ბოტებთან · 4 მოთამაშე", "Online and vs bots · 4 players", "Онлайн и с ботами · 4 игрока")}</p>
                 </div>
                 <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
-                  თამაში
+                  {t("თამაში", "Play", "Играть")}
                   <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
                 </span>
               </div>
@@ -126,20 +156,20 @@ export function MainMenu() {
               </div>
               <div className="flex items-end justify-between gap-4">
                 <div className="min-w-0">
-                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">ბურა</h2>
-                  <p className="mt-1.5 text-base text-white/55">ონლაინ და ბოტებთან · 2 ან 4 მოთამაშე</p>
+                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">{t("ბურა", "Bura", "Бура")}</h2>
+                  <p className="mt-1.5 text-base text-white/55">{t("ონლაინ და ბოტებთან · 2 ან 4 მოთამაშე", "Online and vs bots · 2 or 4 players", "Онлайн и с ботами · 2 или 4 игрока")}</p>
                 </div>
                 <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
-                  თამაში
+                  {t("თამაში", "Play", "Играть")}
                   <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
                 </span>
               </div>
             </div>
           </Link>
 
-          <Link href="/poker" className="group block outline-none sm:col-span-2">
-            <div className="flex min-h-[min(18rem,40dvh)] flex-col justify-between gap-6 rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-white/30 group-hover:bg-white/[0.07] group-hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] group-focus-visible:border-amber-300 sm:flex-row sm:items-center sm:p-9">
-              <div className="relative h-28 w-full sm:h-32 sm:w-72 sm:flex-none">
+          <Link href="/poker" className="group block outline-none">
+            <div className="flex min-h-[min(18rem,40dvh)] flex-col justify-between gap-6 rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-white/30 group-hover:bg-white/[0.07] group-hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] group-focus-visible:border-amber-300 sm:p-9">
+              <div className="relative h-28 w-full sm:h-32">
                 {POKER_FAN.map((card, i) => (
                   <div
                     key={card.id}
@@ -156,11 +186,29 @@ export function MainMenu() {
               </div>
               <div className="flex min-w-0 flex-1 items-end justify-between gap-4">
                 <div className="min-w-0">
-                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">პოკერი</h2>
-                  <p className="mt-1.5 text-base text-white/55">Texas Hold&apos;em ბოტებთან · სათამაშო ჩიპებით</p>
+                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">{t("პოკერი", "Poker", "Покер")}</h2>
+                  <p className="mt-1.5 text-base text-white/55">{t("Texas Hold'em ბოტებთან · სათამაშო ჩიპებით", "Texas Hold'em vs bots · play chips", "Texas Hold'em с ботами · игровые фишки")}</p>
                 </div>
                 <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
-                  თამაში
+                  {t("თამაში", "Play", "Играть")}
+                  <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
+                </span>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/nardi" className="group block outline-none">
+            <div className="flex min-h-[min(18rem,40dvh)] flex-col justify-between gap-6 rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-white/30 group-hover:bg-white/[0.07] group-hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] group-focus-visible:border-amber-300 sm:p-9">
+              <div className="relative grid h-28 w-full place-items-center sm:h-32">
+                <NardiArt />
+              </div>
+              <div className="flex min-w-0 flex-1 items-end justify-between gap-4">
+                <div className="min-w-0">
+                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">{t("ნარდი", "Nardi", "Нарды")}</h2>
+                  <p className="mt-1.5 text-base text-white/55">{t("ნარდი ბოტებთან", "Nardi vs bots", "Нарды с ботами")}</p>
+                </div>
+                <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
+                  {t("თამაში", "Play", "Играть")}
                   <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
                 </span>
               </div>
@@ -170,7 +218,7 @@ export function MainMenu() {
 
         {!configured && (
           <p className="text-sm text-white/40">
-            პროფილები ჯერ არ არის ჩართული (Supabase არ არის მიერთებული), მაგრამ ჯოკერის თამაში შეიძლება.
+            {t("პროფილები ჯერ არ არის ჩართული (Supabase არ არის მიერთებული), მაგრამ ჯოკერის თამაში შეიძლება.", "Profiles are not enabled yet (Supabase is not connected), but you can still play Joker.", "Профили пока не включены (Supabase не подключён), но в Джокер играть можно.")}
           </p>
         )}
       </div>

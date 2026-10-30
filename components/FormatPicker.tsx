@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -16,6 +17,7 @@ type Format = (typeof FORMATS)[keyof typeof FORMATS][number];
 /** Ranked or friendly match: pick the game length, then take a seat at an open table of random players. */
 export function FormatPicker({ kind, game = "joker" }: { kind: "ranked" | "friendly"; game?: "joker" | "bura" }) {
   const router = useRouter();
+  const t = useT();
   const { configured, loading, user } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export function FormatPicker({ kind, game = "joker" }: { kind: "ranked" | "frien
     setError(null);
     const { table, error: err } = await findTable(supabase, kind, format, game);
     if (err || !table) {
-      setError(err ?? "მაგიდა ვერ მოიძებნა");
+      setError(err ?? t("მაგიდა ვერ მოიძებნა", "Table not found", "Стол не найден"));
       setBusy(null);
       return;
     }
@@ -39,19 +41,19 @@ export function FormatPicker({ kind, game = "joker" }: { kind: "ranked" | "frien
     <PageShell width="max-w-4xl">
       <section className="flex flex-col gap-2" style={rise(1)}>
         <Link href={`/${game}`} className="w-fit text-sm font-bold uppercase tracking-wider text-white/45 hover:text-amber-300">
-          ← {game === "bura" ? "ბურა" : "ჯოკერი"}
+          ← {game === "bura" ? t("ბურა", "Bura", "Бура") : t("ჯოკერი", "Joker", "Джокер")}
         </Link>
-        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">{kind === "ranked" ? "წოდებისთვის ბრძოლა" : "მეგობრული მატჩი"}</h1>
-        <p className="text-lg text-white/55 sm:text-xl">{kind === "ranked" ? "შემთხვევითი მოთამაშეები · წოდება იცვლება" : "შემთხვევითი მოთამაშეები · ქულა არ იცვლება"}</p>
+        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">{kind === "ranked" ? t("წოდებისთვის ბრძოლა", "Ranked", "Рейтинговая игра") : t("მეგობრული მატჩი", "Friendly match", "Дружеский матч")}</h1>
+        <p className="text-lg text-white/55 sm:text-xl">{kind === "ranked" ? t("შემთხვევითი მოთამაშეები · წოდება იცვლება", "Random players · rank changes", "Случайные игроки · ранг меняется") : t("შემთხვევითი მოთამაშეები · ქულა არ იცვლება", "Random players · points do not change", "Случайные игроки · очки не меняются")}</p>
       </section>
 
       {!configured ? (
-        <p className="text-white/55">ონლაინ თამაში ჯერ არ არის ჩართული.</p>
+        <p className="text-white/55">{t("ონლაინ თამაში ჯერ არ არის ჩართული.", "Online play is not enabled yet.", "Онлайн-игра пока не включена.")}</p>
       ) : loading ? null : !user ? (
         <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.03] p-6" style={rise(2)}>
-          <p className="text-lg text-white/70">ამ რეჟიმისთვის საჭიროა ანგარიში.</p>
+          <p className="text-lg text-white/70">{t("ამ რეჟიმისთვის საჭიროა ანგარიში.", "This mode needs an account.", "Для этого режима нужен аккаунт.")}</p>
           <Link href={`/login?next=/${game}/${kind}`} className={`${BTN_PRIMARY} w-fit`}>
-            შესვლა
+            {t("შესვლა", "Sign in", "Войти")}
           </Link>
         </div>
       ) : (
@@ -69,7 +71,7 @@ export function FormatPicker({ kind, game = "joker" }: { kind: "ranked" | "frien
                   <FormatFan format={f} />
 
                   <span className="absolute right-6 top-5 flex items-center gap-2 text-xl font-bold text-amber-300">
-                    {busy === f ? "ვეძებთ…" : ""}
+                    {busy === f ? t("ვეძებთ…", "Searching…", "Ищем…") : ""}
                     <span className="text-3xl transition-transform duration-300 group-hover:translate-x-1.5">→</span>
                   </span>
 

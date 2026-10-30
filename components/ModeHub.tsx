@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useT } from "@/lib/i18n";
 import { activeTable, tablePath, type TableRow } from "@/lib/online/client";
 import { rankFor, RANKS } from "@/lib/ranks";
 import { loadPosition, loadRating, type RatingRow } from "@/lib/ratings";
@@ -14,11 +15,16 @@ import { PageShell } from "./PageShell";
 import { RankEmblem } from "./RankEmblem";
 import { BTN_PRIMARY, rise } from "./ui";
 
-const NAME = { joker: "ჯოკერი", bura: "ბურა", poker: "პოკერი" } as const;
+const NAME = {
+  joker: ["ჯოკერი", "Joker", "Джокер"],
+  bura: ["ბურა", "Bura", "Бура"],
+  poker: ["პოკერი", "Poker", "Покер"],
+} as const;
 
 /** The four ways into a game (Joker or Bura), next to the player's own rank and numbers. */
 export function ModeHub({ game }: { game: "joker" | "bura" }) {
   const { user, configured } = useAuth();
+  const tr = useT();
   const [loaded, setLoaded] = useState<{ userId: string; row: RatingRow | null } | null>(null);
 
   const userId = user?.id ?? null;
@@ -73,7 +79,7 @@ export function ModeHub({ game }: { game: "joker" | "bura" }) {
     <PageShell width="max-w-5xl">
       <section className="flex flex-col gap-2" style={rise(1)}>
         <p className="text-sm font-bold uppercase tracking-wider text-white/45">{NAME[game]}</p>
-        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">აირჩიეთ რეჟიმი</h1>
+        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">{tr("აირჩიეთ რეჟიმი", "Choose a mode", "Выберите режим")}</h1>
       </section>
 
       {runningTable && (
@@ -83,8 +89,8 @@ export function ModeHub({ game }: { game: "joker" | "bura" }) {
           style={rise(1)}
         >
           <span>
-            <b className="block text-lg text-emerald-300">თამაში გრძელდება</b>
-            <span className="text-white/60">{NAME[runningTable.game]} · დაბრუნდით თქვენს მაგიდასთან</span>
+            <b className="block text-lg text-emerald-300">{tr("თამაში გრძელდება", "Game in progress", "Игра продолжается")}</b>
+            <span className="text-white/60">{tr(NAME[runningTable.game][0], NAME[runningTable.game][1], NAME[runningTable.game][2])} · {tr("დაბრუნდით თქვენს მაგიდასთან", "back to your table", "вернитесь за свой стол")}</span>
           </span>
           <span className="text-2xl text-emerald-300">→</span>
         </Link>
@@ -106,33 +112,33 @@ export function ModeHub({ game }: { game: "joker" | "bura" }) {
         <section className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 sm:gap-5" style={rise(3)}>
           <ModeCard
             href={loginFor(`/${game}/ranked`)}
-            title="წოდებისთვის ბრძოლა"
-            text="შემთხვევითი მოთამაშეები, ქულა და წოდება იცვლება"
+            title={tr("წოდებისთვის ბრძოლა", "Ranked", "Рейтинговая игра")}
+            text={tr("შემთხვევითი მოთამაშეები, ქულა და წოდება იცვლება", "Random players, points and rank change", "Случайные игроки, очки и ранг меняются")}
             accent={current.accent}
             featured
-            note={!user && online ? "შესვლა საჭიროა" : rating ? `${rating.rating} ქულა · ${current.name}` : "ახალი, 50 ქულით დაიწყებთ"}
+            note={!user && online ? tr("შესვლა საჭიროა", "Sign-in required", "Нужен вход") : rating ? `${rating.rating} ${tr("ქულა", "pts", "очк.")} · ${current.name}` : tr("ახალი, 50 ქულით დაიწყებთ", "New, you start with 50 points", "Новичок, начнёте с 50 очков")}
             art={<RankEmblem rank={user ? current : RANKS[0]} className="size-20" />}
           />
           <ModeCard
             href={loginFor(`/${game}/friendly`)}
-            title="მეგობრული მატჩი"
-            text="შემთხვევითი მოთამაშეები, ქულა არ იცვლება"
+            title={tr("მეგობრული მატჩი", "Friendly match", "Дружеский матч")}
+            text={tr("შემთხვევითი მოთამაშეები, ქულა არ იცვლება", "Random players, points do not change", "Случайные игроки, очки не меняются")}
             accent="#7dd3fc"
             note={!user && online ? "შესვლა საჭიროა" : undefined}
             art={<IconCards />}
           />
           <ModeCard
             href={loginFor(`/${game}/private`)}
-            title="კერძო მაგიდა"
-            text="მხოლოდ მეგობრები, შეიყვანეთ კოდით"
+            title={tr("კერძო მაგიდა", "Private table", "Частный стол")}
+            text={tr("მხოლოდ მეგობრები, შეიყვანეთ კოდით", "Friends only, join with a code", "Только друзья, вход по коду")}
             accent="#86efac"
             note={!user && online ? "შესვლა საჭიროა" : undefined}
             art={<IconTable />}
           />
           <ModeCard
             href={`/${game}/bots`}
-            title="ბოტებთან"
-            text="სავარჯიშო თამაში, არაფერი იწერება"
+            title={tr("ბოტებთან", "Vs bots", "С ботами")}
+            text={tr("სავარჯიშო თამაში, არაფერი იწერება", "Practice game, nothing is recorded", "Тренировочная игра, ничего не записывается")}
             accent="#c4b5fd"
             art={<IconBot />}
           />
@@ -266,6 +272,7 @@ function ProfileCard({
   loginHref: string;
 }) {
   const { user, profile } = useAuth();
+  const tr = useT();
   const standing = rankFor(rating?.rating ?? 50);
 
   if (!user) {
@@ -273,11 +280,11 @@ function ProfileCard({
       <div className="flex flex-col items-start gap-4 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6">
         <RankEmblem rank={RANKS[0]} className="size-16" />
         <div>
-          <h2 className="text-xl font-extrabold">თქვენი პროფილი</h2>
-          <p className="mt-1 text-white/55">შედით, რომ ნახოთ წოდება, ქულები და სტატისტიკა.</p>
+          <h2 className="text-xl font-extrabold">{tr("თქვენი პროფილი", "Your profile", "Ваш профиль")}</h2>
+          <p className="mt-1 text-white/55">{tr("შედით, რომ ნახოთ წოდება, ქულები და სტატისტიკა.", "Sign in to see your rank, points and stats.", "Войдите, чтобы увидеть ранг, очки и статистику.")}</p>
         </div>
         <Link href={loginHref} className={`${BTN_PRIMARY} w-fit`}>
-          შესვლა
+          {tr("შესვლა", "Sign in", "Войти")}
         </Link>
       </div>
     );
@@ -285,10 +292,10 @@ function ProfileCard({
 
   const stats = results ? computeStats(results) : null;
   const cells: [string, string][] = [
-    ["თამაში", stats ? String(stats.played) : "…"],
-    ["მოგება", stats ? String(stats.wins) : "…"],
-    ["მოგების %", stats ? `${stats.winRate}%` : "…"],
-    ["საშ. ადგილი", stats?.avgPlace ? stats.avgPlace.toFixed(1) : "—"],
+    [tr("თამაში", "Games", "Игры"), stats ? String(stats.played) : "…"],
+    [tr("მოგება", "Wins", "Победы"), stats ? String(stats.wins) : "…"],
+    [tr("მოგების %", "Win %", "Побед %"), stats ? `${stats.winRate}%` : "…"],
+    [tr("საშ. ადგილი", "Avg. place", "Ср. место"), stats?.avgPlace ? stats.avgPlace.toFixed(1) : "—"],
   ];
 
   return (
@@ -296,9 +303,9 @@ function ProfileCard({
       <div className="flex items-center gap-4">
         <Avatar size="lg" color={profile?.avatar_color} icon={profile?.avatar_icon} url={profile?.avatar_url} />
         <div className="min-w-0">
-          <h2 className="truncate text-2xl font-extrabold">{profile?.nickname ?? "პროფილი"}</h2>
+          <h2 className="truncate text-2xl font-extrabold">{profile?.nickname ?? tr("პროფილი", "Profile", "Профиль")}</h2>
           <Link href="/profile" className="text-sm font-bold text-amber-300 hover:underline">
-            სრული პროფილი →
+            {tr("სრული პროფილი", "Full profile", "Весь профиль")} →
           </Link>
         </div>
       </div>
@@ -319,8 +326,8 @@ function ProfileCard({
             />
           </div>
           <p className="mt-1.5 text-xs text-white/50">
-            {standing.next ? `${standing.next.name}-მდე ${standing.toNext} ქულა` : "უმაღლესი წოდება"}
-            {position ? ` · #${position} ლიდერბორდზე` : ""}
+            {standing.next ? tr(`${standing.next.name}-მდე ${standing.toNext} ქულა`, `${standing.toNext} pts to ${standing.next.name}`, `${standing.toNext} очк. до ${standing.next.name}`) : tr("უმაღლესი წოდება", "Top rank", "Высший ранг")}
+            {position ? ` · #${position} ${tr("ლიდერბორდზე", "on the leaderboard", "в рейтинге")}` : ""}
           </p>
         </div>
       </div>
@@ -334,7 +341,7 @@ function ProfileCard({
         ))}
       </div>
       <p className="-mt-2 text-xs text-white/35">
-        {game === "bura" ? "ბურის" : "ჯოკრის"} სტატისტიკა; ბოტებთან თამაში არ ითვლება
+        {game === "bura" ? tr("ბურის", "Bura", "Бура") : tr("ჯოკრის", "Joker", "Джокер")} {tr("სტატისტიკა; ბოტებთან თამაში არ ითვლება", "stats; games vs bots do not count", "статистика; игры с ботами не учитываются")}
       </p>
     </div>
   );

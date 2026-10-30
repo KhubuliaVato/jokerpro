@@ -1,3 +1,4 @@
+import { tt } from "../lang";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { GameState } from "@/lib/joker/engine";
 import type { BuraState } from "@/lib/bura/engine";
@@ -39,16 +40,16 @@ export interface ViewRow {
 /** Georgian text for what the database and the game server can answer. */
 export function onlineMessage(message: string): string {
   const m = message.toLowerCase();
-  if (m.includes("table not found")) return "ასეთი კოდით მაგიდა ვერ მოიძებნა";
-  if (m.includes("already started")) return "ამ მაგიდაზე თამაში უკვე დაიწყო";
-  if (m.includes("table is full")) return "მაგიდა სავსეა";
-  if (m.includes("not signed in")) return "ჯერ შედით ანგარიშში";
-  if (m.includes("not your turn")) return "ახლა თქვენი სვლა არ არის";
-  if (m.includes("illegal")) return "ეს სვლა დაუშვებელია";
-  if (m.includes("not seated")) return "თქვენ ამ მაგიდასთან არ ზიხართ";
-  if (m.includes("already in a game")) return "თქვენ უკვე გაქვთ დაწყებული თამაში: ჯერ დაბრუნდით მასში ან გამოდით";
-  if (m.includes("failed to fetch") || m.includes("network")) return "კავშირის შეცდომა, შეამოწმეთ ინტერნეტი";
-  return `შეცდომა: ${message}`;
+  if (m.includes("table not found")) return tt("ასეთი კოდით მაგიდა ვერ მოიძებნა", "No table with this code", "Стола с таким кодом нет");
+  if (m.includes("already started")) return tt("ამ მაგიდაზე თამაში უკვე დაიწყო", "The game at this table has already started", "Игра за этим столом уже началась");
+  if (m.includes("table is full")) return tt("მაგიდა სავსეა", "The table is full", "Стол заполнен");
+  if (m.includes("not signed in")) return tt("ჯერ შედით ანგარიშში", "Sign in first", "Сначала войдите");
+  if (m.includes("not your turn")) return tt("ახლა თქვენი სვლა არ არის", "It is not your turn", "Сейчас не ваш ход");
+  if (m.includes("illegal")) return tt("ეს სვლა დაუშვებელია", "This move is not allowed", "Этот ход недопустим");
+  if (m.includes("not seated")) return tt("თქვენ ამ მაგიდასთან არ ზიხართ", "You are not seated at this table", "Вы не сидите за этим столом");
+  if (m.includes("already in a game")) return tt("თქვენ უკვე გაქვთ დაწყებული თამაში: ჯერ დაბრუნდით მასში ან გამოდით", "You already have a game in progress: return to it or leave it first", "У вас уже есть начатая игра: сначала вернитесь в неё или выйдите");
+  if (m.includes("failed to fetch") || m.includes("network")) return tt("კავშირის შეცდომა, შეამოწმეთ ინტერნეტი", "Connection error, check your internet", "Ошибка соединения, проверьте интернет");
+  return `${tt("შეცდომა", "Error", "Ошибка")}: ${message}`;
 }
 
 /** Normalises what a player typed as a join code: letters and digits only, upper case. */

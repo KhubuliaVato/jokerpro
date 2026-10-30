@@ -1,3 +1,5 @@
+import { tt } from "./lang";
+
 export interface GameResult {
   id: string;
   game: string;
@@ -74,15 +76,15 @@ export interface Achievement {
 export function achievements(results: Pick<GameResult, "place" | "score" | "format">[]): Achievement[] {
   const stats = computeStats(results);
   return [
-    { id: "first", icon: "★", title: "პირველი გამარჯვება", hint: "მოიგეთ ერთი თამაში", done: stats.wins >= 1 },
-    { id: "ten", icon: "♠", title: "10 თამაში", hint: "დაასრულეთ 10 თამაში", done: stats.played >= 10 },
-    { id: "score", icon: "♦", title: "500 ქულა", hint: "ერთ თამაშში 500+", done: (stats.best ?? 0) >= 500 },
-    { id: "streak", icon: "♥", title: "სამი ზედიზედ", hint: "მოიგეთ სამი თამაში ზედიზედ", done: bestStreak(results) >= 3 },
+    { id: "first", icon: "★", title: tt("პირველი გამარჯვება", "First win", "Первая победа"), hint: tt("მოიგეთ ერთი თამაში", "Win a game", "Выиграйте одну игру"), done: stats.wins >= 1 },
+    { id: "ten", icon: "♠", title: tt("10 თამაში", "10 games", "10 игр"), hint: tt("დაასრულეთ 10 თამაში", "Finish 10 games", "Завершите 10 игр"), done: stats.played >= 10 },
+    { id: "score", icon: "♦", title: tt("500 ქულა", "500 points", "500 очков"), hint: tt("ერთ თამაშში 500+", "500+ in one game", "500+ за одну игру"), done: (stats.best ?? 0) >= 500 },
+    { id: "streak", icon: "♥", title: tt("სამი ზედიზედ", "Three in a row", "Три подряд"), hint: tt("მოიგეთ სამი თამაში ზედიზედ", "Win three games in a row", "Выиграйте три игры подряд"), done: bestStreak(results) >= 3 },
     {
       id: "full",
       icon: "♛",
-      title: "სრული თამაშის ოსტატი",
-      hint: "მოიგეთ სრული თამაში",
+      title: tt("სრული თამაშის ოსტატი", "Full game master", "Мастер полной игры"),
+      hint: tt("მოიგეთ სრული თამაში", "Win a full game", "Выиграйте полную игру"),
       done: results.some((r) => r.format === "full" && r.place === 1),
     },
   ];

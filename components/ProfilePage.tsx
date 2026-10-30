@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { NICKNAME_MAX, validateNickname } from "@/lib/auth/messages";
+import { useT } from "@/lib/i18n";
 import { resizeToSquare } from "@/lib/image";
 import { loadResults } from "@/lib/results";
 import type { GameResult } from "@/lib/stats";
@@ -19,6 +20,7 @@ import { BTN_GHOST, BTN_PRIMARY, INPUT, rise } from "./ui";
 export function ProfilePage() {
   const router = useRouter();
   const { configured, loading, user, profile, signOut } = useAuth();
+  const t = useT();
   const [results, setResults] = useState<GameResult[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
@@ -41,15 +43,15 @@ export function ProfilePage() {
   return (
     <PageShell width="max-w-5xl">
       {!configured ? (
-        <Notice title="პროფილები ჯერ არ არის ჩართული" />
+        <Notice title={t("პროფილები ჯერ არ არის ჩართული", "Profiles are not enabled yet", "Профили пока не включены")} />
       ) : loading ? (
         <div className="h-48 animate-pulse rounded-3xl bg-white/[0.06]" />
       ) : !user ? (
         <Notice
-          title="ჯერ შედით ანგარიშში"
+          title={t("ჯერ შედით ანგარიშში", "Sign in first", "Сначала войдите")}
           action={
             <Link href="/login" className={`${BTN_PRIMARY} w-fit`}>
-              შესვლა
+              {t("შესვლა", "Sign in", "Войти")}
             </Link>
           }
         />
@@ -61,7 +63,7 @@ export function ProfilePage() {
 
           <PlayerHero player={profile} subtitle={user.email}>
             <button className={BTN_GHOST} onClick={() => setEditing((v) => !v)}>
-              {editing ? "დახურვა" : "რედაქტირება"}
+              {editing ? t("დახურვა", "Close", "Закрыть") : t("რედაქტირება", "Edit", "Изменить")}
             </button>
             <button
               className={BTN_GHOST}
@@ -70,7 +72,7 @@ export function ProfilePage() {
                 router.replace("/");
               }}
             >
-              გასვლა
+              {t("გასვლა", "Sign out", "Выйти")}
             </button>
           </PlayerHero>
 
@@ -94,6 +96,7 @@ function Notice({ title, action }: { title: string; action?: React.ReactNode }) 
 
 function EditProfile({ onDone }: { onDone: () => void }) {
   const { profile, updateProfile, nicknameAvailable } = useAuth();
+  const t = useT();
   const fileInput = useRef<HTMLInputElement>(null);
   const [nickname, setNickname] = useState(profile?.nickname ?? "");
   const [color, setColor] = useState(profile?.avatar_color ?? "amber");
@@ -149,7 +152,7 @@ function EditProfile({ onDone }: { onDone: () => void }) {
       setPhoto(blob);
       setPreview(URL.createObjectURL(blob));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "სურათი ვერ აირჩა");
+      setError(err instanceof Error ? err.message : t("სურათი ვერ აირჩა", "Could not pick the image", "Не удалось выбрать изображение"));
     }
   };
 
@@ -184,11 +187,11 @@ function EditProfile({ onDone }: { onDone: () => void }) {
             type="button"
             onClick={() => fileInput.current?.click()}
             className="group relative rounded-full outline-none"
-            aria-label="სურათის არჩევა"
+            aria-label={t("სურათის არჩევა", "Choose a picture", "Выбрать картинку")}
           >
             <Avatar size="xl" color={color} icon={icon} url={shownUrl} />
             <span className="absolute inset-0 grid place-items-center rounded-full bg-black/55 text-sm font-bold opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
-              სურათის არჩევა
+              {t("სურათის არჩევა", "Choose a picture", "Выбрать картинку")}
             </span>
           </button>
           <input
@@ -208,14 +211,14 @@ function EditProfile({ onDone }: { onDone: () => void }) {
                 <path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
                 <circle cx="12" cy="13" r="3.5" />
               </svg>
-              {shownUrl ? "შეცვლა" : "ატვირთვა"}
+              {shownUrl ? t("შეცვლა", "Change", "Изменить") : t("ატვირთვა", "Upload", "Загрузить")}
             </button>
             {shownUrl && (
               <button
                 type="button"
                 onClick={removePhoto}
-                aria-label="სურათის წაშლა"
-                title="სურათის წაშლა"
+                aria-label={t("სურათის წაშლა", "Remove picture", "Удалить картинку")}
+                title={t("სურათის წაშლა", "Remove picture", "Удалить картинку")}
                 className="grid size-9 place-items-center rounded-full border border-white/20 text-white/60 transition-[border-color,color,background-color] duration-200 hover:border-red-400 hover:bg-red-400/10 hover:text-red-300"
               >
                 <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -232,16 +235,16 @@ function EditProfile({ onDone }: { onDone: () => void }) {
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             maxLength={NICKNAME_MAX}
-            aria-label="სახელი"
-            placeholder="სახელი"
+            aria-label={t("სახელი", "Name", "Имя")}
+            placeholder={t("სახელი", "Name", "Имя")}
             required
           />
           <p className="min-h-5 px-1 text-sm">
-            {nameState === "checking" && <span className="text-white/40">ვამოწმებ…</span>}
-            {nameState === "free" && <span className="text-emerald-300">✓ სახელი თავისუფალია</span>}
-            {nameState === "taken" && <span className="text-red-300">ეს სახელი უკვე დაკავებულია</span>}
+            {nameState === "checking" && <span className="text-white/40">{t("ვამოწმებ…", "Checking…", "Проверяю…")}</span>}
+            {nameState === "free" && <span className="text-emerald-300">✓ {t("სახელი თავისუფალია", "Name is available", "Имя свободно")}</span>}
+            {nameState === "taken" && <span className="text-red-300">{t("ეს სახელი უკვე დაკავებულია", "This name is already taken", "Это имя уже занято")}</span>}
             {nameState === "idle" && (
-              <span className="text-white/35">სახელი უნიკალურია: ერთს მხოლოდ ერთი მოთამაშე ატარებს</span>
+              <span className="text-white/35">{t("სახელი უნიკალურია: ერთს მხოლოდ ერთი მოთამაშე ატარებს", "Names are unique: only one player can use each", "Имена уникальны: каждое принадлежит одному игроку")}</span>
             )}
           </p>
         </div>
@@ -249,7 +252,7 @@ function EditProfile({ onDone }: { onDone: () => void }) {
 
       <div className="flex flex-col gap-3">
         <span className="text-sm text-white/45">
-          ან აირჩიეთ ფერი და ნიშანი{shownUrl ? " (სურათის წაშლის შემდეგ გამოჩნდება)" : ""}
+          {t("ან აირჩიეთ ფერი და ნიშანი", "Or pick a color and a symbol", "Или выберите цвет и значок")}{shownUrl ? t(" (სურათის წაშლის შემდეგ გამოჩნდება)", " (shown after the picture is removed)", " (появится после удаления картинки)") : ""}
         </span>
         <div className="flex flex-wrap gap-3">
           {Object.entries(AVATAR_COLORS).map(([key, cls]) => (
@@ -289,10 +292,10 @@ function EditProfile({ onDone }: { onDone: () => void }) {
 
       <div className="flex gap-3">
         <button className={BTN_PRIMARY} disabled={busy || nameState === "taken" || nameState === "checking"}>
-          {busy ? "ინახება…" : "შენახვა"}
+          {busy ? t("ინახება…", "Saving…", "Сохраняю…") : t("შენახვა", "Save", "Сохранить")}
         </button>
         <button type="button" className={BTN_GHOST} onClick={onDone}>
-          გაუქმება
+          {t("გაუქმება", "Cancel", "Отмена")}
         </button>
       </div>
     </form>

@@ -1,5 +1,6 @@
 "use client";
 
+import { tt, useLang } from "@/lib/i18n";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -22,7 +23,12 @@ import {
 } from "@/lib/joker/engine";
 import { schedule } from "@/lib/joker/rules";
 import { HUMAN, TURN_SECONDS } from "@/lib/joker/useGame";
-import { DEFAULT_VOLUME, playCardSound, playDealSound, setMasterVolume } from "@/lib/sound";
+import {
+  DEFAULT_VOLUME,
+  playCardSound,
+  playDealSound,
+  setMasterVolume,
+} from "@/lib/sound";
 import { Avatar } from "./Avatar";
 import { CardView } from "./CardView";
 import { MusicPlayer } from "./MusicPlayer";
@@ -70,21 +76,21 @@ function PlayerTag({
   seat,
   compact,
   side,
-  showCount,
 }: {
   game: GameState;
   seat: number;
   compact?: boolean;
   /** Next to the pile of its own cards at the side of the table: on a phone avatar, name and numbers stack up. */
   side?: boolean;
-  /** Phones without the fan of cards: say how many cards this opponent still holds. */
-  showCount?: boolean;
 }) {
   const avatars = usePlayerAvatars();
   const names = usePlayerNames();
   const bid = game.bids[seat];
   const active =
-    game.turn === seat && (game.phase === "bidding" || game.phase === "playing" || game.phase === "trump");
+    game.turn === seat &&
+    (game.phase === "bidding" ||
+      game.phase === "playing" ||
+      game.phase === "trump");
   // The player left of the dealer opens the hand: first to bid and first to lead.
   const starts =
     seat === (game.dealer + 1) % PLAYERS &&
@@ -94,7 +100,12 @@ function PlayerTag({
 
   const photo = avatars?.[seat];
   const avatar = photo ? (
-    <Avatar size={compact ? "tag" : "sm"} color={photo.color} icon={photo.icon} url={photo.url} />
+    <Avatar
+      size={compact ? "tag" : "sm"}
+      color={photo.color}
+      icon={photo.icon}
+      url={photo.url}
+    />
   ) : (
     <span
       className={`grid ${compact ? "size-6 wide:size-8" : "size-8"} flex-none place-items-center rounded-full bg-gradient-to-br text-sm font-extrabold text-black/80 shadow-inner ring-2 ${AVATAR[seat]} ${active ? "ring-amber-300" : "ring-white/30"}`}
@@ -102,20 +113,46 @@ function PlayerTag({
       {names[seat][0]}
     </span>
   );
+  const taken = game.taken[seat];
   const score =
     bid === null ? null : (
       <span
-        className={`flex items-center gap-1.5 whitespace-nowrap text-xs tabular-nums sm:gap-2 ${
-          side ? "flex-col !gap-0 leading-tight wide:!flex-row wide:!gap-1.5" : compact ? "col-span-2 justify-center wide:col-span-1" : ""
+        className={`flex items-center gap-1 whitespace-nowrap tabular-nums sm:gap-1.5 ${
+          side
+            ? "w-full flex-col !gap-1"
+            : compact
+              ? "col-span-2 justify-center wide:col-span-1"
+              : ""
         }`}
       >
-        <span title="ნათქვამი">
-          <span className="opacity-60">ნათ.</span> <b className="text-sm">{bid === 0 ? "—" : bid}</b>
+        <span
+          title={tt("ნათქვამი", "Bid", "Заказ")}
+          className={`flex items-baseline gap-1 rounded-lg bg-white/10 px-1.5 py-0.5 leading-none ${side ? "w-full justify-between px-2.5 py-1" : ""}`}
+        >
+          <span className="text-[0.62rem] font-semibold uppercase text-white/55">
+            {tt("ნათ.", "Bid", "Зак.")}
+          </span>
+          <b className="text-base font-extrabold sm:text-lg">
+            {bid === 0 ? "—" : bid}
+          </b>
         </span>
-        <span title="წაღებული">
-          <span className="opacity-60">წაღ.</span>{" "}
-          <b className={`text-sm ${game.taken[seat] === bid ? "text-emerald-300" : game.taken[seat] > bid ? "text-red-300" : ""}`}>
-            {game.taken[seat]}
+        <span
+          title={tt("წაღებული", "Taken", "Взято")}
+          className={`flex items-baseline gap-1 rounded-lg px-1.5 py-0.5 leading-none ${side ? "w-full justify-between px-2.5 py-1" : ""} ${
+            taken === bid
+              ? "bg-emerald-400/25"
+              : taken > bid
+                ? "bg-red-400/25"
+                : "bg-white/10"
+          }`}
+        >
+          <span className="text-[0.62rem] font-semibold uppercase text-white/55">
+            {tt("წაღ.", "Won", "Взят.")}
+          </span>
+          <b
+            className={`text-base font-extrabold sm:text-lg ${taken === bid ? "text-emerald-300" : taken > bid ? "text-red-300" : ""}`}
+          >
+            {taken}
           </b>
         </span>
       </span>
@@ -123,64 +160,119 @@ function PlayerTag({
   const startBadge = starts && (
     <span
       className={`rounded-full bg-amber-300 px-2 py-0.5 text-[0.65rem] font-extrabold text-black ${
-        compact ? "absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap wide:static wide:translate-x-0" : ""
+        compact
+          ? "absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap wide:static wide:translate-x-0"
+          : ""
       }`}
     >
-      ▶ იწყებს
+      ▶ {tt("იწყებს", "Leads", "Заходит")}
     </span>
   );
 
   return (
     <div
       className={`rounded-2xl border bg-black/35 backdrop-blur-sm transition-shadow ${
-        active ? "border-amber-300 shadow-[0_0_16px_rgb(232_196_106/0.55)]" : "border-white/15"
+        active
+          ? "border-amber-300 shadow-[0_0_16px_rgb(232_196_106/0.55)]"
+          : "border-white/15"
       } ${compact ? `relative ${side ? "flex flex-col items-center gap-0.5 px-1 py-1.5" : "grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-x-1 gap-y-0.5 px-1 py-1.5 min-[360px]:gap-x-1.5 min-[360px]:px-1.5"} wide:flex wide:flex-col wide:gap-1 wide:px-2 wide:py-2 short:flex short:flex-row short:justify-center short:gap-1.5 short:px-2 short:py-1` : "flex items-center gap-2.5 px-3 py-1.5"}`}
     >
       {avatar}
-      <span className={compact ? "contents wide:flex wide:flex-col wide:items-center wide:gap-1 short:flex short:min-w-0 short:flex-row short:items-center short:gap-1.5" : "flex flex-col gap-0.5"}>
-        <b className={`leading-none ${compact ? `truncate wide:text-sm ${side ? "max-w-full text-[0.66rem] min-[400px]:text-[0.8rem]" : "text-[0.72rem] min-[360px]:text-[0.8rem]"}` : "text-sm"}`}>{names[seat]}</b>
+      <span
+        className={
+          compact
+            ? "contents wide:flex wide:flex-col wide:items-center wide:gap-1 short:flex short:min-w-0 short:flex-row short:items-center short:gap-1.5"
+            : "flex flex-col gap-0.5"
+        }
+      >
+        <b
+          className={`leading-none ${compact ? `truncate wide:text-sm ${side ? "max-w-full text-[0.66rem] min-[400px]:text-[0.8rem]" : "text-[0.72rem] min-[360px]:text-[0.8rem]"}` : "text-sm"}`}
+        >
+          {names[seat]}
+        </b>
         {score}
       </span>
       {startBadge}
-      {showCount && seat === 2 && (
-        <span className="col-span-2 text-center text-[0.65rem] font-bold text-white/60 wide:hidden short:hidden [@media(min-height:760px)]:hidden">
-          კარტი: {game.hands[seat].length}
-        </span>
-      )}
-      {showCount && (
-        <span
-          title="კარტი ხელში"
-          className="hidden h-5 min-w-4 flex-none place-items-center rounded-[0.2rem] bg-[#234fae] px-1 text-[0.65rem] font-extrabold leading-none ring-1 ring-white/70 short:grid"
-        >
-          {game.hands[seat].length}
-        </span>
-      )}
     </div>
+  );
+}
+
+/** How far the bids are from the cards dealt: more bids than tricks is "stuffed", fewer is "torn". */
+function bidBalance(game: GameState): { over: boolean; n: number } | null {
+  if (game.bids.some((b) => b === null)) return null;
+  const sum = game.bids.reduce<number>((t, b) => t + (b ?? 0), 0);
+  return sum === game.cards
+    ? null
+    : { over: sum > game.cards, n: Math.abs(sum - game.cards) };
+}
+
+function BidBalance({
+  game,
+  className = "",
+}: {
+  game: GameState;
+  className?: string;
+}) {
+  const bal = bidBalance(game);
+  if (!bal) return null;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[0.7rem] font-extrabold leading-none ${
+        bal.over ? "bg-red-400/20 text-red-200" : "bg-sky-400/20 text-sky-200"
+      } ${className}`}
+    >
+      {bal.over
+        ? tt("შეტენვა", "Over", "Перебор")
+        : tt("წაგლეჯვა", "Under", "Недобор")}
+      <b className="text-sm">
+        {bal.over ? "+" : "−"}
+        {bal.n}
+      </b>
+    </span>
   );
 }
 
 function TrumpInfo({ game }: { game: GameState }) {
   const { phase, trump, trumpCard } = game;
   return (
-    <div className="panel flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-2.5 tight:gap-2 tight:px-3 tight:py-1">
-      <span className="rotate-180 text-xs font-bold tracking-wide opacity-70 [writing-mode:vertical-rl] tight:hidden">
-        კოზირი
-      </span>
-      {phase === "trump" ? (
-        <span className="text-sm opacity-80">ირჩევა…</span>
-      ) : (
-        <>
-          {trumpCard && <CardView card={trumpCard} size="sm" className="tight:!hidden" />}
-          {trump ? (
-            <span className={`flex flex-col items-center leading-none tight:flex-row tight:gap-1.5 ${suitColor(trump)}`}>
-              <span className="text-4xl sm:text-5xl tight:text-3xl">{SUIT_SYMBOL[trump]}</span>
-              <span className="mt-1 text-xs font-bold sm:text-sm tight:mt-0">{SUIT_NAME[trump]}</span>
+    <div className="panel flex items-center px-3 py-2 sm:px-4 sm:py-2.5 tight:px-3 tight:py-1">
+      <div className="flex items-center gap-3 tight:gap-2">
+        <span className="rotate-180 text-xs font-bold tracking-wide opacity-70 [writing-mode:vertical-rl] tight:hidden">
+          {tt("კოზირი", "Trump", "Козырь")}
+        </span>
+        {phase === "trump" ? (
+          <span className="text-sm opacity-80">
+            {tt("ირჩევა…", "Choosing…", "Выбирает…")}
+          </span>
+        ) : (
+          <>
+            <span className="flex flex-col items-center gap-1.5">
+              {trumpCard && (
+                <CardView card={trumpCard} size="sm" className="tight:!hidden" />
+              )}
+              <BidBalance game={game} />
             </span>
-          ) : (
-            <span className="text-center text-base font-extrabold leading-tight sm:text-xl">კოზირის<br />გარეშე</span>
-          )}
-        </>
-      )}
+            {trump ? (
+              <span
+                className={`flex flex-col items-center leading-none tight:flex-row tight:gap-1.5 ${suitColor(trump)}`}
+              >
+                <span className="text-4xl sm:text-5xl tight:text-3xl">
+                  {SUIT_SYMBOL[trump]}
+                </span>
+                <span className="mt-1 text-xs font-bold sm:text-sm tight:mt-0">
+                  {SUIT_NAME[trump]}
+                </span>
+              </span>
+            ) : (
+              <span className="text-center text-base font-extrabold leading-tight sm:text-xl">
+                {tt("კოზირის", "No", "Без")}
+                <br />
+                {tt("გარეშე", "trump", "козыря")}
+              </span>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -219,16 +311,26 @@ function JokerBadge({
   small?: boolean;
 }) {
   // With a named suit the joker was led ("მაღალი" / "წაიღოს"); otherwise it was played on someone's lead.
-  const label = suit ? (mode === "high" ? "მაღალი" : "წაიღოს") : mode === "high" ? "მოჯოკვრა" : "გატანება";
+  const label = suit
+    ? mode === "high"
+      ? tt("მაღალი", "High", "Старшая")
+      : tt("წაიღოს", "Take", "Взять")
+    : mode === "high"
+      ? tt("მოჯოკვრა", "Mojokvra", "Моджокра")
+      : tt("გატანება", "Gatana", "Гатана");
   return (
     <span
       className={`absolute left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full bg-black/85 font-extrabold text-amber-200 ring-1 ring-amber-300/60 ${
-        small ? "-bottom-2 px-1.5 py-0.5 text-[0.55rem]" : "-bottom-3 px-2.5 py-1 text-xs"
+        small
+          ? "-bottom-2 px-1.5 py-0.5 text-[0.55rem]"
+          : "-bottom-3 px-2.5 py-1 text-xs"
       }`}
     >
       {label}
       {suit && (
-        <span className={`${small ? "text-xs" : "text-base"} leading-none ${isRed(suit) ? "text-red-400" : "text-white"}`}>
+        <span
+          className={`${small ? "text-xs" : "text-base"} leading-none ${isRed(suit) ? "text-red-400" : "text-white"}`}
+        >
           {SUIT_SYMBOL[suit]}
         </span>
       )}
@@ -245,15 +347,16 @@ function wobble(id: string) {
 
 function TrickArea({ game }: { game: GameState }) {
   return (
-    <div
-      className="relative h-full max-h-[17rem] w-full max-w-[26rem] [--tcw:clamp(2.6rem,min(15vw,calc((100dvh-24.5rem)/3.2)),6.2rem)] wide:[--tcw:clamp(3.4rem,min(15vw,11.5dvh),6.2rem)]"
-    >
+    <div className="relative h-full max-h-[17rem] w-full max-w-[26rem] [--tcw:clamp(2.6rem,min(15vw,calc((100dvh-24.5rem)/3.2)),6.2rem)] wide:[--tcw:clamp(3.4rem,min(15vw,11.5dvh),6.2rem)]">
       <style>{`@keyframes deal-in{from{opacity:0;transform:translate(var(--fx),var(--fy)) scale(.8)}to{opacity:1;transform:none}}@keyframes take-trick{to{translate:calc(-50% + var(--tcw) * var(--tx)) calc(-50% + var(--tcw) * var(--ty));scale:.55;opacity:0}}`}</style>
       {game.trick.map((p, i) => {
         const slot = TRICK_SLOT[p.player];
         const from = TRICK_FROM[p.player];
         // Once the winner is shown, the trick glides over to them and fades out.
-        const take = game.phase === "trickEnd" && game.trickWinner !== null ? TRICK_TAKE[game.trickWinner] : null;
+        const take =
+          game.phase === "trickEnd" && game.trickWinner !== null
+            ? TRICK_TAKE[game.trickWinner]
+            : null;
         return (
           <div
             key={p.card.id}
@@ -276,7 +379,8 @@ function TrickArea({ game }: { game: GameState }) {
                 {
                   "--fx": `calc(var(--tcw) * ${from.x})`,
                   "--fy": `calc(var(--tcw) * ${from.y})`,
-                  animation: "deal-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1) both",
+                  animation:
+                    "deal-in 0.34s cubic-bezier(0.2, 0.9, 0.3, 1) both",
                 } as React.CSSProperties
               }
             >
@@ -299,11 +403,6 @@ function TrickArea({ game }: { game: GameState }) {
 function OpponentHand({ count, seat }: { count: number; seat: number }) {
   const cw = "var(--opp-cw)";
   const step = 0.3;
-  const badge = (
-    <span className="absolute -bottom-2 -right-2 z-10 grid size-6 place-items-center rounded-full bg-black/80 text-xs font-bold ring-1 ring-white/20">
-      {count}
-    </span>
-  );
   if (seat === 2) {
     const mid = (count - 1) / 2;
     return (
@@ -322,7 +421,6 @@ function OpponentHand({ count, seat }: { count: number; seat: number }) {
             }}
           />
         ))}
-        {count > 0 && badge}
       </div>
     );
   }
@@ -348,7 +446,6 @@ function OpponentHand({ count, seat }: { count: number; seat: number }) {
           }}
         />
       ))}
-      {count > 0 && badge}
     </div>
   );
 }
@@ -356,25 +453,42 @@ function OpponentHand({ count, seat }: { count: number; seat: number }) {
 function Overlay({ children }: { children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-3">
-      <div className="panel max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto p-4 sm:p-5">{children}</div>
+      <div className="panel max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto p-4 sm:p-5">
+        {children}
+      </div>
     </div>
   );
 }
 
-export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNote, quitConfirm }: Props) {
+export function Table({
+  game,
+  secondsLeft,
+  onBid,
+  onTrump,
+  onPlay,
+  onQuit,
+  endNote,
+  quitConfirm,
+}: Props) {
+  useLang(); // the table re-renders when the language is switched
   const names = usePlayerNames();
   // The pending joker choice only counts for the position it was made in.
   const moveKey = `${game.handIndex}:${game.played.length}`;
   const [pick, setPick] = useState<{ card: Card; key: string } | null>(null);
   const jokerPick = pick && pick.key === moveKey ? pick.card : null;
-  const setJokerPick = (card: Card | null) => setPick(card && { card, key: moveKey });
+  const setJokerPick = (card: Card | null) =>
+    setPick(card && { card, key: moveKey });
 
   // The joker menu closes on any click outside it (and on Escape).
   const jokerOpen = jokerPick !== null;
   useEffect(() => {
     if (!jokerOpen) return;
     const close = (e: Event) => {
-      if (e instanceof KeyboardEvent ? e.key === "Escape" : !(e.target as Element).closest("[data-joker]")) {
+      if (
+        e instanceof KeyboardEvent
+          ? e.key === "Escape"
+          : !(e.target as Element).closest("[data-joker]")
+      ) {
         setPick(null);
       }
     };
@@ -412,7 +526,12 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
   const playable = new Set(options.map((o) => o.card.id));
   const myHand = sortHand(game.hands[HUMAN]);
   // While the others act, the hand is softly dimmed.
-  const waiting = !(myTurn && (game.phase === "bidding" || game.phase === "trump" || game.phase === "playing"));
+  const waiting = !(
+    myTurn &&
+    (game.phase === "bidding" ||
+      game.phase === "trump" ||
+      game.phase === "playing")
+  );
 
   const clickCard = (card: Card) => {
     if (!canPlay || !playable.has(card.id)) return;
@@ -430,19 +549,42 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
 
   let status = "";
   if (game.phase === "trump") {
-    status = myTurn ? "" : `${names[game.turn]} ირჩევს კოზირს…`;
+    status = myTurn
+      ? ""
+      : tt(
+          `${names[game.turn]} ირჩევს კოზირს…`,
+          `${names[game.turn]} is choosing the trump…`,
+          `${names[game.turn]} выбирает козырь…`,
+        );
   } else if (game.phase === "bidding") {
-    status = myTurn ? "" : `${names[game.turn]} ფიქრობს…`;
+    status = myTurn
+      ? ""
+      : tt(
+          `${names[game.turn]} ფიქრობს…`,
+          `${names[game.turn]} is thinking…`,
+          `${names[game.turn]} думает…`,
+        );
   } else if (game.phase === "playing") {
-    status = myTurn ? "თქვენი სვლა" : `${names[game.turn]} ფიქრობს…`;
+    status = myTurn
+      ? tt("თქვენი სვლა", "Your move", "Ваш ход")
+      : tt(
+          `${names[game.turn]} ფიქრობს…`,
+          `${names[game.turn]} is thinking…`,
+          `${names[game.turn]} думает…`,
+        );
   } else if (game.phase === "trickEnd" && game.trickWinner !== null) {
     status =
       game.trickWinner === HUMAN
-        ? "ხელი თქვენია"
-        : `ხელს იღებს ${names[game.trickWinner]}`;
+        ? tt("ხელი თქვენია", "You take the trick", "Взятка ваша")
+        : tt(
+            `ხელს იღებს ${names[game.trickWinner]}`,
+            `${names[game.trickWinner]} takes the trick`,
+            `Взятку берёт ${names[game.trickWinner]}`,
+          );
   }
 
-  const bidChoices = game.phase === "bidding" && myTurn ? legalBids(game, HUMAN) : [];
+  const bidChoices =
+    game.phase === "bidding" && myTurn ? legalBids(game, HUMAN) : [];
   const jokerOptions = jokerPick
     ? options.filter((o) => o.card.id === jokerPick.id)
     : [];
@@ -463,46 +605,99 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
           </div>
           <button
             className="btn !px-3 !py-1 max-sm:grid max-sm:size-9 max-sm:place-items-center max-sm:!p-0"
-            aria-label="გასვლა"
-            onClick={() => window.confirm(quitConfirm ?? "დარწმუნებული ხართ? თამაში შეწყდება.") && onQuit()}
+            aria-label={tt("გასვლა", "Leave", "Выйти")}
+            onClick={() =>
+              window.confirm(
+                quitConfirm ??
+                  tt(
+                    "დარწმუნებული ხართ? თამაში შეწყდება.",
+                    "Are you sure? The game will end.",
+                    "Вы уверены? Игра прервётся.",
+                  ),
+              ) && onQuit()
+            }
           >
             <span className="sm:hidden" aria-hidden>
               ✕
             </span>
-            <span className="max-sm:hidden">გასვლა</span>
+            <span className="max-sm:hidden">
+              {tt("გასვლა", "Leave", "Выйти")}
+            </span>
           </button>
         </div>
         <div className="panel order-3 col-span-2 min-w-0 px-2 pb-2 pt-1.5 sm:order-none sm:col-span-1 tight:col-span-1 sm:w-full sm:max-w-[21rem] tight:order-2 tight:!w-36 tight:flex-none tight:px-3 tight:py-1 tight:max-[680px]:hidden">
-          <div className="grid grid-cols-4 divide-x divide-white/10 text-center sm:grid-cols-3 tight:grid-cols-3">
-            {[
-              ["ეტაპი", `${loc.pulka + 1}/${pulkas.length}`],
-              ["ხელი", `${loc.inPulka + 1}/${loc.pulkaLength}`],
-              ["კარტი", String(loc.cards)],
-            ].map(([label, value]) => (
-              <div key={label} className="flex flex-col leading-tight">
-                <span className="text-[0.65rem] font-semibold text-white/50">{label}</span>
-                <b className="text-sm tabular-nums sm:text-base">{value}</b>
+          <div className="grid grid-cols-4 gap-1 text-center sm:grid-cols-3 tight:grid-cols-3">
+            {(
+              [
+                [
+                  tt("ეტაპი", "Round", "Этап"),
+                  String(loc.pulka + 1),
+                  String(pulkas.length),
+                ],
+                [
+                  tt("ხელი", "Hand", "Раздача"),
+                  String(loc.inPulka + 1),
+                  String(loc.pulkaLength),
+                ],
+                [tt("კარტი", "Cards", "Карты"), String(loc.cards), null],
+              ] as [string, string, string | null][]
+            ).map(([label, value, total]) => (
+              <div
+                key={label}
+                className="flex flex-col items-center rounded-lg bg-white/[0.06] py-1 leading-tight"
+              >
+                <span className="text-[0.58rem] font-semibold uppercase tracking-wide text-white/50">
+                  {label}
+                </span>
+                <span className="tabular-nums">
+                  <b className="text-base font-extrabold sm:text-lg">{value}</b>
+                  {total && (
+                    <span className="text-xs text-white/45">/{total}</span>
+                  )}
+                </span>
               </div>
             ))}
             {/* portrait phones: the trump is one more cell of this strip instead of a panel of its own */}
-            <div className="flex flex-col leading-tight sm:hidden tight:hidden">
-              <span className="text-[0.65rem] font-semibold text-white/50">კოზირი</span>
+            <div className="flex flex-col items-center rounded-lg bg-white/[0.06] py-1 leading-tight sm:hidden tight:hidden">
+              <span className="text-[0.58rem] font-semibold uppercase tracking-wide text-white/50">
+                {tt("კოზირი", "Trump", "Козырь")}
+              </span>
               {game.phase === "trump" ? (
-                <b className="text-sm opacity-70">…</b>
+                <b className="text-base opacity-70">…</b>
               ) : game.trump ? (
-                <b className={`text-sm ${suitColor(game.trump)}`}>
+                <b className={`text-base ${suitColor(game.trump)}`}>
                   {SUIT_SYMBOL[game.trump]} {SUIT_NAME[game.trump]}
                 </b>
               ) : (
-                <b className="whitespace-nowrap text-[0.7rem]">კოზირის გარეშე</b>
+                <b className="whitespace-nowrap text-[0.7rem]">
+                  {tt("კოზირის გარეშე", "No trump", "Без козыря")}
+                </b>
               )}
+              <BidBalance game={game} className="mt-0.5 self-center" />
             </div>
           </div>
-          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10 tight:hidden">
-            <div
-              className="h-full rounded-full bg-amber-300 transition-[width] duration-500"
-              style={{ width: `${(game.handIndex / pulkas.flat().length) * 100}%` }}
-            />
+          {/* one segment per round, filled as its hands are played */}
+          <div className="mt-1.5 flex gap-1 tight:hidden">
+            {pulkas.map((pl, i) => {
+              const before = pulkas
+                .slice(0, i)
+                .reduce((t, x) => t + x.length, 0);
+              const f = Math.min(
+                1,
+                Math.max(0, (game.handIndex - before) / pl.length),
+              );
+              return (
+                <div
+                  key={i}
+                  className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"
+                >
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-400 transition-[width] duration-500"
+                    style={{ width: `${f * 100}%` }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
         <div className="order-4 hidden justify-self-end sm:order-none sm:block tight:order-3 tight:block">
@@ -514,13 +709,13 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
         <div className="col-span-3 flex w-full flex-col items-center gap-1 [@media(min-width:1100px)_and_(min-height:821px)]:absolute [@media(min-width:1100px)_and_(min-height:821px)]:left-1/2 [@media(min-width:1100px)_and_(min-height:821px)]:top-2 [@media(min-width:1100px)_and_(min-height:821px)]:z-10 [@media(min-width:1100px)_and_(min-height:821px)]:w-auto [@media(min-width:1100px)_and_(min-height:821px)]:-translate-x-1/2">
           {/* landscape phones: no room beside the stage, so the three opponents sit side by side on top */}
           <div className="hidden w-full grid-cols-3 gap-1.5 short:mx-auto short:grid short:max-w-xl">
-            <PlayerTag game={game} seat={1} compact showCount />
-            <PlayerTag game={game} seat={2} compact showCount />
-            <PlayerTag game={game} seat={3} compact showCount />
+            <PlayerTag game={game} seat={1} compact />
+            <PlayerTag game={game} seat={2} compact />
+            <PlayerTag game={game} seat={3} compact />
           </div>
           {/* portrait phones: every opponent next to their own cards; this one is above the cards across the table */}
           <div className="w-[min(13rem,60vw)] wide:hidden short:hidden">
-            <PlayerTag game={game} seat={2} compact showCount />
+            <PlayerTag game={game} seat={2} compact />
           </div>
           <div className="hidden wide:block">
             <PlayerTag game={game} seat={2} />
@@ -549,7 +744,9 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
         <div className="pointer-events-none relative col-span-3 col-start-1 row-start-2 flex items-end justify-center self-stretch wide:hidden">
           <div className="flex items-center gap-2 text-sm font-bold text-amber-200">
             {status}
-            {myTurn && game.phase === "playing" && secondsLeft !== null && <TurnTimer left={secondsLeft} />}
+            {myTurn && game.phase === "playing" && secondsLeft !== null && (
+              <TurnTimer left={secondsLeft} />
+            )}
           </div>
         </div>
         {/* the pickers float over the whole stage, not just its middle column */}
@@ -558,7 +755,11 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
             <TrumpPicker secondsLeft={secondsLeft} onPick={onTrump} />
           )}
           {jokerPick && canPlay && (
-            <JokerMenu leading={leading} options={jokerOptions} onPick={playJoker} />
+            <JokerMenu
+              leading={leading}
+              options={jokerOptions}
+              onPick={playJoker}
+            />
           )}
           {myTurn && game.phase === "bidding" && (
             <BidPicker
@@ -574,28 +775,35 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
       <footer className="relative flex flex-col items-center gap-1.5 px-2 pb-2 sm:gap-2 sm:pb-3">
         <div className="hidden min-h-9 items-center gap-3 text-sm font-bold text-amber-200 wide:flex">
           {status}
-          {myTurn && game.phase === "playing" && secondsLeft !== null && <TurnTimer left={secondsLeft} />}
+          {myTurn && game.phase === "playing" && secondsLeft !== null && (
+            <TurnTimer left={secondsLeft} />
+          )}
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-2 sm:hidden short:hidden">
           <PlayerTag game={game} seat={HUMAN} />
-          {game.lastTrick && (
-            <LastTrickDock trick={game.lastTrick} open={lastOpen} onToggle={setLastOpen} />
-          )}
         </div>
         <div className="absolute bottom-3 left-3 hidden flex-col items-start gap-2 sm:flex short:flex">
-          {game.lastTrick && (
-            <LastTrickDock trick={game.lastTrick} open={lastOpen} onToggle={setLastOpen} />
-          )}
           <PlayerTag game={game} seat={HUMAN} />
         </div>
+        {/* the previous trick: low on the right, beside the hand and clear of the status line */}
+        {game.lastTrick && (
+          <div className="absolute bottom-[4.75rem] right-3 z-10 short:bottom-16">
+            <LastTrickDock
+              trick={game.lastTrick}
+              open={lastOpen}
+              onToggle={setLastOpen}
+            />
+          </div>
+        )}
         <div className="flex max-w-full justify-center px-2 pb-6 pt-2 sm:pb-10 sm:pt-3 short:pb-3 short:pt-1">
           <div className="relative flex items-end">
             {myHand.map((card, i) => {
               const ok = canPlay && playable.has(card.id);
               // A true fan: every card sits on the same spot and is turned about a pivot far below the
               // hand, so the spacing comes from the angle and the row forms a tight, even arc.
-              const rot = (i - (myHand.length - 1) / 2) * fanStep(myHand.length);
+              const rot =
+                (i - (myHand.length - 1) / 2) * fanStep(myHand.length);
               return (
                 <button
                   key={card.id}
@@ -612,7 +820,9 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
                   data-joker={card.joker ? "" : undefined}
                   onClick={() => clickCard(card)}
                   disabled={!ok}
-                  aria-label={card.joker ? "ჯოკერი" : card.id}
+                  aria-label={
+                    card.joker ? tt("ჯოკერი", "Joker", "Джокер") : card.id
+                  }
                 >
                   <CardView card={card} />
                 </button>
@@ -625,16 +835,16 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
       {game.phase === "gameEnd" && (
         <Overlay>
           <h2 className="mb-2 text-center text-xl font-extrabold text-amber-200">
-            თამაში დასრულდა
+            {tt("თამაში დასრულდა", "Game over", "Игра окончена")}
           </h2>
           <Standings sums={sums} />
           {endNote && <div className="mb-3 text-center text-sm">{endNote}</div>}
           <ScoreSheet game={game} />
           <button className="btn btn-primary mt-3 w-full" onClick={onQuit}>
-            ახალი თამაში
+            {tt("ახალი თამაში", "New game", "Новая игра")}
           </button>
           <Link href="/" className="btn mt-2 block w-full text-center">
-            მთავარი მენიუ
+            {tt("მთავარი მენიუ", "Main menu", "Главное меню")}
           </Link>
         </Overlay>
       )}
@@ -644,11 +854,16 @@ export function Table({ game, secondsLeft, onBid, onTrump, onPlay, onQuit, endNo
 
 function Standings({ sums }: { sums: number[] }) {
   const names = usePlayerNames();
-  const order = Array.from({ length: PLAYERS }, (_, p) => p).sort((a, b) => sums[b] - sums[a]);
+  const order = Array.from({ length: PLAYERS }, (_, p) => p).sort(
+    (a, b) => sums[b] - sums[a],
+  );
   return (
     <ol className="mb-3 flex flex-col gap-1 text-center">
       {order.map((p, i) => (
-        <li key={p} className={i === 0 ? "text-lg font-bold text-amber-300" : ""}>
+        <li
+          key={p}
+          className={i === 0 ? "text-lg font-bold text-amber-300" : ""}
+        >
           {i + 1}. {names[p]} — {sums[p]}
           {i === 0 && p === HUMAN && " 🎉"}
         </li>
@@ -679,7 +894,10 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
   game.history.forEach((h, i) => {
     entries.push({ kind: "hand", h, n: i + 1 });
     const { inPulka, pulkaLength } = locateHand(game.rules, i);
-    if (inPulka === pulkaLength - 1 && game.premiums[h.pulka].some((v) => v > 0)) {
+    if (
+      inPulka === pulkaLength - 1 &&
+      game.premiums[h.pulka].some((v) => v > 0)
+    ) {
       entries.push({ kind: "premium", pulka: h.pulka });
     }
   });
@@ -690,23 +908,36 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
       <button
         type="button"
         onClick={() => setPinned((v) => !v)}
-        className="panel block w-full px-2 py-2 text-left sm:px-3 sm:py-2.5 tight:py-1"
-        aria-label="ქულების სია"
+        className="panel block w-full p-1.5 text-left sm:p-2 tight:p-1"
+        aria-label={tt("ქულების სია", "Score list", "Таблица очков")}
         aria-expanded={pinned}
       >
-        <div className={`${COLS} mb-0.5 text-center text-[0.7rem] font-bold min-[360px]:text-xs sm:mb-1 sm:text-sm tight:!text-xs`}>
-          {names.map((name, p) => (
-            <span key={name} className={`truncate ${sums[p] === top && started ? "text-amber-300" : ""}`}>
-              {name}
-            </span>
-          ))}
-        </div>
-        <div className={`${COLS} text-center text-base font-extrabold tabular-nums min-[360px]:text-lg sm:text-2xl tight:!text-lg`}>
-          {sums.map((v, p) => (
-            <span key={p} className={v === top && started ? "text-amber-300" : ""}>
-              {v}
-            </span>
-          ))}
+        <div className="grid grid-cols-4 gap-1">
+          {names.map((name, p) => {
+            const lead = sums[p] === top && started;
+            return (
+              <div
+                key={p}
+                className={`flex min-w-0 flex-col items-center rounded-xl px-0.5 py-1 leading-tight ring-1 ${
+                  lead
+                    ? "bg-amber-300/15 ring-amber-300/60"
+                    : "bg-white/[0.06] ring-white/10"
+                } ${p === HUMAN ? "shadow-[inset_0_-2px_0_rgb(52_211_153/0.75)]" : ""}`}
+              >
+                <span
+                  className={`flex max-w-full items-center gap-0.5 text-[0.66rem] font-semibold min-[360px]:text-[0.72rem] sm:text-xs ${lead ? "text-amber-200" : "text-white/70"}`}
+                >
+                  {lead && <span aria-hidden>♛</span>}
+                  <span className="truncate">{name}</span>
+                </span>
+                <b
+                  className={`text-lg font-black tabular-nums sm:text-2xl tight:!text-lg ${lead ? "text-amber-300" : sums[p] < 0 ? "text-red-300" : ""}`}
+                >
+                  {sums[p]}
+                </b>
+              </div>
+            );
+          })}
         </div>
         <div className="mt-0.5 text-center text-[0.6rem] leading-none opacity-40 transition-opacity group-hover:opacity-0 tight:hidden">
           ▾
@@ -722,61 +953,67 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
           }`}
         >
           <div className="min-h-0 overflow-hidden rounded-2xl">
-            <div className="panel max-h-[55dvh] overflow-y-auto rounded-2xl px-3 py-2">
+            <div className="panel max-h-[55dvh] overflow-y-auto rounded-2xl px-2.5 py-2">
               {entries.length === 0 ? (
                 <p className="py-2 text-center text-xs opacity-60">
-                  ქულები პირველი ხელის შემდეგ გამოჩნდება
+                  {tt("ქულები პირველი ხელის შემდეგ გამოჩნდება", "Scores appear after the first hand", "Очки появятся после первой раздачи")}
                 </p>
               ) : (
                 <>
-                  <div className={`${COLS} pb-1 text-center text-[0.65rem] opacity-60`}>
-                              {names.map((name) => (
-                      <span key={name} className="grid grid-cols-2 border-l border-white/30">
-                        <span>ნათ.</span>
-                        <span>წაღ.</span>
-                      </span>
-                    ))}
-                  </div>
-                  {entries.map((e) =>
-                    e.kind === "premium" ? (
-                      <div
-                        key={`pr${e.pulka}`}
-                        className={`${COLS} relative border-t border-amber-300/30 py-1.5 text-center text-xs font-bold text-amber-300`}
-                      >
-                        <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 text-[0.6rem]">★</span>
-                        {game.premiums[e.pulka].map((v, p) => (
-                          <span key={p} className="border-l border-white/30">
-                            {v > 0 ? `+${v}` : ""}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <div key={e.n} className={`${COLS} relative border-t border-white/10 py-1.5 text-center`}>
-                        <span className="absolute -left-2.5 top-1/2 -translate-y-1/2 text-[0.6rem] opacity-40">{e.h.cards}</span>
-                        {e.h.bids.map((bid, p) => {
-                          const taken = e.h.taken[p];
-                          return (
-                            <span
-                              key={p}
-                              title={`${e.h.points[p] > 0 ? "+" : ""}${e.h.points[p]}`}
-                              className="grid grid-cols-2 border-l border-white/30 text-base font-bold tabular-nums"
-                            >
-                              <span>{bid === 0 ? "—" : bid}</span>
-                              <span className={bid === taken ? GOOD : BAD}>
-                                {bid > 0 && taken === 0 ? (
-                                  <span title="ხიშტი" className="whitespace-nowrap text-sm tracking-tighter">
-                                    [--]
-                                  </span>
-                                ) : (
-                                  taken
-                                )}
-                              </span>
+                  <p className="mb-1.5 text-center text-[0.65rem] font-semibold uppercase tracking-wide text-white/45">
+                    {tt("ნათქვამი", "Bid", "Заказ")} <span className="text-white/25">/</span> {tt("წაღებული", "Won", "Взято")} · {tt("ქულა", "Points", "Очки")}
+                  </p>
+                  <div className="flex flex-col gap-1">
+                    {entries.map((e) =>
+                      e.kind === "premium" ? (
+                        <div key={`pr${e.pulka}`} className={`${COLS} relative gap-1 rounded-xl bg-amber-300/10 py-1.5 text-center text-sm font-extrabold text-amber-300 ring-1 ring-amber-300/30`}>
+                          <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[0.6rem]">★</span>
+                          {game.premiums[e.pulka].map((v, p) => (
+                            <span key={p} className="tabular-nums">
+                              {v > 0 ? `+${v}` : ""}
                             </span>
-                          );
-                        })}
-                      </div>
-                    ),
-                  )}
+                          ))}
+                        </div>
+                      ) : (
+                        <div key={e.n} className={`${COLS} relative gap-1`}>
+                          <span
+                            title={tt("კარტი ხელში", "Cards dealt", "Карт в раздаче")}
+                            className="absolute -left-1 top-1/2 z-10 grid size-4 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-[0.55rem] font-bold text-white/60 ring-1 ring-white/15"
+                          >
+                            {e.h.cards}
+                          </span>
+                          {e.h.bids.map((bid, p) => {
+                            const taken = e.h.taken[p];
+                            const hit = bid === taken;
+                            const pts = e.h.points[p];
+                            return (
+                              <span
+                                key={p}
+                                className={`flex flex-col items-center rounded-xl py-1 leading-tight ring-1 ${
+                                  hit ? "bg-emerald-400/12 ring-emerald-400/30" : "bg-red-400/10 ring-red-400/25"
+                                }`}
+                              >
+                                <span className="flex items-baseline gap-1 tabular-nums">
+                                  <b className="text-base font-extrabold">{bid === 0 ? "—" : bid}</b>
+                                  <span className="text-xs text-white/30">/</span>
+                                  {bid > 0 && taken === 0 ? (
+                                    <b title={tt("ხიშტი", "Khishti", "Хишти")} className="text-base font-extrabold text-red-300">
+                                      ✕
+                                    </b>
+                                  ) : (
+                                    <b className={`text-base font-extrabold ${hit ? GOOD : BAD}`}>{taken}</b>
+                                  )}
+                                </span>
+                                <span className={`text-[0.65rem] font-bold tabular-nums ${pts > 0 ? "text-emerald-300/80" : pts < 0 ? "text-red-300/80" : "text-white/40"}`}>
+                                  {pts > 0 ? `+${pts}` : pts}
+                                </span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ),
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -794,10 +1031,21 @@ function TurnTimer({ left }: { left: number }) {
   return (
     <span
       className={`relative grid size-9 flex-none place-items-center sm:size-10 ${urgent ? "animate-pulse text-red-300" : "text-amber-200"}`}
-      aria-label={`დარჩა ${left} წამი`}
+      aria-label={tt(
+        `დარჩა ${left} წამი`,
+        `${left} seconds left`,
+        `Осталось ${left} сек.`,
+      )}
     >
       <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90">
-        <circle cx="18" cy="18" r={r} fill="rgb(0 0 0 / 0.35)" stroke="rgb(255 255 255 / 0.15)" strokeWidth="3" />
+        <circle
+          cx="18"
+          cy="18"
+          r={r}
+          fill="rgb(0 0 0 / 0.35)"
+          stroke="rgb(255 255 255 / 0.15)"
+          strokeWidth="3"
+        />
         <circle
           cx="18"
           cy="18"
@@ -811,24 +1059,40 @@ function TurnTimer({ left }: { left: number }) {
           className="transition-[stroke-dashoffset] duration-300 ease-linear"
         />
       </svg>
-      <span className="relative text-sm font-extrabold tabular-nums">{left}</span>
+      <span className="relative text-sm font-extrabold tabular-nums">
+        {left}
+      </span>
     </span>
   );
 }
 
 /** Speaker icon (click to mute / restore) with a volume slider. */
-function VolumeControl({ volume, onChange }: { volume: number; onChange: (v: number) => void }) {
+function VolumeControl({
+  volume,
+  onChange,
+}: {
+  volume: number;
+  onChange: (v: number) => void;
+}) {
   const lastAudible = useRef(DEFAULT_VOLUME);
   useEffect(() => {
     if (volume > 0) lastAudible.current = volume;
   }, [volume]);
-  const icon = volume === 0 ? "🔇" : volume < 0.4 ? "🔈" : volume < 0.75 ? "🔉" : "🔊";
+  const icon =
+    volume === 0 ? "🔇" : volume < 0.4 ? "🔈" : volume < 0.75 ? "🔉" : "🔊";
   return (
-    <div className="chip flex items-center gap-2 !rounded-full px-3 py-1" title="ხმა">
+    <div
+      className="chip flex items-center gap-2 !rounded-full px-3 py-1"
+      title={tt("ხმა", "Sound", "Звук")}
+    >
       <button
         type="button"
         className="text-base leading-none"
-        aria-label={volume === 0 ? "ხმის ჩართვა" : "ხმის გამორთვა"}
+        aria-label={
+          volume === 0
+            ? tt("ხმის ჩართვა", "Unmute", "Включить звук")
+            : tt("ხმის გამორთვა", "Mute", "Выключить звук")
+        }
         onClick={() => onChange(volume === 0 ? lastAudible.current : 0)}
       >
         {icon}
@@ -839,10 +1103,12 @@ function VolumeControl({ volume, onChange }: { volume: number; onChange: (v: num
         max={100}
         value={Math.round(volume * 100)}
         onChange={(e) => onChange(Number(e.target.value) / 100)}
-        aria-label="ხმის სიმაღლე"
+        aria-label={tt("ხმის სიმაღლე", "Volume", "Громкость")}
         className="hidden h-1 w-16 cursor-pointer accent-amber-300 sm:block sm:w-24 tight:max-[900px]:!hidden"
       />
-      <span className="hidden w-8 text-right text-[0.7rem] tabular-nums opacity-70 sm:block tight:max-[900px]:!hidden">{Math.round(volume * 100)}%</span>
+      <span className="hidden w-8 text-right text-[0.7rem] tabular-nums opacity-70 sm:block tight:max-[900px]:!hidden">
+        {Math.round(volume * 100)}%
+      </span>
     </div>
   );
 }
@@ -868,7 +1134,9 @@ function PickerStage({
         <div className="absolute -inset-x-16 -inset-y-12 -z-10 rounded-[50%] bg-[radial-gradient(closest-side,rgb(0_0_0/0.4),transparent)]" />
         <div className="flex items-center gap-2 sm:gap-4">
           <span className="hidden h-px w-16 bg-gradient-to-r from-transparent to-amber-300/80 sm:block" />
-          <span className="whitespace-nowrap text-sm font-extrabold text-amber-200 min-[400px]:text-base sm:text-xl">{title}</span>
+          <span className="whitespace-nowrap text-sm font-extrabold text-amber-200 min-[400px]:text-base sm:text-xl">
+            {title}
+          </span>
           {secondsLeft !== null && <TurnTimer left={secondsLeft} />}
           <span className="hidden h-px w-16 bg-gradient-to-l from-transparent to-amber-300/80 sm:block" />
         </div>
@@ -891,7 +1159,14 @@ function BidPicker({
   onPick: (bid: number) => void;
 }) {
   return (
-    <PickerStage title="რამდენს იტყვით?" secondsLeft={secondsLeft}>
+    <PickerStage
+      title={tt(
+        "რამდენს იტყვით?",
+        "How many will you take?",
+        "Сколько возьмёте?",
+      )}
+      secondsLeft={secondsLeft}
+    >
       {/* one or two even rows: 6 choices become 3 + 3, not 5 + 1 */}
       <div
         className="pointer-events-auto grid justify-center gap-x-2 gap-y-2 [--bw:clamp(2.6rem,min(15vw,8.5dvh),4.5rem)] [grid-template-columns:repeat(var(--c2),var(--bw))] sm:gap-3 short:[grid-template-columns:repeat(var(--c1),var(--bw))]"
@@ -912,7 +1187,7 @@ function BidPicker({
               onClick={() => onPick(n)}
               style={{ animationDelay: `${n * 35}ms` }}
               className="group relative block h-[calc(var(--bw)*1.25)] w-[var(--bw)] drop-in disabled:cursor-not-allowed"
-              aria-label={n === 0 ? "პასი" : String(n)}
+              aria-label={n === 0 ? tt("პასი", "Pass", "Пас") : String(n)}
             >
               <span
                 className={`grid size-full place-items-center rounded-xl font-extrabold leading-none transition-[translate,box-shadow] duration-200 ease-out ${
@@ -921,7 +1196,7 @@ function BidPicker({
                     : "bg-black/20 text-white/25 ring-1 ring-white/10 line-through"
                 } ${n === 0 ? "text-[calc(var(--bw)*0.3)]" : "text-[calc(var(--bw)*0.56)]"}`}
               >
-                {n === 0 ? "პასი" : n}
+                {n === 0 ? tt("პასი", "Pass", "Пас") : n}
               </span>
             </button>
           );
@@ -932,7 +1207,8 @@ function BidPicker({
 }
 
 /** Trump choice: five big cards dealt onto the table, no words (the joker card means "no trump"). */
-const TRUMP_TILE = "group relative block h-[calc(var(--tw)*1.5)] w-[var(--tw)] drop-in";
+const TRUMP_TILE =
+  "group relative block h-[calc(var(--tw)*1.5)] w-[var(--tw)] drop-in";
 
 function TrumpPicker({
   secondsLeft,
@@ -943,8 +1219,14 @@ function TrumpPicker({
 }) {
   const tiles = [...SUITS, null] as const;
   return (
-    <PickerStage title="აირჩიეთ კოზირი" secondsLeft={secondsLeft}>
-      <div className="pointer-events-auto flex items-start gap-1.5 [--tw:clamp(3.1rem,min(17vw,10dvh),6.5rem)] min-[420px]:gap-2.5 sm:gap-4" style={{ "--from": "3rem" } as React.CSSProperties}>
+    <PickerStage
+      title={tt("აირჩიეთ კოზირი", "Choose the trump", "Выберите козырь")}
+      secondsLeft={secondsLeft}
+    >
+      <div
+        className="pointer-events-auto flex items-start gap-1.5 [--tw:clamp(3.1rem,min(17vw,10dvh),6.5rem)] min-[420px]:gap-2.5 sm:gap-4"
+        style={{ "--from": "3rem" } as React.CSSProperties}
+      >
         {tiles.map((s, i) => {
           const d = i - 2;
           return (
@@ -952,19 +1234,39 @@ function TrumpPicker({
               key={s ?? "none"}
               className={TRUMP_TILE}
               // Fan: tilt each card and let the outer ones sit lower, so the row forms a dome.
-              style={{ rotate: `${d * 4}deg`, translate: `0 ${d * d * 0.3}rem`, animationDelay: `${i * 70}ms` }}
-              aria-label={s ? SUIT_NAME[s] : "კოზირის გარეშე"}
+              style={{
+                rotate: `${d * 4}deg`,
+                translate: `0 ${d * d * 0.3}rem`,
+                animationDelay: `${i * 70}ms`,
+              }}
+              aria-label={
+                s
+                  ? SUIT_NAME[s]
+                  : tt("კოზირის გარეშე", "No trump", "Без козыря")
+              }
               onClick={() => onPick(s)}
             >
               {/* The outer button keeps a fixed hit area; only this face moves on hover. */}
               <span
                 className={`flex size-full flex-col items-center justify-center gap-2 rounded-xl leading-none shadow-[0_6px_16px_rgb(0_0_0/0.45)] ring-1 ring-black/10 transition-[translate,box-shadow] duration-200 ease-out group-hover:-translate-y-3 group-hover:shadow-[0_0_0_3px_#e8c46a,0_16px_24px_rgb(0_0_0/0.45)] group-active:translate-y-0 ${s ? "bg-[#fbf8ef]" : "bg-gradient-to-br from-[#fff4e0] via-[#f1ddff] to-[#d9e6ff]"}`}
               >
-                <span className={`text-[calc(var(--tw)*0.55)] ${s ? (isRed(s) ? "text-red-600" : "text-neutral-900") : "text-purple-700"}`}>
+                <span
+                  className={`text-[calc(var(--tw)*0.55)] ${s ? (isRed(s) ? "text-red-600" : "text-neutral-900") : "text-purple-700"}`}
+                >
                   {s ? SUIT_SYMBOL[s] : "★"}
                 </span>
-                <span className={`text-[calc(var(--tw)*0.17)] text-center font-extrabold leading-tight ${s ? (isRed(s) ? "text-red-700" : "text-neutral-800") : "text-purple-800"}`}>
-                  {s ? SUIT_NAME[s] : <>კოზირის<br />გარეშე</>}
+                <span
+                  className={`text-[calc(var(--tw)*0.17)] text-center font-extrabold leading-tight ${s ? (isRed(s) ? "text-red-700" : "text-neutral-800") : "text-purple-800"}`}
+                >
+                  {s ? (
+                    SUIT_NAME[s]
+                  ) : (
+                    <>
+                      {tt("კოზირის", "No", "Без")}
+                      <br />
+                      {tt("გარეშე", "trump", "козыря")}
+                    </>
+                  )}
                 </span>
               </span>
             </button>
@@ -988,15 +1290,19 @@ function JokerMenu({
   const modes = [
     {
       mode: "high",
-      label: leading ? "მაღალი" : "მოჯოკვრა",
+      label: leading
+        ? tt("მაღალი", "High", "Старшая")
+        : tt("მოჯოკვრა", "Mojokvra", "Моджокра"),
     },
     {
       mode: "low",
-      label: leading ? "წაიღოს" : "გატანება",
+      label: leading
+        ? tt("წაიღოს", "Take", "Взять")
+        : tt("გატანება", "Gatana", "Гатана"),
     },
   ] as const;
   return (
-    <PickerStage title="ჯოკერი" secondsLeft={null} low>
+    <PickerStage title={tt("ჯოკერი", "Joker", "Джокер")} secondsLeft={null} low>
       <div
         data-joker
         className="pointer-events-auto flex flex-col gap-2 min-[400px]:gap-4"
@@ -1004,8 +1310,14 @@ function JokerMenu({
       >
         {leading ? (
           modes.map(({ mode, label }, r) => (
-            <div key={mode} className="drop-in flex items-center gap-2 min-[400px]:gap-4 sm:gap-5" style={{ animationDelay: `${r * 80}ms` }}>
-              <span className={`w-[4.5rem] text-sm font-extrabold min-[400px]:w-24 min-[400px]:text-base sm:w-28 sm:text-lg ${mode === "high" ? "text-amber-300" : "text-white"}`}>
+            <div
+              key={mode}
+              className="drop-in flex items-center gap-2 min-[400px]:gap-4 sm:gap-5"
+              style={{ animationDelay: `${r * 80}ms` }}
+            >
+              <span
+                className={`w-[4.5rem] text-sm font-extrabold min-[400px]:w-24 min-[400px]:text-base sm:w-28 sm:text-lg ${mode === "high" ? "text-amber-300" : "text-white"}`}
+              >
                 {label}
               </span>
               <span className="flex gap-2 min-[400px]:gap-2.5 sm:gap-3">
@@ -1021,7 +1333,9 @@ function JokerMenu({
                     >
                       <span
                         className={`grid size-full place-items-center rounded-full bg-[radial-gradient(circle_at_35%_30%,#fffdf6,#efe8d3)] text-[clamp(1.5rem,6.5vw,2.25rem)] leading-none shadow-[0_3px_8px_rgb(0_0_0/0.45)] transition-[translate,box-shadow] duration-150 ease-out group-hover:-translate-y-1.5 group-hover:shadow-[0_0_0_3px_#e8c46a,0_10px_16px_rgb(0_0_0/0.45)] group-active:translate-y-0 ${
-                          mode === "high" ? "ring-[3px] ring-amber-300/90" : "opacity-90 ring-2 ring-white/25"
+                          mode === "high"
+                            ? "ring-[3px] ring-amber-300/90"
+                            : "opacity-90 ring-2 ring-white/25"
                         } ${isRed(o.suit as Suit) ? "text-red-600" : "text-neutral-900"}`}
                       >
                         {SUIT_SYMBOL[o.suit as Suit]}
@@ -1050,7 +1364,9 @@ function JokerMenu({
                         : "bg-[#fbf8ef] text-neutral-900"
                     }`}
                   >
-                    <span className="text-xl font-extrabold sm:text-2xl">{label}</span>
+                    <span className="text-xl font-extrabold sm:text-2xl">
+                      {label}
+                    </span>
                   </span>
                 </button>
               );
@@ -1059,6 +1375,56 @@ function JokerMenu({
         )}
       </div>
     </PickerStage>
+  );
+}
+
+/** Two cards with a "back" arrow around them. */
+function LastTrickIcon() {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      className="size-8 flex-none"
+      fill="none"
+      aria-hidden
+    >
+      <rect
+        x="4"
+        y="9"
+        width="14"
+        height="19"
+        rx="2.5"
+        transform="rotate(-12 11 18)"
+        fill="#fbf8ef"
+        opacity="0.55"
+      />
+      <rect
+        x="11"
+        y="7"
+        width="14"
+        height="19"
+        rx="2.5"
+        transform="rotate(8 18 16)"
+        fill="#fbf8ef"
+      />
+      <path
+        d="M18 12.2c-1.6 1.7-2.9 2.7-2.9 4.3a1.6 1.6 0 0 0 2.8.9c0 .9-.4 1.5-1 1.9h2.4c-.6-.4-1-1-1-1.9a1.6 1.6 0 0 0 2.8-.9c0-1.6-1.3-2.6-2.9-4.3z"
+        transform="rotate(8 18 16)"
+        fill="#d6443f"
+      />
+      <path
+        d="M7 6.5A11.5 11.5 0 0 1 26 8"
+        stroke="#fcd34d"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M5.2 3.6 7 7l3.6-1.4"
+        stroke="#fcd34d"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -1077,12 +1443,18 @@ function LastTrickDock({
       {open && <LastTrick trick={trick} onClose={() => onToggle(false)} />}
       <button
         type="button"
-        className={`chip flex items-center gap-1.5 whitespace-nowrap px-3 py-1 text-xs font-bold transition-colors hover:border-amber-300/60 ${open ? "!border-amber-300 text-amber-200" : ""}`}
+        className={`chip flex items-center gap-2 whitespace-nowrap py-1.5 pl-2 pr-4 max-sm:pr-2 text-sm font-extrabold shadow-[0_4px_14px_rgb(0_0_0/0.4)] transition-[border-color,color,background-color,translate] hover:-translate-y-0.5 hover:border-amber-300/70 ${
+          open
+            ? "!border-amber-300 !bg-amber-300/15 text-amber-200"
+            : "!bg-black/55"
+        }`}
         onClick={() => onToggle(!open)}
         aria-pressed={open}
       >
-        <span className="text-base leading-none">↺</span>
-        წინა სვლა
+        <LastTrickIcon />
+        <span className="max-sm:hidden short:inline">
+          {tt("წინა სვლა", "Last trick", "Прошлая взятка")}
+        </span>
       </button>
     </div>
   );
@@ -1098,12 +1470,18 @@ function LastTrick({
 }) {
   const names = usePlayerNames();
   return (
-    <div className="panel last-trick-pop absolute bottom-full left-0 z-10 mb-2 p-3">
+    <div className="panel last-trick-pop absolute bottom-full right-0 z-10 mb-2 p-3">
       <div className="mb-2 flex items-center justify-between gap-6 text-xs font-bold">
         <span>
-          წინა სვლა · იღებს <span className="text-amber-300">{names[trick.winner]}</span>
+          {tt("წინა სვლა", "Last trick", "Прошлая взятка")} ·{" "}
+          {tt("იღებს", "taken by", "берёт")}{" "}
+          <span className="text-amber-300">{names[trick.winner]}</span>
         </span>
-        <button className="px-1 text-base leading-none opacity-70" onClick={onClose} aria-label="დახურვა">
+        <button
+          className="px-1 text-base leading-none opacity-70"
+          onClick={onClose}
+          aria-label={tt("დახურვა", "Close", "Закрыть")}
+        >
           ×
         </button>
       </div>
@@ -1119,7 +1497,9 @@ function LastTrick({
               />
               {p.card.joker && <JokerBadge mode={p.mode} suit={p.suit} small />}
             </div>
-            <span className="mt-1 text-[0.65rem] opacity-80">{names[p.player]}</span>
+            <span className="mt-1 text-[0.65rem] opacity-80">
+              {names[p.player]}
+            </span>
           </div>
         ))}
       </div>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { formatDate, formatTime } from "@/lib/format";
 import { GAMES, gameName } from "@/lib/games";
 import { achievements, computeStats, placeCounts, type GameResult } from "@/lib/stats";
@@ -40,6 +41,7 @@ export function StatsSection({
   /** Whose stats these are, used in the score breakdown when it is not the viewer. */
   name?: string;
 }) {
+  const t = useT();
   const [gameId, setGameId] = useState(GAMES[0].id);
   const [standing, setStanding] = useState<{ userId: string; gameId: string; row: RatingRow | null; position: number | null } | null>(null);
   useEffect(() => {
@@ -72,20 +74,20 @@ export function StatsSection({
         <GameTabs games={GAMES} value={gameId} onChange={setGameId} />
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <Tile label="თამაში" value={String(stats.played)} icon="♠" />
-          <Tile label="გამარჯვება" value={String(stats.wins)} icon="★" />
-          <Tile label="საუკეთესო ქულა" value={stats.best === null ? "—" : String(stats.best)} icon="♦" />
-          <Tile label="საშუალო ადგილი" value={stats.avgPlace === null ? "—" : stats.avgPlace.toFixed(1)} icon="♥" />
+          <Tile label={t("თამაში", "Games", "Игры")} value={String(stats.played)} icon="♠" />
+          <Tile label={t("გამარჯვება", "Wins", "Победы")} value={String(stats.wins)} icon="★" />
+          <Tile label={t("საუკეთესო ქულა", "Best score", "Лучший счёт")} value={stats.best === null ? "—" : String(stats.best)} icon="♦" />
+          <Tile label={t("საშუალო ადგილი", "Average place", "Среднее место")} value={stats.avgPlace === null ? "—" : stats.avgPlace.toFixed(1)} icon="♥" />
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Panel title="გამარჯვებები">
+          <Panel title={t("გამარჯვებები", "Wins", "Победы")}>
             <div className="flex items-center gap-6">
-              <Donut percent={stats.winRate} label="წარმატება" />
+              <Donut percent={stats.winRate} label={t("წარმატება", "Success", "Успех")} />
               <PlaceBars counts={placeCounts(rows)} />
             </div>
           </Panel>
-          <Panel title="ბოლო თამაშების ქულა">
+          <Panel title={t("ბოლო თამაშების ქულა", "Recent scores", "Очки последних игр")}>
             <Sparkline values={trend} />
           </Panel>
         </div>
@@ -94,23 +96,23 @@ export function StatsSection({
       </div>
 
       <section className="flex flex-col gap-4 pb-8" style={rise(3)}>
-        <h2 className="text-2xl font-extrabold">{game.name} · ისტორია</h2>
-        {loadError && <p className="text-sm text-red-300">ისტორია ვერ ჩაიტვირთა: {loadError}</p>}
+        <h2 className="text-2xl font-extrabold">{game.name} · {t("ისტორია", "History", "История")}</h2>
+        {loadError && <p className="text-sm text-red-300">{t("ისტორია ვერ ჩაიტვირთა", "Could not load history", "Не удалось загрузить историю")}: {loadError}</p>}
         {results === null && !loadError ? (
           <div className="h-24 animate-pulse rounded-2xl bg-white/[0.06]" />
         ) : rows.length === 0 ? (
           <p className="text-lg text-white/45">
-            {game.name}-ში ჯერ არცერთი თამაში არ დასრულებულა.{" "}
+            {t(`${game.name}-ში ჯერ არცერთი თამაში არ დასრულებულა.`, `No ${game.name} games finished yet.`, `Ни одной игры в ${game.name} ещё не завершено.`)}{" "}
             {owner && (
               <Link href={game.href} className="text-amber-300 underline underline-offset-4">
-                ითამაშეთ
+                {t("ითამაშეთ", "Play", "Играть")}
               </Link>
             )}
           </p>
         ) : (
           <ul className="flex flex-col gap-2.5">
             {rows.slice(0, 30).map((r) => (
-              <HistoryRow key={r.id} r={r} firstName={owner ? PLAYER_NAMES[0] : (name ?? "მოთამაშე")} />
+              <HistoryRow key={r.id} r={r} firstName={owner ? PLAYER_NAMES[0] : (name ?? t("მოთამაშე", "Player", "Игрок"))} />
             ))}
           </ul>
         )}
@@ -130,6 +132,7 @@ function Tile({ label, value, icon }: { label: string; value: string; icon: stri
 }
 
 function HistoryRow({ r, firstName }: { r: GameResult; firstName: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const when = new Date(r.played_at);
   const max = Math.max(1, ...r.scores.map((s) => Math.abs(s)));
@@ -143,7 +146,7 @@ function HistoryRow({ r, firstName }: { r: GameResult; firstName: string }) {
       >
         <span
           className={`grid size-11 flex-none place-items-center rounded-full text-lg font-extrabold ${PLACE_STYLE[r.place] ?? PLACE_STYLE[4]}`}
-          title={`${r.place} ადგილი`}
+          title={t(`${r.place} ადგილი`, `Place ${r.place}`, `${r.place} место`)}
         >
           {r.place}
         </span>
@@ -156,7 +159,7 @@ function HistoryRow({ r, firstName }: { r: GameResult; firstName: string }) {
                   r.kind === "ranked" ? "bg-amber-300/15 text-amber-300" : "bg-sky-300/15 text-sky-300"
                 }`}
               >
-                {r.kind === "ranked" ? "წოდებისთვის" : "მეგობრული"}
+                {r.kind === "ranked" ? t("წოდებისთვის", "Ranked", "Рейтинговая") : t("მეგობრული", "Friendly", "Дружеская")}
               </span>
             )}
           </span>
@@ -169,7 +172,7 @@ function HistoryRow({ r, firstName }: { r: GameResult; firstName: string }) {
             className={`w-14 text-right text-lg tabular-nums ${
               r.rating_after > r.rating_before ? "text-emerald-300" : r.rating_after < r.rating_before ? "text-red-300" : "text-white/50"
             }`}
-            title="ქულის ცვლილება"
+            title={t("ქულის ცვლილება", "Rating change", "Изменение очков")}
           >
             {r.rating_after - r.rating_before > 0 ? "+" : ""}
             {r.rating_after - r.rating_before}
@@ -187,7 +190,7 @@ function HistoryRow({ r, firstName }: { r: GameResult; firstName: string }) {
             {r.scores.map((s, i) => (
               <li key={i} className="flex items-center gap-3 text-sm">
                 <span className={`w-24 flex-none truncate ${i === 0 ? "font-bold text-amber-300" : "text-white/60"}`}>
-                  {r.players?.[i] ?? (i === 0 ? firstName : (PLAYER_NAMES[i] ?? `მოთამაშე ${i + 1}`))}
+                  {r.players?.[i] ?? (i === 0 ? firstName : (PLAYER_NAMES[i] ?? `${t("მოთამაშე", "Player", "Игрок")} ${i + 1}`))}
                 </span>
                 <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
                   <span

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useT } from "@/lib/i18n";
 import { searchPlayers, type PlayerSummary } from "@/lib/search";
 import { getSupabase } from "@/lib/supabase";
 import { Avatar } from "./Avatar";
@@ -20,6 +21,7 @@ function pick(players: PlayerSummary[], query: string): PlayerSummary | undefine
 export function PlayerSearch() {
   const router = useRouter();
   const { user } = useAuth();
+  const t = useT();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<PlayerSummary[]>([]);
   /** The text the current suggestions were fetched for. */
@@ -98,8 +100,8 @@ export function PlayerSearch() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={onKeyDown}
-        placeholder="მოთამაშის სახელი"
-        aria-label="მოთამაშის ძებნა"
+        placeholder={t("მოთამაშის სახელი", "Player name", "Имя игрока")}
+        aria-label={t("მოთამაშის ძებნა", "Search players", "Поиск игроков")}
         autoComplete="off"
         maxLength={32}
       />
@@ -107,7 +109,7 @@ export function PlayerSearch() {
       {((query.trim() && suggestions.length > 0) || notFound) && (
         <ul className="absolute inset-x-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-white/15 bg-[#0d2a1e] shadow-[0_20px_40px_-10px_rgb(0_0_0/0.6)]">
           {notFound ? (
-            <li className="px-5 py-4 text-white/50">მოთამაშე ვერ მოიძებნა</li>
+            <li className="px-5 py-4 text-white/50">{t("მოთამაშე ვერ მოიძებნა", "Player not found", "Игрок не найден")}</li>
           ) : (
             suggestions.map((p, i) => (
               <li key={p.id}>
@@ -121,7 +123,7 @@ export function PlayerSearch() {
                 >
                   <Avatar size="sm" color={p.avatar_color} icon={p.avatar_icon} url={p.avatar_url} />
                   <span className="min-w-0 flex-1 truncate text-lg font-bold">{p.nickname}</span>
-                  {p.id === user?.id && <span className="text-sm font-semibold text-amber-300">თქვენ</span>}
+                  {p.id === user?.id && <span className="text-sm font-semibold text-amber-300">{t("თქვენ", "You", "Вы")}</span>}
                 </button>
               </li>
             ))

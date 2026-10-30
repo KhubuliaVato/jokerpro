@@ -1,5 +1,6 @@
 "use client";
 
+import { tt, useLang } from "@/lib/i18n";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -24,16 +25,17 @@ import { BTN_GHOST, BTN_PRIMARY, FORMAT_LABEL, rise } from "./ui";
 
 /** "სრული თამაში · ხიშტი −200" */
 export const describeRules = (r: Rules) =>
-  `${FORMAT_LABEL[r.format]} · ხიშტი −${r.format === "nine" ? r.khishti * 2 : `${r.khishti} / −${r.khishti * 2}`}${r.pulkaPremium ? " · ეტაპის პრემია" : ""}`;
+  `${FORMAT_LABEL[r.format]} · ${tt("ხიშტი", "Khishti", "Хишти")} −${r.format === "nine" ? r.khishti * 2 : `${r.khishti} / −${r.khishti * 2}`}${r.pulkaPremium ? ` · ${tt("ეტაპის პრემია", "round bonus", "премия за этап")}` : ""}`;
 
 /** "2 მოთამაშე" / "4 მოთამაშე · 2×2" */
-export const describeBura = (r: BuraRules) => (r.players === 4 ? "4 მოთამაშე · 2×2" : "2 მოთამაშე");
+export const describeBura = (r: BuraRules) => (r.players === 4 ? tt("4 მოთამაშე · 2×2", "4 players · 2×2", "4 игрока · 2×2") : tt("2 მოთამაშე", "2 players", "2 игрока"));
 
 /** "Texas Hold'em · 4 მოთამაშე · ბლაინდები 10/20" */
-export const describePoker = (r: PokerRules) => `Texas Hold'em · ${r.players} მოთამაშე · ბლაინდები ${r.smallBlind}/${r.bigBlind} · ${r.startStack} ჩიპი`;
+export const describePoker = (r: PokerRules) => `Texas Hold'em · ${r.players} ${tt("მოთამაშე", "players", "игроков")} · ${tt("ბლაინდები", "blinds", "блайнды")} ${r.smallBlind}/${r.bigBlind} · ${r.startStack} ${tt("ჩიპი", "chips", "фишек")}`;
 
 /** The screen behind a table code: the waiting room first, the game itself once four players sit. */
 export function OnlineTable({ code }: { code: string }) {
+  useLang(); // the table re-renders when the language is switched
   const router = useRouter();
   const { configured, loading, user } = useAuth();
   const t = useOnlineTable(code);
@@ -45,15 +47,15 @@ export function OnlineTable({ code }: { code: string }) {
     back();
   };
 
-  if (!configured) return <Message title="ონლაინ თამაში ჯერ არ არის ჩართული" />;
+  if (!configured) return <Message title={tt("ონლაინ თამაში ჯერ არ არის ჩართული", "Online play is not enabled yet", "Онлайн-игра пока не включена")} />;
   if (loading) return <Message title="…" />;
   if (!user) {
     return (
       <Message
-        title="ონლაინ მაგიდაზე შესასვლელად შედით ანგარიშში"
+        title={tt("ონლაინ მაგიდაზე შესასვლელად შედით ანგარიშში", "Sign in to join an online table", "Войдите, чтобы сесть за онлайн-стол")}
         action={
           <Link href={`/login?next=${encodeURIComponent(`/joker/table/${code}`)}`} className={`${BTN_PRIMARY} w-fit`}>
-            შესვლა
+            {tt("შესვლა", "Sign in", "Войти")}
           </Link>
         }
       />
@@ -65,23 +67,23 @@ export function OnlineTable({ code }: { code: string }) {
         title={t.error}
         action={
           <Link href="/joker" className={`${BTN_GHOST} w-fit`}>
-            ← უკან
+            ← {tt("უკან", "Back", "Назад")}
           </Link>
         }
       />
     );
   }
-  if (!t.table) return <Message title="მაგიდასთან გამაერთიანებთ…" />;
+  if (!t.table) return <Message title={tt("მაგიდასთან გამაერთიანებთ…", "Joining the table…", "Подключаем к столу…")} />;
 
   // My seat was taken over by a bot (I left or timed out twice): I can only watch the end, so show the way out.
   if (t.mySeat?.bot && t.table.status !== "waiting") {
     return (
       <Message
-        title="ადგილი ბოტმა დაიკავა"
-        text="ზედიზედ ორჯერ გამოტოვეთ სვლა ან მაგიდა დატოვეთ."
+        title={tt("ადგილი ბოტმა დაიკავა", "A bot took your seat", "Ваше место занял бот")}
+        text={tt("ზედიზედ ორჯერ გამოტოვეთ სვლა ან მაგიდა დატოვეთ.", "You missed your turn twice in a row or left the table.", "Вы дважды подряд пропустили ход или покинули стол.")}
         action={
           <Link href={`/${game}`} className={`${BTN_GHOST} w-fit`}>
-            ← უკან
+            ← {tt("უკან", "Back", "Назад")}
           </Link>
         }
       />
@@ -92,11 +94,11 @@ export function OnlineTable({ code }: { code: string }) {
   if (t.kicked) {
     return (
       <Message
-        title="დრო ამოიწურა"
-        text="მატჩი დროზე არ დაადასტურეთ."
+        title={tt("დრო ამოიწურა", "Time ran out", "Время истекло")}
+        text={tt("მატჩი დროზე არ დაადასტურეთ.", "You did not confirm the match in time.", "Вы не подтвердили матч вовремя.")}
         action={
           <Link href={`/${game}/${t.table.kind}`} className={`${BTN_PRIMARY} w-fit`}>
-            ხელახლა ძებნა
+            {tt("ხელახლა ძებნა", "Search again", "Искать снова")}
           </Link>
         }
       />
@@ -104,7 +106,7 @@ export function OnlineTable({ code }: { code: string }) {
   }
 
   if (t.table.status === "waiting" || !t.view) {
-    if (t.table.status === "closed") return <Message title="მაგიდა დაიხურა" />;
+    if (t.table.status === "closed") return <Message title={tt("მაგიდა დაიხურა", "The table was closed", "Стол закрыт")} />;
     // Random-player tables wait in a lobby with four lamps; private ones show the code to share.
     if (t.table.kind !== "private") {
       return (
@@ -136,7 +138,7 @@ export function OnlineTable({ code }: { code: string }) {
 
   if (t.table.game === "poker") {
     const others = t.players.slice(1).map((p) => ({
-      name: (p?.profile?.nickname ?? "…") + (p?.bot ? " · ბოტი" : ""),
+      name: (p?.profile?.nickname ?? "…") + (p?.bot ? ` · ${tt("ბოტი", "bot", "бот")}` : ""),
       color: p?.profile?.avatar_color,
       icon: p?.profile?.avatar_icon,
       url: p?.profile?.avatar_url ?? null,
@@ -147,7 +149,7 @@ export function OnlineTable({ code }: { code: string }) {
           game={t.view as PokerState}
           opponents={others}
           me={{
-            name: t.players[0]?.profile?.nickname ?? "თქვენ",
+            name: t.players[0]?.profile?.nickname ?? tt("თქვენ", "You", "Вы"),
             avatar: t.players[0]?.profile
               ? { color: t.players[0].profile.avatar_color, icon: t.players[0].profile.avatar_icon, url: t.players[0].profile.avatar_url }
               : null,
@@ -157,7 +159,7 @@ export function OnlineTable({ code }: { code: string }) {
           onNext={() => {}}
           autoNext
           onQuit={() => {
-            if (window.confirm("დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს.")) void leaveToMenu();
+            if (window.confirm(tt("დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს.", "Are you sure? A bot will take your seat when you leave.", "Вы уверены? После выхода ваше место займёт бот."))) void leaveToMenu();
           }}
         />
         {t.notice && <Notice text={t.notice} />}
@@ -165,7 +167,7 @@ export function OnlineTable({ code }: { code: string }) {
     );
   }
 
-  const names = t.players.map((p, k) => (p?.profile?.nickname ?? (k === 0 ? "თქვენ" : "…")) + (p?.bot && k !== 0 ? " · ბოტი" : ""));
+  const names = t.players.map((p, k) => (p?.profile?.nickname ?? (k === 0 ? tt("თქვენ", "You", "Вы") : "…")) + (p?.bot && k !== 0 ? ` · ${tt("ბოტი", "bot", "бот")}` : ""));
   const avatars = t.players.map((p) =>
     p?.profile
       ? { color: p.profile.avatar_color, icon: p.profile.avatar_icon, url: p.profile.avatar_url }
@@ -174,15 +176,15 @@ export function OnlineTable({ code }: { code: string }) {
 
   const quitConfirm =
     t.table.kind === "ranked"
-      ? "დარწმუნებული ხართ? თამაშიდან გასვლა წოდებისთვის ბრძოლაში −10 ქულას ნიშნავს და თქვენს ადგილს ბოტი დაიკავებს."
-      : "დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს.";
+      ? tt("დარწმუნებული ხართ? თამაშიდან გასვლა წოდებისთვის ბრძოლაში −10 ქულას ნიშნავს და თქვენს ადგილს ბოტი დაიკავებს.", "Are you sure? Leaving a ranked game costs −10 points and a bot takes your seat.", "Вы уверены? Выход из рейтинговой игры стоит −10 очков, а ваше место займёт бот.")
+      : tt("დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს.", "Are you sure? A bot will take your seat when you leave.", "Вы уверены? После выхода ваше место займёт бот.");
   const note =
     t.table.kind === "ranked" ? (
       <RatingResult tableId={t.table.id} userId={user.id} />
     ) : t.table.kind === "friendly" ? (
-      <span className="text-emerald-300">✓ თამაში ჩაიწერა ისტორიაში</span>
+      <span className="text-emerald-300">✓ {tt("თამაში ჩაიწერა ისტორიაში", "The game was saved to your history", "Игра записана в историю")}</span>
     ) : (
-      <span className="text-white/60">კერძო თამაში არ იწერება ისტორიაში</span>
+      <span className="text-white/60">{tt("კერძო თამაში არ იწერება ისტორიაში", "Private games are not saved to the history", "Частные игры не записываются в историю")}</span>
     );
 
   const chat = (
@@ -278,6 +280,7 @@ function Lobby({
   starting: boolean;
   onLeave: () => void;
 }) {
+  useLang();
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const seated = players.filter(Boolean).length;
 
@@ -288,20 +291,20 @@ function Lobby({
       setCopied(what);
       setTimeout(() => setCopied(null), 1800);
     } catch {
-      window.prompt("დააკოპირეთ:", text);
+      window.prompt(tt("დააკოპირეთ:", "Copy this:", "Скопируйте:"), text);
     }
   };
 
   return (
     <PageShell width="max-w-3xl">
       <section className="flex flex-col gap-2" style={rise(1)}>
-        <p className="text-sm font-bold uppercase tracking-wider text-white/45">კერძო მაგიდა</p>
-        <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">მაგიდის კოდი</h1>
+        <p className="text-sm font-bold uppercase tracking-wider text-white/45">{tt("კერძო მაგიდა", "Private table", "Частный стол")}</p>
+        <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">{tt("მაგიდის კოდი", "Table code", "Код стола")}</h1>
         <p className="text-lg text-white/55">{game === "poker" ? describePoker(rules as PokerRules) : game === "bura" ? describeBura(rules as BuraRules) : describeRules(rules as Rules)}</p>
       </section>
 
       <section className="flex flex-col gap-5" style={rise(2)}>
-        <div className="flex gap-2 sm:gap-3" aria-label={`კოდი ${code}`}>
+        <div className="flex gap-2 sm:gap-3" aria-label={tt(`კოდი ${code}`, `Code ${code}`, `Код ${code}`)}>
           {code.split("").map((ch, i) => (
             <span
               key={i}
@@ -313,20 +316,20 @@ function Lobby({
         </div>
         <div className="flex flex-wrap gap-3">
           <button className={BTN_GHOST} onClick={() => copy("code")}>
-            {copied === "code" ? "✓ დაკოპირდა" : "კოდის კოპირება"}
+            {copied === "code" ? "✓ " + tt("დაკოპირდა", "Copied", "Скопировано") : tt("კოდის კოპირება", "Copy code", "Копировать код")}
           </button>
           <button className={BTN_GHOST} onClick={() => copy("link")}>
-            {copied === "link" ? "✓ დაკოპირდა" : "ბმულის კოპირება"}
+            {copied === "link" ? "✓ " + tt("დაკოპირდა", "Copied", "Скопировано") : tt("ბმულის კოპირება", "Copy link", "Копировать ссылку")}
           </button>
         </div>
-        <p className="text-white/45">გაუგზავნეთ მეგობრებს კოდი ან ბმული. როცა ყველა დაჯდება, თამაში თავისით დაიწყება.</p>
+        <p className="text-white/45">{tt("გაუგზავნეთ მეგობრებს კოდი ან ბმული. როცა ყველა დაჯდება, თამაში თავისით დაიწყება.", "Send your friends the code or link. When everyone has sat down, the game starts by itself.", "Отправьте друзьям код или ссылку. Когда все сядут, игра начнётся сама.")}</p>
       </section>
 
       <section className="flex flex-col gap-4" style={rise(3)}>
         <div className="flex items-baseline justify-between">
-          <h2 className="text-2xl font-extrabold">მოთამაშეები</h2>
+          <h2 className="text-2xl font-extrabold">{tt("მოთამაშეები", "Players", "Игроки")}</h2>
           <span className={`text-lg font-bold tabular-nums ${starting ? "text-emerald-300" : "text-white/50"}`}>
-            {starting ? "თამაში იწყება…" : `${seated}/${players.length}`}
+            {starting ? tt("თამაში იწყება…", "The game is starting…", "Игра начинается…") : `${seated}/${players.length}`}
           </span>
         </div>
         <ul className="grid gap-3 sm:grid-cols-2">
@@ -347,9 +350,9 @@ function Lobby({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-lg font-bold">{p.profile?.nickname ?? "…"}</span>
                   <span className="block text-sm text-white/45">
-                    {p.user_id === hostId && "მასპინძელი"}
+                    {p.user_id === hostId && tt("მასპინძელი", "Host", "Хозяин")}
                     {p.user_id === hostId && p.user_id === myId && " · "}
-                    {p.user_id === myId && "თქვენ"}
+                    {p.user_id === myId && tt("თქვენ", "You", "Вы")}
                   </span>
                 </span>
               </li>
@@ -359,7 +362,7 @@ function Lobby({
                 className="flex items-center gap-4 rounded-2xl border border-dashed border-white/15 p-4 text-white/35"
               >
                 <span className="grid size-12 animate-pulse place-items-center rounded-full bg-white/[0.06] text-xl">?</span>
-                <span className="text-lg">ელოდება მოთამაშეს…</span>
+                <span className="text-lg">{tt("ელოდება მოთამაშეს…", "Waiting for a player…", "Ожидание игрока…")}</span>
               </li>
             );
           })}
@@ -368,7 +371,7 @@ function Lobby({
 
       <div className="pb-8" style={rise(4)}>
         <button className={BTN_GHOST} onClick={onLeave}>
-          მაგიდის დატოვება
+          {tt("მაგიდის დატოვება", "Leave the table", "Покинуть стол")}
         </button>
       </div>
     </PageShell>

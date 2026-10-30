@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { BOTS, botById, randomBots, TIER_LABEL, type BotProfile, type BotTier } from "@/lib/joker/botProfiles";
 import { Avatar } from "./Avatar";
 import { LABEL } from "./RulesForm";
@@ -18,6 +19,7 @@ export function BotPicker({
   /** How many opponents are needed (three at a Joker table, one or three at a Bura table). */
   count?: number;
 }) {
+  const t = useT();
   const toggle = (id: string) => {
     if (selected.includes(id)) onChange(selected.filter((x) => x !== id));
     // One pick too many replaces the oldest one, so a full set is always possible with a single click.
@@ -28,14 +30,14 @@ export function BotPicker({
     <fieldset>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <legend className={`${LABEL} !mb-0`}>
-          ოპონენტები <span className="ml-2 text-amber-300">{selected.length}/{count}</span>
+          {t("ოპონენტები", "Opponents", "Соперники")} <span className="ml-2 text-amber-300">{selected.length}/{count}</span>
         </legend>
         <div className="flex flex-wrap gap-2">
           {(
             [
-              ["შემთხვევითი", () => onChange(randomBots(undefined, Math.random, count))],
-              ["მარტივი", () => onChange(randomBots("easy", Math.random, count))],
-              ["ძლიერი", () => onChange(randomBots("hard", Math.random, count))],
+              [t("შემთხვევითი", "Random", "Случайные"), () => onChange(randomBots(undefined, Math.random, count))],
+              [t("მარტივი", "Easy", "Лёгкие"), () => onChange(randomBots("easy", Math.random, count))],
+              [t("ძლიერი", "Strong", "Сильные"), () => onChange(randomBots("hard", Math.random, count))],
             ] as const
           ).map(([label, pick]) => (
             <button

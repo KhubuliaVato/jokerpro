@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -17,6 +18,7 @@ export function PrivateRoom({ game = "joker" }: { game?: "joker" | "bura" | "pok
   const { configured, loading, user } = useAuth();
   const [rules, setRules] = useState<Rules>(DEFAULT_RULES);
   const [players, setPlayers] = useState<2 | 4>(2);
+  const t = useT();
   const [seats, setSeats] = useState(4);
   const [bigBlind, setBigBlind] = useState<10 | 20 | 50>(20);
   const [joinCode, setJoinCode] = useState("");
@@ -34,7 +36,7 @@ export function PrivateRoom({ game = "joker" }: { game?: "joker" | "bura" | "pok
       game === "poker" ? { game: "poker", players: seats, bigBlind } : game === "bura" ? { game: "bura", players } : rules,
     );
     if (err || !table) {
-      setError(err ?? "მაგიდა ვერ შეიქმნა");
+      setError(err ?? t("მაგიდა ვერ შეიქმნა", "Could not create the table", "Не удалось создать стол"));
       setBusy(false);
       return;
     }
@@ -49,7 +51,7 @@ export function PrivateRoom({ game = "joker" }: { game?: "joker" | "bura" | "pok
     setError(null);
     const { table, error: err } = await joinTable(supabase, joinCode);
     if (err || !table) {
-      setError(err ?? "მაგიდასთან შეერთება ვერ მოხერხდა");
+      setError(err ?? t("მაგიდასთან შეერთება ვერ მოხერხდა", "Could not join the table", "Не удалось присоединиться к столу"));
       setBusy(false);
       return;
     }
@@ -60,29 +62,29 @@ export function PrivateRoom({ game = "joker" }: { game?: "joker" | "bura" | "pok
     <PageShell width="max-w-5xl">
       <section className="flex flex-col gap-2" style={rise(1)}>
         <Link href={`/${game}`} className="w-fit text-sm font-bold uppercase tracking-wider text-white/45 hover:text-amber-300">
-          ← {game === "poker" ? "პოკერი" : game === "bura" ? "ბურა" : "ჯოკერი"}
+          ← {game === "poker" ? t("პოკერი", "Poker", "Покер") : game === "bura" ? t("ბურა", "Bura", "Бура") : t("ჯოკერი", "Joker", "Джокер")}
         </Link>
-        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">კერძო მაგიდა</h1>
-        <p className="text-lg text-white/55 sm:text-xl">მეგობრებთან · ქულა არ იცვლება</p>
+        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">{t("კერძო მაგიდა", "Private table", "Частный стол")}</h1>
+        <p className="text-lg text-white/55 sm:text-xl">{t("მეგობრებთან · ქულა არ იცვლება", "With friends · points do not change", "С друзьями · очки не меняются")}</p>
       </section>
 
       {!configured ? (
-        <p className="text-white/55">ონლაინ თამაში ჯერ არ არის ჩართული.</p>
+        <p className="text-white/55">{t("ონლაინ თამაში ჯერ არ არის ჩართული.", "Online play is not enabled yet.", "Онлайн-игра пока не включена.")}</p>
       ) : loading ? null : !user ? (
         <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.03] p-6" style={rise(2)}>
-          <p className="text-lg text-white/70">მაგიდისთვის საჭიროა ანგარიში.</p>
+          <p className="text-lg text-white/70">{t("მაგიდისთვის საჭიროა ანგარიში.", "A table needs an account.", "Для стола нужен аккаунт.")}</p>
           <Link href={`/login?next=/${game}/private`} className={`${BTN_PRIMARY} w-fit`}>
-            შესვლა
+            {t("შესვლა", "Sign in", "Войти")}
           </Link>
         </div>
       ) : (
         <div className="grid items-start gap-6 pb-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" style={rise(2)}>
           <section className="flex flex-col gap-8 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 sm:p-8">
-            <h2 className="text-2xl font-extrabold">მაგიდის შექმნა</h2>
+            <h2 className="text-2xl font-extrabold">{t("მაგიდის შექმნა", "Create a table", "Создать стол")}</h2>
             {game === "poker" ? (
               <div className="flex flex-col gap-6">
                 <fieldset>
-                  <legend className={LABEL}>მოთამაშეები მაგიდასთან</legend>
+                  <legend className={LABEL}>{t("მოთამაშეები მაგიდასთან", "Players at the table", "Игроков за столом")}</legend>
                   <div className="flex flex-wrap gap-3">
                     {[2, 3, 4, 5, 6].map((n) => (
                       <button
@@ -100,9 +102,9 @@ export function PrivateRoom({ game = "joker" }: { game?: "joker" | "bura" | "pok
                   </div>
                 </fieldset>
                 <fieldset>
-                  <legend className={LABEL}>ბლაინდები</legend>
+                  <legend className={LABEL}>{t("ბლაინდები", "Blinds", "Блайнды")}</legend>
                   <div className="grid grid-cols-3 gap-3">
-                    {([[10, "მცირე"], [20, "საშუალო"], [50, "დიდი"]] as const).map(([big, title]) => (
+                    {([[10, t("მცირე", "Low", "Малые")], [20, t("საშუალო", "Medium", "Средние")], [50, t("დიდი", "High", "Большие")]] as const).map(([big, title]) => (
                       <button
                         key={big}
                         type="button"
@@ -116,7 +118,7 @@ export function PrivateRoom({ game = "joker" }: { game?: "joker" | "bura" | "pok
                         <span className="mt-1 block text-xs text-white/55">
                           {big / 2}/{big}
                         </span>
-                        <span className="block text-xs text-white/40">{big * 50} ჩიპი</span>
+                        <span className="block text-xs text-white/40">{big * 50} {t("ჩიპი", "chips", "фишек")}</span>
                       </button>
                     ))}
                   </div>
@@ -135,7 +137,7 @@ export function PrivateRoom({ game = "joker" }: { game?: "joker" | "bura" | "pok
                     }`}
                   >
                     <b className="block text-2xl">{n}</b>
-                    <span className="text-white/55">{n === 2 ? "მოთამაშე" : "მოთამაშე · 2×2"}</span>
+                    <span className="text-white/55">{n === 2 ? t("მოთამაშე", "player", "игрок") : t("მოთამაშე · 2×2", "players · 2×2", "игрока · 2×2")}</span>
                   </button>
                 ))}
               </div>
@@ -143,15 +145,15 @@ export function PrivateRoom({ game = "joker" }: { game?: "joker" | "bura" | "pok
               <RulesForm rules={rules} onChange={set} />
             )}
             <button className={`${BTN_PRIMARY} w-full !py-4 !text-xl`} onClick={create} disabled={busy}>
-              {busy ? "ერთი წამით…" : "შექმნა →"}
+              {busy ? t("ერთი წამით…", "One moment…", "Секунду…") : t("შექმნა →", "Create →", "Создать →")}
             </button>
           </section>
 
           <section className="flex flex-col gap-5 rounded-[2rem] border border-white/10 bg-white/[0.04] p-6 sm:p-8">
-            <h2 className="text-2xl font-extrabold">შეერთება</h2>
+            <h2 className="text-2xl font-extrabold">{t("შეერთება", "Join", "Присоединиться")}</h2>
             <form onSubmit={join} className="flex flex-col gap-4">
               <label className={`${LABEL} !mb-0`} htmlFor="join-code">
-                მეგობრის კოდი
+                {t("მეგობრის კოდი", "Friend code", "Код друга")}
               </label>
               <input
                 id="join-code"
@@ -164,7 +166,7 @@ export function PrivateRoom({ game = "joker" }: { game?: "joker" | "bura" | "pok
                 maxLength={6}
               />
               <button className={`${BTN_GHOST} w-full !py-3.5 !text-lg`} disabled={busy || joinCode.length < 6}>
-                შეერთება →
+                {t("შეერთება →", "Join →", "Войти →")}
               </button>
             </form>
           </section>

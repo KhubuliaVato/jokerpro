@@ -1,5 +1,6 @@
 "use client";
 
+import { tt, useT } from "@/lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTableChat, type ChatMessage } from "@/lib/online/useTableChat";
 
@@ -19,7 +20,14 @@ export function TableChat({
   return <ChatView messages={messages} send={send} over={over} myId={myId} names={names} />;
 }
 
-const BOT_LINES = ["წარმატებებს გისურვებთ!", "კარგი სვლა იყო 👏", "ეხლა ვნახოთ…", "ჰმ, საინტერესოა", "ამას არ ველოდი 😄", "კოზირი კარგი გაქვს?"];
+const BOT_LINES: [string, string, string][] = [
+  ["წარმატებებს გისურვებთ!", "Good luck!", "Удачи!"],
+  ["კარგი სვლა იყო 👏", "Nice move 👏", "Хороший ход 👏"],
+  ["ეხლა ვნახოთ…", "Let us see…", "Посмотрим…"],
+  ["ჰმ, საინტერესოა", "Hmm, interesting", "Хм, интересно"],
+  ["ამას არ ველოდი 😄", "Did not expect that 😄", "Не ожидал 😄"],
+  ["კოზირი კარგი გაქვს?", "Got a good trump?", "Хороший козырь?"],
+];
 
 /** Practice games have no one to talk to: the bots answer with a few stock phrases, so the chat can be tried out. */
 export function BotChat({ myId, bots }: { myId: string; bots: string[] }) {
@@ -41,7 +49,7 @@ export function BotChat({ myId, bots }: { myId: string; bots: string[] }) {
     const list = botsRef.current;
     if (list.length === 0) return;
     const b = list[Math.floor(Math.random() * list.length)];
-    say(`bot:${b}`, BOT_LINES[Math.floor(Math.random() * BOT_LINES.length)]);
+    say(`bot:${b}`, tt(...BOT_LINES[Math.floor(Math.random() * BOT_LINES.length)]));
   }, [say]);
 
   // Now and then a bot speaks up on its own.
@@ -79,6 +87,7 @@ function ChatView({
   myId: string;
   names: Record<string, string>;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [seenId, setSeenId] = useState(0);
   const [text, setText] = useState("");
@@ -131,7 +140,7 @@ function ChatView({
         role="status"
         className="fixed bottom-3 right-3 z-50 flex items-center gap-2 rounded-full border border-white/15 bg-[#0b2a1b]/95 px-4 py-2.5 text-sm text-white/75 shadow-lg"
       >
-        <span aria-hidden className="text-lg">🗑</span>ჩათი წაიშალა
+        <span aria-hidden className="text-lg">🗑</span>{t("ჩათი წაიშალა", "Chat deleted", "Чат удалён")}
       </div>
     ) : null;
   }
@@ -141,17 +150,17 @@ function ChatView({
       {open && (
         <div className="flex h-72 max-h-[calc(100dvh-5rem)] w-72 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0b2a1b]/95 shadow-2xl backdrop-blur">
           <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-sm font-bold">
-            ჩათი
-            <button onClick={toggle} aria-label="ჩათის დახურვა" className="px-1 text-lg leading-none text-white/60 hover:text-white">
+            {t("ჩათი", "Chat", "Чат")}
+            <button onClick={toggle} aria-label={t("ჩათის დახურვა", "Close chat", "Закрыть чат")} className="px-1 text-lg leading-none text-white/60 hover:text-white">
               ×
             </button>
           </div>
           <div ref={list} className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto px-3 py-2 text-sm">
-            {messages.length === 0 && <p className="m-auto text-white/40">შეტყობინება ჯერ არ არის</p>}
+            {messages.length === 0 && <p className="m-auto text-white/40">{t("შეტყობინება ჯერ არ არის", "No messages yet", "Сообщений пока нет")}</p>}
             {messages.map((m) => (
               <p key={m.id} className="break-words">
                 <span className={`font-bold ${m.user_id === myId ? "text-amber-300" : "text-emerald-300"}`}>
-                  {m.user_id === myId ? "თქვენ" : (names[m.user_id] ?? "…")}:
+                  {m.user_id === myId ? t("თქვენ", "You", "Вы") : (names[m.user_id] ?? "…")}:
                 </span>{" "}
                 <span className="text-white/90">{m.body}</span>
               </p>
@@ -162,7 +171,7 @@ function ChatView({
               value={text}
               onChange={(e) => setText(e.target.value)}
               maxLength={200}
-              placeholder="დაწერეთ…"
+              placeholder={t("დაწერეთ…", "Write…", "Напишите…")}
               className="min-w-0 flex-1 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white outline-none placeholder:text-white/35 focus:bg-white/15"
             />
             <button type="submit" className="rounded-full bg-amber-300 px-3 text-sm font-bold text-[#2a1d00]">
@@ -174,7 +183,7 @@ function ChatView({
       {!open && (
         <button
           onClick={toggle}
-          aria-label={unread > 0 ? `ჩათი, ახალი შეტყობინებები: ${unread}` : "ჩათი"}
+          aria-label={unread > 0 ? t(`ჩათი, ახალი შეტყობინებები: ${unread}`, `Chat, new messages: ${unread}`, `Чат, новых сообщений: ${unread}`) : t("ჩათი", "Chat", "Чат")}
           className={`relative grid size-11 place-items-center rounded-full border text-xl shadow-lg transition-colors ${
             unread > 0 ? "animate-pulse border-red-300/60 bg-red-600" : "border-white/20 bg-[#0b2a1b]/90 hover:bg-[#12402a]"
           }`}

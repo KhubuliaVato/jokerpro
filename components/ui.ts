@@ -1,3 +1,4 @@
+import { tt } from "@/lib/i18n";
 import type { CSSProperties } from "react";
 
 /** Flat text field used by the sign-in and profile forms. */
@@ -14,10 +15,18 @@ export const BTN_GHOST =
 
 /** Georgian labels for the game formats. */
 export const FORMAT_LABEL = {
-  full: "სტანდარტული",
-  nine: "ცხრიანები",
-  p2: "2 მოთამაშე",
-  p4: "4 მოთამაშე",
+  get full() {
+    return tt("სტანდარტული", "Standard", "Стандартная");
+  },
+  get nine() {
+    return tt("ცხრიანები", "Nines", "Девятки");
+  },
+  get p2() {
+    return tt("2 მოთამაშე", "2 players", "2 игрока");
+  },
+  get p4() {
+    return tt("4 მოთამაშე", "4 players", "4 игрока");
+  },
 } as const;
 
 /** Keyframes for {@link rise}; render once per page inside a <style> tag. */

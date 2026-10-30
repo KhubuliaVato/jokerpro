@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useT } from "@/lib/i18n";
 import { GAMES } from "@/lib/games";
 import { rankFor } from "@/lib/ranks";
 import { loadLeaderboard, loadPosition, type LeaderRow } from "@/lib/ratings";
@@ -17,6 +18,7 @@ const MEDAL = ["#fcd34d", "#cbd5e1", "#fb923c"];
 /** The best players of a game, top three on a podium, then the list. */
 export function LeaderboardPage() {
   const { user, configured } = useAuth();
+  const t = useT();
   const [gameId, setGameId] = useState(GAMES[0].id);
   const [board, setBoard] = useState<{ gameId: string; rows: LeaderRow[]; error: string | null } | null>(null);
   const [mine, setMine] = useState<{ userId: string; gameId: string; position: number | null } | null>(null);
@@ -55,7 +57,7 @@ export function LeaderboardPage() {
   return (
     <PageShell width="max-w-4xl">
       <section className="flex flex-col gap-4" style={rise(1)}>
-        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">ლიდერბორდი</h1>
+        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">{t("ლიდერბორდი", "Leaderboard", "Рейтинг")}</h1>
         <div className="flex flex-wrap gap-2">
           {GAMES.map((g) => (
             <button
@@ -73,17 +75,17 @@ export function LeaderboardPage() {
       </section>
 
       {!configured ? (
-        <p className="text-white/55">ლიდერბორდი ჯერ არ არის ჩართული.</p>
+        <p className="text-white/55">{t("ლიდერბორდი ჯერ არ არის ჩართული.", "The leaderboard is not enabled yet.", "Рейтинг пока не включён.")}</p>
       ) : !current ? (
         <div className="h-64 animate-pulse rounded-3xl bg-white/[0.06]" />
       ) : current.error ? (
-        <p className="text-red-300">ვერ ჩაიტვირთა: {current.error}</p>
+        <p className="text-red-300">{t("ვერ ჩაიტვირთა", "Could not load", "Не удалось загрузить")}: {current.error}</p>
       ) : rows.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-white/20 px-6 py-14 text-center" style={rise(2)}>
-          <p className="text-xl text-white/60">ჯერ არავის დაუსრულებია რეიტინგული თამაში.</p>
-          <p className="mt-2 text-white/40">იყავით პირველი, ითამაშეთ ‹წოდებისთვის ბრძოლა›.</p>
+          <p className="text-xl text-white/60">{t("ჯერ არავის დაუსრულებია რეიტინგული თამაში.", "Nobody has finished a ranked game yet.", "Пока никто не завершил рейтинговую игру.")}</p>
+          <p className="mt-2 text-white/40">{t("იყავით პირველი, ითამაშეთ ‹წოდებისთვის ბრძოლა›.", "Be the first: play a ranked game.", "Будьте первым: сыграйте в рейтинговую игру.")}</p>
           <Link href="/joker/ranked" className="mt-6 inline-block rounded-full bg-amber-300 px-7 py-3 text-lg font-extrabold text-black">
-            თამაში
+            {t("თამაში", "Play", "Играть")}
           </Link>
         </div>
       ) : (
@@ -151,7 +153,7 @@ export function LeaderboardPage() {
           {userId && myPosition !== null && !iAmListed && (
             <div className="sticky bottom-4 z-10 rounded-2xl border border-amber-300/40 bg-[#0d2a1e]/95 px-5 py-3 shadow-lg backdrop-blur">
               <Link href="/profile" className="flex items-center justify-between gap-3">
-                <span className="font-bold text-amber-300">თქვენი ადგილი</span>
+                <span className="font-bold text-amber-300">{t("თქვენი ადგილი", "Your place", "Ваше место")}</span>
                 <b className="text-2xl tabular-nums">#{myPosition}</b>
               </Link>
             </div>
@@ -164,6 +166,7 @@ export function LeaderboardPage() {
 }
 
 function Row({ r, me }: { r: LeaderRow; me: boolean }) {
+  const t = useT();
   const standing = rankFor(r.rating);
   const winRate = r.games > 0 ? Math.round((r.wins / r.games) * 100) : 0;
   return (
@@ -179,10 +182,10 @@ function Row({ r, me }: { r: LeaderRow; me: boolean }) {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-lg font-bold">
             {r.nickname}
-            {me && <span className="ml-2 text-sm font-semibold text-amber-300">თქვენ</span>}
+            {me && <span className="ml-2 text-sm font-semibold text-amber-300">{t("თქვენ", "You", "Вы")}</span>}
           </span>
           <span className="block text-sm text-white/45">
-            {r.games} თამაში · {winRate}% გამარჯვება
+            {r.games} {t("თამაში", "games", "игр")} · {winRate}% {t("გამარჯვება", "wins", "побед")}
           </span>
         </span>
         <span className="hidden items-center gap-2 sm:flex">

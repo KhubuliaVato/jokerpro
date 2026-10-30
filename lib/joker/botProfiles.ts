@@ -1,3 +1,5 @@
+import { tt } from "../lang";
+
 /** How a bot plays: 0 everywhere is the standard (strong) bot the online server uses for empty seats. */
 export interface BotStyle {
   /** Chance of bidding one trick more or less than it thinks. */
@@ -13,9 +15,15 @@ export const STANDARD_STYLE: BotStyle = { bidNoise: 0, mistake: 0, bidBias: 0 };
 export type BotTier = "easy" | "medium" | "hard";
 
 export const TIER_LABEL: Record<BotTier, string> = {
-  easy: "დამწყები",
-  medium: "საშუალო",
-  hard: "ძლიერი",
+  get easy() {
+    return tt("დამწყები", "Beginner", "Новичок");
+  },
+  get medium() {
+    return tt("საშუალო", "Medium", "Средний");
+  },
+  get hard() {
+    return tt("ძლიერი", "Strong", "Сильный");
+  },
 };
 
 export interface BotProfile {
@@ -42,6 +50,26 @@ export const BOTS: BotProfile[] = [
   { id: "tamar", name: "თამარ", tier: "hard", trait: "ცივი გონება: თითქმის არასდროს ცდება", style: STANDARD_STYLE, color: "violet", icon: "♛" },
   { id: "zura", name: "ზურა", tier: "hard", trait: "ჯოკერის ოსტატი, დაკვეთებში ზუსტია", style: STANDARD_STYLE, color: "amber", icon: "★" },
 ];
+
+const BOT_TEXT: Record<string, { name: [string, string, string]; trait: [string, string, string] }> = {
+  nika: { name: ["ნიკა", "Nika", "Ника"], trait: ["ახალი სწავლობს და ხშირად ცდება", "Still learning and often makes mistakes", "Ещё учится и часто ошибается"] },
+  mzia: { name: ["მზია", "Mzia", "Мзия"], trait: ["ფრთხილია და ბევრჯერ პასს ამბობს", "Careful, passes a lot", "Осторожная, часто пасует"] },
+  gio: { name: ["გიო", "Gio", "Гио"], trait: ["სულ რისკავს და მეტს ამბობს", "Always takes risks and bids high", "Всегда рискует и заказывает больше"] },
+  levani: { name: ["ლევანი", "Levani", "Леван"], trait: ["ჩვეულებრივი, გაწონასწორებული მოთამაშე", "An ordinary, balanced player", "Обычный, уравновешенный игрок"] },
+  nino: { name: ["ნინო", "Nino", "Нино"], trait: ["ყურადღებიანია, იშვიათად ცდება", "Attentive, rarely makes mistakes", "Внимательная, редко ошибается"] },
+  mariami: { name: ["მარიამი", "Mariami", "Мариами"], trait: ["ცოტა მეტს ამბობს, ვიდრე უნდა", "Bids a bit more than she should", "Заказывает чуть больше, чем нужно"] },
+  dato: { name: ["დათო", "Dato", "Дато"], trait: ["ტაქტიკოსია და კარტებს ითვლის", "A tactician who counts cards", "Тактик, считает карты"] },
+  tamar: { name: ["თამარ", "Tamar", "Тамар"], trait: ["ცივი გონება: თითქმის არასდროს ცდება", "Cool head: almost never makes mistakes", "Холодный ум: почти не ошибается"] },
+  zura: { name: ["ზურა", "Zura", "Зура"], trait: ["ჯოკერის ოსტატი, დაკვეთებში ზუსტია", "A Joker master, precise with bids", "Мастер Джокера, точен в заказах"] },
+};
+
+// Names and descriptions follow the chosen language.
+for (const bot of BOTS) {
+  const text = BOT_TEXT[bot.id];
+  if (!text) continue;
+  Object.defineProperty(bot, "name", { get: () => tt(...text.name), enumerable: true });
+  Object.defineProperty(bot, "trait", { get: () => tt(...text.trait), enumerable: true });
+}
 
 /** The three opponents played against when nothing is chosen. */
 export const DEFAULT_BOTS = ["levani", "nino", "mariami"];

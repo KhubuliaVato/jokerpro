@@ -1,3 +1,4 @@
+import { tt } from "@/lib/i18n";
 import type { Card, Suit } from "@/lib/joker/cards";
 import { CardView } from "./CardView";
 
@@ -7,11 +8,15 @@ const card = (suit: Suit, rank: number): Card => ({ joker: false, suit, rank: ra
 /** Each game length is shown by a few cards and a short name. */
 export const FORMAT_ART = {
   nine: {
-    title: "ცხრიანები",
+    get title() {
+      return tt("ცხრიანები", "Nines", "Девятки");
+    },
     cards: [nine("S", "S9"), nine("H", "H9"), nine("D", "D9"), nine("C", "C9")],
   },
   full: {
-    title: "სტანდარტული",
+    get title() {
+      return tt("სტანდარტული", "Standard", "Стандартная");
+    },
     cards: [
       { joker: false, suit: "S", rank: 14, id: "S14" } as Card,
       { joker: true, id: "J0" } as Card,
@@ -19,8 +24,18 @@ export const FORMAT_ART = {
     ],
   },
   // Bura: by the number of players
-  p2: { title: "2 მოთამაშე", cards: [card("H", 14), card("H", 10)] },
-  p4: { title: "4 მოთამაშე · 2×2", cards: [card("H", 14), card("S", 13), card("H", 10), card("D", 12)] },
+  p2: {
+    get title() {
+      return tt("2 მოთამაშე", "2 players", "2 игрока");
+    },
+    cards: [card("H", 14), card("H", 10)],
+  },
+  p4: {
+    get title() {
+      return tt("4 მოთამაშე · 2×2", "4 players · 2×2", "4 игрока · 2×2");
+    },
+    cards: [card("H", 14), card("S", 13), card("H", 10), card("D", 12)],
+  },
 } as const;
 
 /** The cards of a format fanned out; they spread a little when an ancestor with the `group` class is hovered. */

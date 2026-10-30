@@ -1,5 +1,6 @@
 "use client";
 
+import { tt } from "@/lib/lang";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -90,21 +91,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     const supabase = getSupabase();
-    if (!supabase) return "მონაცემთა ბაზა ჯერ არ არის მიერთებული";
+    if (!supabase) return tt("მონაცემთა ბაზა ჯერ არ არის მიერთებული", "The database is not connected yet", "База данных ещё не подключена");
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     return error ? authMessage(error.message) : null;
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, nickname: string) => {
     const supabase = getSupabase();
-    if (!supabase) return { error: "მონაცემთა ბაზა ჯერ არ არის მიერთებული", needsConfirm: false };
+    if (!supabase) return { error: tt("მონაცემთა ბაზა ჯერ არ არის მიერთებული", "The database is not connected yet", "База данных ещё не подключена"), needsConfirm: false };
     const nameError = validateNickname(nickname);
     if (nameError) return { error: nameError, needsConfirm: false };
     const name = nickname.trim();
 
     // Fail early, in plain words, if the nickname is already taken.
     const { data: free } = await supabase.rpc("nickname_available", { n: name });
-    if (free === false) return { error: "ეს სახელი უკვე დაკავებულია", needsConfirm: false };
+    if (free === false) return { error: tt("ეს სახელი უკვე დაკავებულია", "This name is already taken", "Это имя уже занято"), needsConfirm: false };
 
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
@@ -129,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateProfile = useCallback(
     async ({ photo, ...patch }: ProfilePatch) => {
       const supabase = getSupabase();
-      if (!supabase || !userId) return "ჯერ შედით ანგარიშში";
+      if (!supabase || !userId) return tt("ჯერ შედით ანგარიშში", "Sign in first", "Сначала войдите");
       const changes: Partial<Profile> = { ...patch };
       if (patch.nickname !== undefined) {
         const nameError = validateNickname(patch.nickname);
@@ -143,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error } = await supabase.storage
           .from("avatars")
           .upload(path, photo, { upsert: true, contentType: photo.type || "image/webp" });
-        if (error) return `სურათი ვერ აიტვირთა: ${error.message}`;
+        if (error) return `${tt("სურათი ვერ აიტვირთა", "Could not upload the picture", "Не удалось загрузить картинку")}: ${error.message}`;
         const { data } = supabase.storage.from("avatars").getPublicUrl(path);
         changes.avatar_url = `${data.publicUrl}?v=${Date.now()}`;
       } else if (photo === null) {

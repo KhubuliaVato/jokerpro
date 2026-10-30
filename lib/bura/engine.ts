@@ -1,3 +1,4 @@
+import { localizedList } from "../lang";
 import { shuffle, SUITS, type NormalCard, type Rank, type Rng, type Suit } from "../joker/cards";
 
 /**
@@ -71,7 +72,13 @@ export type Phase = "play" | "call" | "var" | "trickEnd" | "roundEnd" | "gameEnd
 export const VAR_POINTS = 31;
 export const MAX_PRICE = 6;
 /** Calls by the price they raise the round to: 2 to 6. */
-export const CALL_NAMES = ["დავი", "სე", "ჩარი", "ფანჯი", "შაში"];
+export const CALL_NAMES = localizedList([
+  ["დავი", "Davi", "Дави"],
+  ["სე", "Se", "Се"],
+  ["ჩარი", "Chari", "Чари"],
+  ["ფანჯი", "Panji", "Пандж"],
+  ["შაში", "Shashi", "Шаши"],
+]);
 export const callName = (level: number) => CALL_NAMES[level - 2] ?? "";
 
 /** A call waiting for an answer: who made it and what the round would be worth. */

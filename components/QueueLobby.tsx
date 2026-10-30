@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { playMatchFound } from "@/lib/matchSound";
 import { READY_SECONDS } from "@/lib/online/client";
@@ -54,6 +55,7 @@ export function QueueLobby({
   onAccept: () => void;
   onLeave: () => void;
 }) {
+  const t = useT();
   const seated = players.filter(Boolean).length;
   const checking = readyLeft !== null;
   const mine = players[0];
@@ -99,10 +101,10 @@ export function QueueLobby({
 
       <section className="flex flex-col gap-2" style={rise(1)}>
         <p className="text-sm font-bold uppercase tracking-wider text-white/45">
-          {kind === "ranked" ? "წოდებისთვის ბრძოლა" : "მეგობრული მატჩი"} · {game === "bura" ? ((rules as BuraRules).players === 4 ? "4 მოთამაშე · 2×2" : "2 მოთამაშე") : FORMAT_LABEL[(rules as Rules).format]}
+          {kind === "ranked" ? t("წოდებისთვის ბრძოლა", "Ranked", "Рейтинговая игра") : t("მეგობრული მატჩი", "Friendly match", "Дружеский матч")} · {game === "bura" ? ((rules as BuraRules).players === 4 ? t("4 მოთამაშე · 2×2", "4 players · 2×2", "4 игрока · 2×2") : t("2 მოთამაშე", "2 players", "2 игрока")) : FORMAT_LABEL[(rules as Rules).format]}
         </p>
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
-          {checking ? "მატჩი ნაპოვნია!" : full ? "მაგიდა იღება…" : "ვეძებთ მოთამაშეებს"}
+          {checking ? t("მატჩი ნაპოვნია!", "Match found!", "Матч найден!") : full ? t("მაგიდა იღება…", "The table is opening…", "Стол открывается…") : t("ვეძებთ მოთამაშეებს", "Looking for players", "Ищем игроков")}
         </h1>
       </section>
 
@@ -133,12 +135,12 @@ export function QueueLobby({
             {checking ? (
               <div className="text-center">
                 <b className="block text-6xl font-black tabular-nums text-amber-200 sm:text-7xl">{readyLeft}</b>
-                <span className="text-sm text-white/55">წამი</span>
+                <span className="text-sm text-white/55">{t("წამი", "seconds", "сек.")}</span>
               </div>
             ) : (
               <div className="text-center">
                 <b className="block text-5xl font-black tabular-nums text-amber-200 sm:text-6xl">{full ? `${players.length}/${players.length}` : clock}</b>
-                <span className="text-sm text-white/55">{full ? "იწყება" : `${seated}/${players.length} · ძებნა`}</span>
+                <span className="text-sm text-white/55">{full ? t("იწყება", "Starting", "Начинается") : `${seated}/${players.length} · ${t("ძებნა", "searching", "поиск")}`}</span>
               </div>
             )}
           </div>
@@ -170,12 +172,12 @@ export function QueueLobby({
                     </div>
                     {checking && (
                       <span className={`text-sm font-bold ${p.accepted ? "text-emerald-300" : "text-white/40"}`}>
-                        {p.accepted ? "✓ მზადაა" : "ელოდება…"}
+                        {p.accepted ? t("✓ მზადაა", "✓ Ready", "✓ Готов") : t("ელოდება…", "Waiting…", "Ожидает…")}
                       </span>
                     )}
                     <span className="max-w-full truncate text-center text-base font-bold">
                       {p.profile?.nickname ?? "…"}
-                      {k === 0 && <span className="ml-1 text-xs font-semibold text-amber-300">თქვენ</span>}
+                      {k === 0 && <span className="ml-1 text-xs font-semibold text-amber-300">{t("თქვენ", "You", "Вы")}</span>}
                     </span>
                   </>
                 ) : (
@@ -183,7 +185,7 @@ export function QueueLobby({
                     <div className="grid size-24 animate-pulse place-items-center rounded-full border-2 border-dashed border-white/20 text-3xl text-white/25">
                       ?
                     </div>
-                    <span className="text-sm text-white/35">ელოდება</span>
+                    <span className="text-sm text-white/35">{t("ელოდება", "Waiting", "Ожидает")}</span>
                   </>
                 )}
               </div>
@@ -195,11 +197,11 @@ export function QueueLobby({
       <div className="flex flex-col items-center gap-4 pb-8" style={rise(3)}>
         {checking && (
           <button className={`${BTN_PRIMARY} min-w-60 text-xl`} onClick={onAccept} disabled={!!mine?.accepted}>
-            {mine?.accepted ? "ველოდებით დანარჩენებს…" : "დადასტურება"}
+            {mine?.accepted ? t("ველოდებით დანარჩენებს…", "Waiting for the others…", "Ждём остальных…") : t("დადასტურება", "Confirm", "Подтвердить")}
           </button>
         )}
         <button className={BTN_GHOST} onClick={onLeave}>
-          გაუქმება
+          {t("გაუქმება", "Cancel", "Отмена")}
         </button>
       </div>
     </PageShell>

@@ -1,3 +1,4 @@
+import { localizedList } from "../lang";
 import type { NormalCard } from "../joker/cards";
 
 /** From the weakest hand to the strongest (five of a kind needs wild cards, which are not played here). */
@@ -13,17 +14,17 @@ export const CATEGORY = {
   straightFlush: 8,
 } as const;
 
-export const CATEGORY_NAME = [
-  "უმაღლესი კარტი",
-  "წყვილი",
-  "ორი წყვილი",
-  "სამეული",
-  "სტრეიტი",
-  "ფლეში",
-  "ფულ-ჰაუსი",
-  "კარე",
-  "სტრეიტ-ფლეში",
-] as const;
+export const CATEGORY_NAME = localizedList([
+  ["უმაღლესი კარტი", "High card", "Старшая карта"],
+  ["წყვილი", "Pair", "Пара"],
+  ["ორი წყვილი", "Two pair", "Две пары"],
+  ["სამეული", "Three of a kind", "Сет"],
+  ["სტრეიტი", "Straight", "Стрит"],
+  ["ფლეში", "Flush", "Флеш"],
+  ["ფულ-ჰაუსი", "Full house", "Фулл-хаус"],
+  ["კარე", "Four of a kind", "Каре"],
+  ["სტრეიტ-ფლეში", "Straight flush", "Стрит-флеш"],
+]);
 
 export interface HandValue {
   category: number;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n";
 import { rankFor } from "@/lib/ranks";
 import { getSupabase } from "@/lib/supabase";
 import { RankEmblem } from "./RankEmblem";
@@ -15,6 +16,7 @@ interface Outcome {
  * The server writes the result a moment after the last move, so this asks a few times.
  */
 export function RatingResult({ tableId, userId }: { tableId: string; userId: string }) {
+  const t = useT();
   const [outcome, setOutcome] = useState<Outcome | null>(null);
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export function RatingResult({ tableId, userId }: { tableId: string; userId: str
     };
   }, [tableId, userId]);
 
-  if (!outcome) return <span className="text-white/50">ქულა ითვლება…</span>;
+  if (!outcome) return <span className="text-white/50">{t("ქულა ითვლება…", "Calculating points…", "Считаем очки…")}</span>;
 
   const delta = outcome.after - outcome.before;
   const was = rankFor(outcome.before).rank;
@@ -64,13 +66,13 @@ export function RatingResult({ tableId, userId }: { tableId: string; userId: str
             {delta > 0 ? `+${delta}` : delta}
           </b>
           <span className="text-sm text-white/60">
-            {outcome.after} ქულა · {now.rank.name}
+            {outcome.after} {t("ქულა", "points", "очков")} · {now.rank.name}
           </span>
         </div>
       </div>
       {moved && (
         <b className={up ? "text-amber-300" : "text-red-300"}>
-          {up ? `ახალი წოდება: ${now.rank.name} ★` : `წოდება დაგეკარგათ: ახლა ${now.rank.name}`}
+          {up ? t(`ახალი წოდება: ${now.rank.name} ★`, `New rank: ${now.rank.name} ★`, `Новый ранг: ${now.rank.name} ★`) : t(`წოდება დაგეკარგათ: ახლა ${now.rank.name}`, `Rank lost: now ${now.rank.name}`, `Ранг потерян: теперь ${now.rank.name}`)}
         </b>
       )}
     </div>

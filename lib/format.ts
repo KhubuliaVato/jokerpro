@@ -1,4 +1,6 @@
-const MONTHS = [
+import { tt } from "./lang";
+
+const MONTHS_KA = [
   "იანვარი",
   "თებერვალი",
   "მარტი",
@@ -13,9 +15,12 @@ const MONTHS = [
   "დეკემბერი",
 ];
 
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS_RU = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа", "сентября", "октября", "ноября", "декабря"];
+
 /** "26 ოქტომბერი, 2026": done by hand because many browsers lack the Georgian locale. */
 export function formatDate(d: Date): string {
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${d.getFullYear()}`;
+  return `${d.getDate()} ${tt(MONTHS_KA[d.getMonth()], MONTHS_EN[d.getMonth()], MONTHS_RU[d.getMonth()])}, ${d.getFullYear()}`;
 }
 
 /** "22:29" */

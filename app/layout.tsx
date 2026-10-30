@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Georgian } from "next/font/google";
 import { PageFade } from "@/components/PageFade";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
+import { LangProvider } from "@/lib/i18n";
 import "./globals.css";
 
 const notoGeorgian = Noto_Sans_Georgian({
@@ -24,9 +25,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="ka" className={notoGeorgian.variable}>
       <body>
-        <AuthProvider>
-          <PageFade>{children}</PageFade>
-        </AuthProvider>
+        <LangProvider>
+          <AuthProvider>
+            <PageFade>{children}</PageFade>
+          </AuthProvider>
+        </LangProvider>
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/lib/i18n";
 import { useState } from "react";
 import { botById, DEFAULT_BOTS } from "@/lib/joker/botProfiles";
 import type { BuraPlayers } from "@/lib/bura/engine";
@@ -13,6 +14,7 @@ import { BTN_PRIMARY, rise } from "./ui";
 /** A game of Bura against bots: nothing is rated and nothing is recorded anywhere. */
 export function BuraApp() {
   const { game, bots, secondsLeft, kicked, start, quit, next, play, doAct } = useBuraGame();
+  const t = useT();
   const [players, setPlayers] = useState<BuraPlayers>(2);
   // (fixed to begin with: a random pick would differ between the server's page and the browser's)
   const [picked, setPicked] = useState<Record<BuraPlayers, string[]>>({ 2: ["levani"], 4: DEFAULT_BOTS });
@@ -25,14 +27,14 @@ export function BuraApp() {
         <BuraTable
           game={game}
           secondsLeft={secondsLeft}
-          names={["თქვენ", ...bots.map((b) => b.name)]}
+          names={[t("თქვენ", "You", "Вы"), ...bots.map((b) => b.name)]}
           avatars={[null, ...bots.map((b) => ({ color: b.color, icon: b.icon }))]}
           onPlay={play}
           onAct={doAct}
           onNext={next}
           autoNext
           onQuit={quit}
-          endNote={<span className="text-white/60">თამაში ბოტებთან არ იწერება ისტორიაში</span>}
+          endNote={<span className="text-white/60">{t("თამაში ბოტებთან არ იწერება ისტორიაში", "Games vs bots are not recorded in the history", "Игры с ботами не записываются в историю")}</span>}
         />
       </>
     );
@@ -41,14 +43,14 @@ export function BuraApp() {
   return (
     <PageShell width="max-w-3xl">
       <section className="flex flex-col gap-2" style={rise(1)}>
-        <p className="text-sm font-bold uppercase tracking-wider text-white/45">ბურა</p>
-        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">ბოტებთან</h1>
-        <p className="text-lg text-white/55 sm:text-xl">სავარჯიშო თამაში: ქულა და ისტორია არ იწერება</p>
+        <p className="text-sm font-bold uppercase tracking-wider text-white/45">{t("ბურა", "Bura", "Бура")}</p>
+        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">{t("ბოტებთან", "Vs bots", "С ботами")}</h1>
+        <p className="text-lg text-white/55 sm:text-xl">{t("სავარჯიშო თამაში: ქულა და ისტორია არ იწერება", "Practice game: points and history are not recorded", "Тренировочная игра: очки и история не записываются")}</p>
       </section>
 
       {kicked && (
         <p role="alert" className="rounded-2xl border border-red-400/40 bg-red-500/10 px-5 py-4 text-red-200" style={rise(1)}>
-          ზედიზედ ორჯერ გამოტოვეთ სვლა და თამაშიდან გაგაგდეთ.
+          {t("ზედიზედ ორჯერ გამოტოვეთ სვლა და თამაშიდან გაგაგდეთ.", "You missed your turn twice in a row and were removed from the game.", "Вы дважды подряд пропустили ход и были исключены из игры.")}
         </p>
       )}
 
@@ -65,7 +67,7 @@ export function BuraApp() {
               }`}
             >
               <b className="block text-3xl">{n}</b>
-              <span className="text-white/55">{n === 2 ? "მოთამაშე" : "მოთამაშე · 2×2"}</span>
+              <span className="text-white/55">{n === 2 ? t("მოთამაშე", "player", "игрок") : t("მოთამაშე · 2×2", "players · 2×2", "игрока · 2×2")}</span>
             </button>
           ))}
         </div>
@@ -82,7 +84,7 @@ export function BuraApp() {
           disabled={opponents.length !== players - 1}
           onClick={() => start(players, opponents.map(botById))}
         >
-          {opponents.length === players - 1 ? "თამაშის დაწყება →" : `აირჩიეთ ${players - 1} ოპონენტი`}
+          {opponents.length === players - 1 ? t("თამაშის დაწყება →", "Start the game →", "Начать игру →") : t(`აირჩიეთ ${players - 1} ოპონენტი`, `Choose ${players - 1} opponent${players - 1 > 1 ? "s" : ""}`, `Выберите соперников: ${players - 1}`)}
         </button>
       </div>
     </PageShell>
