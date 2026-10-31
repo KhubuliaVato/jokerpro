@@ -74,7 +74,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
   const winnerSpot = game.phase === "trickEnd" ? spot(game, game.trick[game.best].player) : null;
 
   return (
-    <main className="relative flex h-dvh flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_40%,#1b6b46,#0a2a1b_78%)] text-white select-none">
+    <main className="relative flex h-dvh flex-col overflow-hidden bg-[radial-gradient(ellipse_at_50%_40%,var(--play-a),var(--play-b)_78%)] text-white select-none">
       <style>{`@keyframes bura-in{from{opacity:0;transform:translate(var(--fx,0),var(--fy,0)) scale(.8)}to{opacity:1;transform:none}}@keyframes bura-take{to{transform:translate(var(--tx,0),var(--ty,0)) scale(.55);opacity:0}}`}</style>
       {/* score */}
       <header className="relative z-20 flex items-center justify-between gap-2 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3">

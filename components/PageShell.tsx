@@ -10,7 +10,7 @@ export function PageShell({
   width?: string;
 }) {
   return (
-    <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(ellipse_at_50%_-10%,#17623f,#0a2418_70%)]">
+    <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(ellipse_at_50%_-10%,var(--bg-a),var(--bg-b)_70%)]">
       <style>{RISE_CSS}</style>
       <div className={`relative mx-auto flex min-h-dvh w-full flex-col gap-10 px-5 py-6 sm:gap-14 sm:px-8 sm:py-8 ${width}`}>
         <div className="relative z-30" style={rise(0)}>

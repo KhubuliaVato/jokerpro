@@ -108,7 +108,7 @@ export function NardiApp() {
     const passed = game.passed === null ? null : game.passed === HUMAN ? you : bot.name;
 
     return (
-      <main className="relative flex h-dvh flex-col gap-2 overflow-hidden bg-[radial-gradient(ellipse_at_50%_40%,#1b6b46,#0a2a1b_78%)] px-3 py-3 text-white select-none sm:gap-3 sm:px-6">
+      <main className="relative flex h-dvh flex-col gap-2 overflow-hidden bg-[radial-gradient(ellipse_at_50%_40%,var(--play-a),var(--play-b)_78%)] px-3 py-3 text-white select-none sm:gap-3 sm:px-6">
         <div className="mx-auto flex w-full max-w-[44rem] items-center justify-between gap-3">
           <button
             type="button"

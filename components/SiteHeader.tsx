@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useT } from "@/lib/i18n";
 import { Avatar } from "./Avatar";
 import { LanguageSwitcher } from "./LanguageSwitcher";
+import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Logo } from "./Logo";
 
 const NAV = [
@@ -34,6 +35,7 @@ export function SiteHeader() {
       </div>
 
       <div className="flex items-center gap-2 min-[380px]:gap-3">
+        <ThemeSwitcher />
         <LanguageSwitcher />
         {loading ? (
           <span className="h-12 w-40 animate-pulse rounded-full bg-white/10" />

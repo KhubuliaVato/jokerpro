@@ -1,12 +1,31 @@
 @import "tailwindcss";
 
 :root {
+  /* site background: the page gradient, the table gradient, the felt and the panels (see the themes below) */
+  --bg-a: #17623f;
+  --bg-b: #0a2418;
+  --play-a: #1b6b46;
+  --play-b: #0a2a1b;
+  --panel: rgb(8 28 18 / 0.92);
   --felt-1: #1f7a4d;
   --felt-2: #0d4128;
   --ink: #f4efe2;
   --gold: #e8c46a;
   --hand-cw: clamp(3.3rem, min(15vw, 12.5dvh), 6.6rem);
   --opp-cw: clamp(2.5rem, min(9vw, 8dvh), 4rem);
+}
+
+:root[data-theme="blue"] {
+  --bg-a: #1e4a7a; --bg-b: #0a1a30; --play-a: #24548a; --play-b: #0b1c33; --panel: rgb(8 20 38 / 0.92); --felt-1: #25588f; --felt-2: #0e2a4d;
+}
+:root[data-theme="purple"] {
+  --bg-a: #4b2a7a; --bg-b: #1a0d30; --play-a: #5a3392; --play-b: #1d0f36; --panel: rgb(22 10 40 / 0.92); --felt-1: #5a3392; --felt-2: #2a1650;
+}
+:root[data-theme="wine"] {
+  --bg-a: #7a1f33; --bg-b: #2a0a12; --play-a: #8a2540; --play-b: #2d0b15; --panel: rgb(36 8 16 / 0.92); --felt-1: #8a2540; --felt-2: #3a0f1b;
+}
+:root[data-theme="graphite"] {
+  --bg-a: #3a3f47; --bg-b: #121418; --play-a: #454b55; --play-b: #14161a; --panel: rgb(16 18 22 / 0.92); --felt-1: #454b55; --felt-2: #1d2026;
 }
 
 /* A phone held sideways, or any window that is wide but not tall: the table switches to its compact layout. */
@@ -47,7 +66,7 @@ body {
 }
 
 body {
-  background: #0a2418;
+  background: var(--bg-b);
   color: var(--ink);
   font-family: var(--font-noto-georgian), "Sylfaen", system-ui, sans-serif;
   -webkit-tap-highlight-color: transparent;
@@ -281,7 +300,7 @@ body {
 }
 
 .panel {
-  background: rgb(8 28 18 / 0.92);
+  background: var(--panel);
   border: 1px solid rgb(255 255 255 / 0.15);
   border-radius: 1rem;
   backdrop-filter: blur(6px);
