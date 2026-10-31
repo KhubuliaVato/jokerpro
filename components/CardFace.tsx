@@ -60,11 +60,11 @@ export function CardFace({ card }: { card: NormalCard }) {
       {card.rank === 14 && <Glyph suit={card.suit} x={50} y={70} size={52} />}
       {court && (
         <g>
-          <Glyph suit={card.suit} x={50} y={38} size={22} />
-          <text x="50" y="94" textAnchor="middle" fontSize="62" fontWeight="700" fontFamily={SERIF} fill={ink}>
+          <Glyph suit={card.suit} x={50} y={31} size={20} />
+          <text x="50" y="88" textAnchor="middle" fontSize="54" fontWeight="700" fontFamily={SERIF} fill={ink}>
             {label}
           </text>
-          <Glyph suit={card.suit} x={50} y={110} size={22} flip />
+          <Glyph suit={card.suit} x={50} y={117} size={20} flip />
         </g>
       )}
       {PIPS[card.rank]?.map(([x, y], i) => (
