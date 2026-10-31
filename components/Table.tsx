@@ -960,13 +960,13 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
                 </p>
               ) : (
                 <>
-                  <p className="mb-1.5 text-center text-[0.65rem] font-semibold uppercase tracking-wide text-white/45">
+                  <p className="mb-1 text-center text-[0.62rem] font-semibold uppercase tracking-wide text-white/45">
                     {tt("ნათქვამი", "Bid", "Заказ")} <span className="text-white/25">/</span> {tt("წაღებული", "Won", "Взято")} · {tt("ქულა", "Points", "Очки")}
                   </p>
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col gap-0.5">
                     {entries.map((e) =>
                       e.kind === "premium" ? (
-                        <div key={`pr${e.pulka}`} className={`${COLS} relative gap-1 rounded-xl bg-amber-300/10 py-1.5 text-center text-sm font-extrabold text-amber-300 ring-1 ring-amber-300/30`}>
+                        <div key={`pr${e.pulka}`} className={`${COLS} relative gap-1 rounded-xl bg-amber-300/10 py-0.5 text-center text-sm font-extrabold text-amber-300 ring-1 ring-amber-300/30`}>
                           <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[0.6rem]">★</span>
                           {game.premiums[e.pulka].map((v, p) => (
                             <span key={p} className="tabular-nums">
@@ -989,19 +989,19 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
                             return (
                               <span
                                 key={p}
-                                className={`flex flex-col items-center rounded-xl py-1 leading-tight ring-1 ${
+                                className={`flex items-baseline justify-center gap-1 whitespace-nowrap rounded-lg py-0.5 leading-tight ring-1 ${
                                   hit ? "bg-emerald-400/12 ring-emerald-400/30" : "bg-red-400/10 ring-red-400/25"
                                 }`}
                               >
-                                <span className="flex items-baseline gap-1 tabular-nums">
-                                  <b className="text-base font-extrabold">{bid === 0 ? "—" : bid}</b>
+                                <span className="flex items-baseline gap-0.5 tabular-nums">
+                                  <b className="text-sm font-extrabold">{bid === 0 ? "—" : bid}</b>
                                   <span className="text-xs text-white/30">/</span>
                                   {bid > 0 && taken === 0 ? (
-                                    <b title={tt("ხიშტი", "Khishti", "Хишти")} className="text-base font-extrabold text-red-300">
+                                    <b title={tt("ხიშტი", "Khishti", "Хишти")} className="text-sm font-extrabold text-red-300">
                                       ✕
                                     </b>
                                   ) : (
-                                    <b className={`text-base font-extrabold ${hit ? GOOD : BAD}`}>{taken}</b>
+                                    <b className={`text-sm font-extrabold ${hit ? GOOD : BAD}`}>{taken}</b>
                                   )}
                                 </span>
                                 <span className={`text-[0.65rem] font-bold tabular-nums ${pts > 0 ? "text-emerald-300/80" : pts < 0 ? "text-red-300/80" : "text-white/40"}`}>
