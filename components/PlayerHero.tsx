@@ -29,7 +29,7 @@ export function PlayerHero({
           <Avatar size="xl" color={player?.avatar_color} icon={player?.avatar_icon} url={player?.avatar_url} />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="truncate text-4xl font-extrabold tracking-tight sm:text-6xl">{player?.nickname ?? "…"}</h1>
+          <h1 className="truncate pb-1.5 text-4xl font-extrabold leading-[1.2] tracking-tight sm:text-6xl">{player?.nickname ?? "…"}</h1>
           <p className="mt-1 truncate text-base text-white/50">
             {subtitle}
             {subtitle && player && " · "}
