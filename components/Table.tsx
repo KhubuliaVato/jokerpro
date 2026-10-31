@@ -625,7 +625,7 @@ export function Table({
             </span>
           </button>
         </div>
-        <div className="panel order-3 col-span-2 min-w-0 px-2 pb-2 pt-1.5 sm:order-none sm:col-span-1 tight:col-span-1 sm:w-full sm:max-w-[21rem] tight:order-2 tight:!w-36 tight:flex-none tight:px-3 tight:py-1 tight:max-[680px]:hidden">
+        <div className="panel order-3 col-span-2 min-w-0 px-2 pb-1.5 pt-1 sm:order-none sm:col-span-1 tight:col-span-1 sm:w-full sm:max-w-[21rem] tight:order-2 tight:!w-36 tight:flex-none tight:px-3 tight:py-1 tight:max-[680px]:hidden">
           <div className="grid grid-cols-4 gap-1 text-center sm:grid-cols-3 tight:grid-cols-3">
             {(
               [
@@ -644,13 +644,13 @@ export function Table({
             ).map(([label, value, total]) => (
               <div
                 key={label}
-                className="flex flex-col items-center rounded-lg bg-white/[0.06] py-1 leading-tight"
+                className="flex flex-col items-center rounded-lg bg-white/[0.06] py-0.5 leading-tight sm:flex-row sm:justify-center sm:gap-1.5 sm:py-0.5"
               >
                 <span className="text-[0.58rem] font-semibold uppercase tracking-wide text-white/50">
                   {label}
                 </span>
                 <span className="tabular-nums">
-                  <b className="text-base font-extrabold sm:text-lg">{value}</b>
+                  <b className="text-base font-extrabold">{value}</b>
                   {total && (
                     <span className="text-xs text-white/45">/{total}</span>
                   )}
@@ -677,7 +677,7 @@ export function Table({
             </div>
           </div>
           {/* one segment per round, filled as its hands are played */}
-          <div className="mt-1.5 flex gap-1 tight:hidden">
+          <div className="mt-1 flex gap-1 tight:hidden">
             {pulkas.map((pl, i) => {
               const before = pulkas
                 .slice(0, i)
@@ -689,7 +689,7 @@ export function Table({
               return (
                 <div
                   key={i}
-                  className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"
+                  className="h-1 flex-1 overflow-hidden rounded-full bg-white/10"
                 >
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-amber-300 to-amber-400 transition-[width] duration-500"
