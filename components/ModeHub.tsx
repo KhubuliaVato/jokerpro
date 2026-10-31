@@ -78,7 +78,7 @@ export function ModeHub({ game }: { game: "joker" | "bura" }) {
   return (
     <PageShell width="max-w-5xl">
       <section className="flex flex-col gap-2" style={rise(1)}>
-        <p className="text-sm font-bold uppercase tracking-wider text-white/45">{NAME[game]}</p>
+        <p className="text-sm font-bold uppercase tracking-wider text-white/45">{tr(NAME[game][0], NAME[game][1], NAME[game][2])}</p>
         <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">{tr("აირჩიეთ რეჟიმი", "Choose a mode", "Выберите режим")}</h1>
       </section>
 
