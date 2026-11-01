@@ -10,7 +10,6 @@ import { loadPlayer, type PlayerSummary } from "@/lib/search";
 import type { GameResult } from "@/lib/stats";
 import { getSupabase } from "@/lib/supabase";
 import { PageShell } from "./PageShell";
-import { PlayerHero } from "./PlayerHero";
 import { StatsSection } from "./StatsSection";
 import { BTN_GHOST, rise } from "./ui";
 
@@ -61,8 +60,7 @@ export function PlayerPage() {
         </section>
       ) : (
         <>
-          <PlayerHero player={player} />
-          <StatsSection userId={player.id} results={results} loadError={error} name={player.nickname} />
+          <StatsSection userId={player.id} results={results} loadError={error} name={player.nickname} player={player} />
         </>
       )}
     </PageShell>

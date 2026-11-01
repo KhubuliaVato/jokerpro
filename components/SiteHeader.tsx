@@ -1,36 +1,72 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useT } from "@/lib/i18n";
 import { Avatar } from "./Avatar";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Logo } from "./Logo";
+import { HEADER_BTN } from "./ui";
+
+const ICON = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true, className: "size-5 flex-none" } as const;
 
 const NAV = [
-  { href: "/leaderboard", ka: "ლიდერბორდი", en: "Leaderboard", ru: "Рейтинг" },
-  { href: "/ranks", ka: "წოდებები", en: "Ranks", ru: "Ранги" },
+  {
+    href: "/leaderboard",
+    ka: "ლიდერბორდი",
+    en: "Leaderboard",
+    ru: "Рейтинг",
+    icon: (
+      <svg viewBox="0 0 24 24" {...ICON}>
+        <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
+        <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
+      </svg>
+    ),
+  },
+  {
+    href: "/ranks",
+    ka: "წოდებები",
+    en: "Ranks",
+    ru: "Ранги",
+    icon: (
+      <svg viewBox="0 0 24 24" {...ICON}>
+        <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" />
+        <path d="M9 11l3 2.5L15 11" />
+      </svg>
+    ),
+  },
 ];
 
 /** Top bar of the hub pages: the brand on the left, the language, and the player (or a sign-in link) on the right. */
 export function SiteHeader() {
   const { loading, user, profile, configured } = useAuth();
   const t = useT();
+  const path = usePathname();
   return (
     <header className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-8">
+      <div className="flex min-w-0 items-center gap-6">
         <Logo />
-        <nav className="hidden items-center gap-6 md:flex">
-          {NAV.map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="text-base font-bold text-white/55 transition-colors hover:text-amber-300"
-            >
-              {t(n.ka, n.en, n.ru)}
-            </Link>
-          ))}
+        <nav className="hidden items-center gap-2 md:flex">
+          {NAV.map((n) => {
+            const active = path === n.href || path.startsWith(`${n.href}/`);
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                aria-current={active ? "page" : undefined}
+                className={`group flex items-center gap-2 rounded-full border px-4 py-2.5 text-base font-bold transition-[color,background-color,border-color,translate,box-shadow] duration-200 hover:-translate-y-0.5 ${
+                  active
+                    ? "border-amber-300/60 bg-amber-300/15 text-amber-200 shadow-[0_8px_24px_-12px_rgb(252_211_77/0.6)]"
+                    : "border-white/10 bg-white/[0.04] text-white/65 hover:border-amber-300/40 hover:bg-white/[0.08] hover:text-amber-200"
+                }`}
+              >
+                <span className="transition-transform duration-200 group-hover:scale-110">{n.icon}</span>
+                {t(n.ka, n.en, n.ru)}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 
@@ -42,16 +78,18 @@ export function SiteHeader() {
         ) : user ? (
           <Link
             href="/profile"
-            className="flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] py-1.5 pl-1.5 pr-3 transition min-[380px]:pr-5-[border-color,background-color] duration-200 hover:border-white/30 hover:bg-white/[0.08]"
+            className={`group flex items-center gap-3 p-1.5 min-[430px]:py-1.5 min-[430px]:pl-1.5 min-[430px]:pr-5 ${HEADER_BTN}`}
           >
-            <Avatar size="sm" color={profile?.avatar_color} icon={profile?.avatar_icon} url={profile?.avatar_url} />
-            <span className="max-w-24 truncate text-base font-bold min-[380px]:max-w-32">{profile?.nickname ?? t("პროფილი", "Profile", "Профиль")}</span>
+            <span className="rounded-full ring-2 ring-amber-300/60 transition-shadow duration-200 group-hover:ring-amber-300">
+              <Avatar size="sm" color={profile?.avatar_color} icon={profile?.avatar_icon} url={profile?.avatar_url} />
+            </span>
+            <span className="hidden max-w-32 truncate text-base font-bold min-[430px]:inline">{profile?.nickname ?? t("პროფილი", "Profile", "Профиль")}</span>
           </Link>
         ) : (
           configured && (
             <Link
               href="/login"
-              className="rounded-full border border-white/20 px-4 py-2.5 text-base min-[380px]:px-6 font-bold transition-[border-color,background-color,color] duration-200 hover:border-amber-300 hover:text-amber-300"
+              className="rounded-full bg-amber-300 px-4 py-2.5 text-base font-extrabold text-black transition-[background-color,translate] duration-200 hover:-translate-y-0.5 hover:bg-amber-200 min-[380px]:px-6"
             >
               {t("შესვლა", "Sign in", "Войти")}
             </Link>

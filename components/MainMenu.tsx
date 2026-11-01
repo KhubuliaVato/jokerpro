@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Card } from "@/lib/joker/cards";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useT } from "@/lib/i18n";
+import { activeTable, openTableCounts, tablePath, type TableRow } from "@/lib/online/client";
 import { loadResults } from "@/lib/results";
-import { computeStats, type Stats } from "@/lib/stats";
+import { computeStats, type GameResult } from "@/lib/stats";
 import { getSupabase } from "@/lib/supabase";
-import { CardView } from "./CardView";
+import { rankFor } from "@/lib/ranks";
+import { loadRating, type RatingRow } from "@/lib/ratings";
+import { Avatar } from "./Avatar";
+import { GameCard } from "./GameCard";
+import { RankEmblem } from "./RankEmblem";
 import { SiteHeader } from "./SiteHeader";
 import { RISE_CSS, rise } from "./ui";
 
@@ -17,7 +22,9 @@ const JOKER: Card = { joker: true, id: "J0" };
 const KING: Card = { joker: false, suit: "H", rank: 13, id: "H13" };
 
 /** A royal flush fanned out on the poker card. */
-const POKER_FAN: Card[] = [10, 11, 12, 13, 14].map((rank) => ({ joker: false, suit: "H", rank: rank as 10, id: `H${rank}` }));
+const POKER_FAN: Card[] = [12, 13, 14].map((rank) => ({ joker: false, suit: "H", rank: rank as 10, id: `H${rank}` }));
+
+const JOKER_FAN: Card[] = [ACE, JOKER, KING];
 
 const BURA_FAN: Card[] = [
   { joker: false, suit: "H", rank: 14, id: "H14" },
@@ -25,7 +32,8 @@ const BURA_FAN: Card[] = [
   { joker: false, suit: "S", rank: 13, id: "S13" },
 ];
 
-const CARD_SIZE = { ["--cw" as string]: "clamp(5.5rem, 14vw, 7.5rem)" } as React.CSSProperties;
+/** The nardi engine and page stay in the code; the menu card is hidden until the game is launched. */
+const SHOW_NARDI = false;
 
 /** A tiny nardi board on the menu card: a row of points with a few checkers and two dice. */
 function NardiArt() {
@@ -58,21 +66,51 @@ function NardiArt() {
 export function MainMenu() {
   const { user, profile, configured } = useAuth();
   const t = useT();
-  const [loaded, setLoaded] = useState<{ userId: string; stats: Stats } | null>(null);
+  const [loaded, setLoaded] = useState<{ userId: string; results: GameResult[] } | null>(null);
+  const [running, setRunning] = useState<{ userId: string; table: TableRow | null } | null>(null);
+  const [ratings, setRatings] = useState<{ userId: string; rows: Partial<Record<"joker" | "bura", RatingRow | null>> } | null>(null);
+  const [waiting, setWaiting] = useState<Partial<Record<TableRow["game"], number>>>({});
 
   const userId = user?.id ?? null;
-  const stats = loaded && loaded.userId === userId ? loaded.stats : null;
+  const results = loaded && loaded.userId === userId ? loaded.results : null;
+  const stats = useMemo(() => (results ? computeStats(results) : null), [results]);
+  const gameStats = (game: string) => (results ? computeStats(results.filter((r) => r.game === game)) : null);
+  const myRatings = ratings && ratings.userId === userId ? ratings.rows : null;
+  const runningTable = running && running.userId === userId ? running.table : null;
+
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase || !userId) return;
     let cancelled = false;
     loadResults(supabase, userId).then(({ results }) => {
-      if (!cancelled) setLoaded({ userId, stats: computeStats(results) });
+      if (!cancelled) setLoaded({ userId, results });
+    });
+    // a game still running (the page was closed, say) and the lobbies that wait for someone
+    activeTable(supabase).then((table) => {
+      if (!cancelled) setRunning({ userId, table });
+    });
+    Promise.all([loadRating(supabase, userId, "joker"), loadRating(supabase, userId, "bura")]).then(([joker, bura]) => {
+      if (!cancelled) setRatings({ userId, rows: { joker, bura } });
+    });
+    openTableCounts(supabase).then((counts) => {
+      if (!cancelled) setWaiting(counts);
     });
     return () => {
       cancelled = true;
     };
   }, [userId]);
+
+  const online = configured; // online play needs the database
+  const loginFor = (path: string) => (user || !online ? path : `/login?next=${encodeURIComponent(path)}`);
+  const waitingText = (n: number) => t(`${n} მაგიდა ელოდება`, `${n} ${n === 1 ? "table" : "tables"} waiting`, `Ждут столов: ${n}`);
+  const line = (game: "joker" | "bura", fallback: string) => {
+    const g = gameStats(game);
+    return g && g.played > 0 ? `${g.played} ${t("თამაში", "games", "игр")} · ${g.wins} ${t("გამარჯვება", "wins", "побед")} · ${g.winRate}%` : fallback;
+  };
+  const resumeFor = (game: TableRow["game"]) =>
+    runningTable?.game === game ? { href: tablePath(runningTable), text: t("გააგრძელე თამაში", "Resume your game", "Вернуться в игру") } : undefined;
+  const botsText = t("ბოტებთან", "Vs bots", "С ботами");
+  const onlineText = t("ონლაინ", "Online", "Онлайн");
 
   return (
     <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(ellipse_at_50%_-10%,var(--bg-a),var(--bg-b)_70%)]">
@@ -83,121 +121,101 @@ export function MainMenu() {
           <SiteHeader />
         </div>
 
-        <section className="flex flex-col gap-3" style={rise(1)}>
-          <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
-            {user ? (
-              <>
-                {t("გამარჯობა", "Hello", "Привет")}, <span className="text-amber-300">{profile?.nickname ?? t("მოთამაშე", "Player", "Игрок")}</span>
-              </>
-            ) : (
-              t("თამაშები", "Games", "Игры")
+        <section className="flex items-center gap-4 sm:gap-6" style={rise(1)}>
+          {user && (
+            <Link href="/profile" aria-label={t("პროფილი", "Profile", "Профиль")} className="flex-none transition-transform duration-300 hover:scale-105 max-sm:[&>*]:size-16! max-sm:[&>*]:text-3xl!">
+              <Avatar size="lg" color={profile?.avatar_color} icon={profile?.avatar_icon} url={profile?.avatar_url} />
+            </Link>
+          )}
+          <div className="flex min-w-0 flex-col gap-3">
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
+              {user ? (
+                <>
+                  {t("გამარჯობა", "Hello", "Привет")}, <span className="text-amber-300">{profile?.nickname ?? t("მოთამაშე", "Player", "Игрок")}</span>
+                </>
+              ) : (
+                t("თამაშები", "Games", "Игры")
+              )}
+            </h1>
+            <p className="text-lg text-white/55 sm:text-xl">
+              {user && stats && stats.played > 0 ? (
+                <>
+                  {stats.played} {t("თამაში", "games", "игр")} · {stats.wins} {t("გამარჯვება", "wins", "побед")} · {stats.winRate}%
+                </>
+              ) : user ? (
+                t("აირჩიეთ თამაში და დაიწყეთ.", "Pick a game and get started.", "Выберите игру и начинайте.")
+              ) : (
+                t("აირჩიეთ თამაში.", "Pick a game.", "Выберите игру.")
+              )}
+            </p>
+            {user && (
+              <div className="flex min-h-9 flex-wrap gap-2">
+                {myRatings &&
+                  (["joker", "bura"] as const).map((g) => {
+                    const row = myRatings[g];
+                    if (!row) return null;
+                    const { rank } = rankFor(row.rating);
+                    return (
+                      <span key={g} className="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] py-1 pl-2 pr-3.5 text-sm font-bold text-white/80">
+                        <RankEmblem rank={rank} className="h-7 w-6" glow={false} compact />
+                        {g === "joker" ? t("ჯოკერი", "Joker", "Джокер") : t("ბურა", "Bura", "Бура")} · {rank.name} · {row.rating}
+                      </span>
+                    );
+                  })}
+              </div>
             )}
-          </h1>
-          <p className="text-lg text-white/55 sm:text-xl">
-            {user && stats && stats.played > 0 ? (
-              <>
-                {stats.played} {t("თამაში", "games", "игр")} · {stats.wins} {t("გამარჯვება", "wins", "побед")} · {stats.winRate}%
-              </>
-            ) : user ? (
-              t("აირჩიეთ თამაში და დაიწყეთ.", "Pick a game and get started.", "Выберите игру и начинайте.")
-            ) : (
-              t("აირჩიეთ თამაში.", "Pick a game.", "Выберите игру.")
-            )}
-          </p>
+          </div>
         </section>
 
-        <section className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-[repeat(2,minmax(0,1fr))] sm:gap-8" style={rise(2)}>
-          <Link href="/joker" className="group block outline-none">
-            <div className="flex min-h-[min(28rem,50dvh)] flex-col justify-between rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-white/30 group-hover:bg-white/[0.07] group-hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] group-focus-visible:border-amber-300 sm:p-9">
-              <div className="relative grid flex-1 place-items-center py-6">
-                <div className="relative h-44 w-full">
-                  <div className="absolute bottom-0 left-1/2 origin-bottom -translate-x-[calc(50%+3.6rem)] -rotate-[9deg] transition-[rotate,translate] duration-500 ease-out group-hover:-translate-x-[calc(50%+5.2rem)] group-hover:-rotate-[17deg]">
-                    <CardView card={ACE} style={CARD_SIZE} />
-                  </div>
-                  <div className="absolute bottom-0 left-1/2 z-10 -translate-x-1/2 transition-[translate] duration-500 ease-out group-hover:-translate-y-4">
-                    <CardView card={JOKER} style={CARD_SIZE} />
-                  </div>
-                  <div className="absolute bottom-0 left-1/2 origin-bottom -translate-x-[calc(50%-3.6rem)] rotate-[9deg] transition-[rotate,translate] duration-500 ease-out group-hover:-translate-x-[calc(50%-5.2rem)] group-hover:rotate-[17deg]">
-                    <CardView card={KING} style={CARD_SIZE} />
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-end justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">{t("ჯოკერი", "Joker", "Джокер")}</h2>
-                  <p className="mt-1.5 text-base text-white/55">{t("ონლაინ და ბოტებთან · 4 მოთამაშე", "Online and vs bots · 4 players", "Онлайн и с ботами · 4 игрока")}</p>
-                </div>
-                <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
-                  {t("თამაში", "Play", "Играть")}
-                  <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
-                </span>
-              </div>
-            </div>
-          </Link>
+        <section className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:grid-cols-[repeat(2,minmax(0,1fr))] sm:gap-8 lg:grid-cols-[repeat(3,minmax(0,1fr))] lg:gap-6" style={rise(2)}>
+          <GameCard
+            title={t("ბურა", "Bura", "Бура")}
+            href="/bura"
+            cards={BURA_FAN}
+            accent="#34d399"
+            badges={[t("2 ან 4 მოთამაშე", "2 or 4 players", "2 или 4 игрока")]}
+            line={line("bura", t("ონლაინ და ბოტებთან", "Online and vs bots", "Онлайн и с ботами"))}
+            waiting={waiting.bura}
+            waitingText={waitingText(waiting.bura ?? 0)}
+            resume={resumeFor("bura")}
+            botsHref="/bura/bots"
+            botsText={botsText}
+            online={online ? { href: "/bura", text: onlineText } : undefined}
+          />
 
-          <Link href="/bura" className="group block outline-none">
-            <div className="flex min-h-[min(28rem,50dvh)] flex-col justify-between rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-white/30 group-hover:bg-white/[0.07] group-hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] group-focus-visible:border-amber-300 sm:p-9">
-              <div className="relative grid flex-1 place-items-center py-6">
-                <div className="relative h-44 w-full">
-                  {BURA_FAN.map((card, i) => (
-                    <div
-                      key={card.id}
-                      className="absolute bottom-0 left-1/2 origin-bottom transition-[rotate,translate] duration-500 ease-out"
-                      style={{
-                        rotate: `calc(${i - 1} * var(--spread, 9deg))`,
-                        translate: `calc(-50% + ${i - 1} * var(--gap, 3.6rem)) 0`,
-                        zIndex: i,
-                      }}
-                    >
-                      <CardView card={card} style={CARD_SIZE} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-end justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">{t("ბურა", "Bura", "Бура")}</h2>
-                  <p className="mt-1.5 text-base text-white/55">{t("ონლაინ და ბოტებთან · 2 ან 4 მოთამაშე", "Online and vs bots · 2 or 4 players", "Онлайн и с ботами · 2 или 4 игрока")}</p>
-                </div>
-                <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
-                  {t("თამაში", "Play", "Играть")}
-                  <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
-                </span>
-              </div>
-            </div>
-          </Link>
+          <GameCard
+            title={t("ჯოკერი", "Joker", "Джокер")}
+            href="/joker"
+            cards={JOKER_FAN}
+            front={1}
+            accent="#fbbf24"
+            badges={[t("4 მოთამაშე", "4 players", "4 игрока")]}
+            line={line("joker", t("ონლაინ და ბოტებთან", "Online and vs bots", "Онлайн и с ботами"))}
+            waiting={waiting.joker}
+            waitingText={waitingText(waiting.joker ?? 0)}
+            resume={resumeFor("joker")}
+            botsHref="/joker/bots"
+            botsText={botsText}
+            online={online ? { href: "/joker", text: onlineText } : undefined}
+          />
 
-          <Link href="/poker" className="group block outline-none">
-            <div className="flex min-h-[min(18rem,40dvh)] flex-col justify-between gap-6 rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 transition-[translate,border-color,background-color,box-shadow] duration-300 ease-out group-hover:-translate-y-2 group-hover:border-white/30 group-hover:bg-white/[0.07] group-hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] group-focus-visible:border-amber-300 sm:p-9">
-              <div className="relative h-28 w-full sm:h-32">
-                {POKER_FAN.map((card, i) => (
-                  <div
-                    key={card.id}
-                    className="absolute bottom-0 left-1/2 origin-bottom transition-[rotate,translate] duration-500 ease-out"
-                    style={{
-                      rotate: `calc(${i - 2} * var(--spread, 7deg))`,
-                      translate: `calc(-50% + ${i - 2} * var(--gap, 2.6rem)) 0`,
-                      zIndex: i,
-                    }}
-                  >
-                    <CardView card={card} style={{ "--cw": "4.2rem" } as React.CSSProperties} />
-                  </div>
-                ))}
-              </div>
-              <div className="flex min-w-0 flex-1 items-end justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">{t("პოკერი", "Poker", "Покер")}</h2>
-                  <p className="mt-1.5 text-base text-white/55">{t("Texas Hold'em ბოტებთან · სათამაშო ჩიპებით", "Texas Hold'em vs bots · play chips", "Texas Hold'em с ботами · игровые фишки")}</p>
-                </div>
-                <span className="flex items-center gap-2 whitespace-nowrap text-lg font-bold text-amber-300">
-                  {t("თამაში", "Play", "Играть")}
-                  <span className="transition-transform duration-300 group-hover:translate-x-1.5">→</span>
-                </span>
-              </div>
-            </div>
-          </Link>
+          <GameCard
+            title={t("პოკერი", "Poker", "Покер")}
+            href="/poker"
+            cards={POKER_FAN}
+            accent="#60a5fa"
+            badges={[t("2-6 მოთამაშე", "2-6 players", "2-6 игроков"), t("სათამაშო ჩიპები", "Play chips", "Игровые фишки")]}
+            line={t("Texas Hold'em, ფული არ გამოიყენება", "Texas Hold'em, no real money", "Texas Hold'em, без денег")}
+            waiting={waiting.poker}
+            waitingText={waitingText(waiting.poker ?? 0)}
+            resume={resumeFor("poker")}
+            botsHref="/poker/bots"
+            botsText={botsText}
+            online={online ? { href: loginFor("/poker/private"), text: onlineText } : undefined}
+          />
 
-          {/* not open yet: dimmed and not a link */}
+          {/* not open yet: dimmed and not a link; hidden from the menu until SHOW_NARDI is turned on */}
+          {SHOW_NARDI && (
           <div aria-disabled className="block cursor-not-allowed select-none opacity-45 saturate-50">
             <div className="flex min-h-[min(18rem,40dvh)] flex-col justify-between gap-6 rounded-[2rem] border border-white/10 bg-white/[0.04] p-7 sm:p-9">
               <div className="relative grid h-28 w-full place-items-center sm:h-32">
@@ -214,6 +232,7 @@ export function MainMenu() {
               </div>
             </div>
           </div>
+          )}
         </section>
 
         {!configured && (

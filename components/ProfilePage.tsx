@@ -12,10 +12,9 @@ import type { GameResult } from "@/lib/stats";
 import { getSupabase } from "@/lib/supabase";
 import { AVATAR_COLORS, AVATAR_ICONS, Avatar } from "./Avatar";
 import { PageShell } from "./PageShell";
-import { PlayerHero } from "./PlayerHero";
 import { PlayerSearch } from "./PlayerSearch";
 import { StatsSection } from "./StatsSection";
-import { BTN_GHOST, BTN_PRIMARY, INPUT, rise } from "./ui";
+import { BTN_GHOST, BTN_PRIMARY, HEADER_BTN, HEADER_MENU, INPUT, rise } from "./ui";
 
 export function ProfilePage() {
   const router = useRouter();
@@ -24,6 +23,7 @@ export function ProfilePage() {
   const [results, setResults] = useState<GameResult[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [searching, setSearching] = useState(false);
 
   const userId = user?.id ?? null;
   useEffect(() => {
@@ -57,31 +57,119 @@ export function ProfilePage() {
         />
       ) : (
         <>
-          <div style={rise(1)}>
-            <PlayerSearch />
-          </div>
+          {searching && (
+            <div style={rise(0)}>
+              <PlayerSearch />
+            </div>
+          )}
 
-          <PlayerHero player={profile} subtitle={user.email}>
-            <button className={BTN_GHOST} onClick={() => setEditing((v) => !v)}>
-              {editing ? t("დახურვა", "Close", "Закрыть") : t("რედაქტირება", "Edit", "Изменить")}
-            </button>
-            <button
-              className={BTN_GHOST}
-              onClick={async () => {
-                await signOut();
-                router.replace("/");
-              }}
-            >
-              {t("გასვლა", "Sign out", "Выйти")}
-            </button>
-          </PlayerHero>
+          <StatsSection
+            userId={user.id}
+            results={results}
+            loadError={loadError}
+            owner
+            player={profile}
+            subtitle={user.email}
+            actions={
+              <ProfileMenu
+                onEdit={() => setEditing(true)}
+                onSearch={() => setSearching((v) => !v)}
+                onSignOut={async () => {
+                  await signOut();
+                  router.replace("/");
+                }}
+              />
+            }
+          />
 
-          {editing && profile && <EditProfile onDone={() => setEditing(false)} />}
-
-          <StatsSection userId={user.id} results={results} loadError={loadError} owner />
+          {editing && profile && (
+            <Modal onClose={() => setEditing(false)}>
+              <EditProfile onDone={() => setEditing(false)} />
+            </Modal>
+          )}
         </>
       )}
     </PageShell>
+  );
+}
+
+/** The gear on the hero card: edit the profile, search for a player, sign out. */
+function ProfileMenu({ onEdit, onSearch, onSignOut }: { onEdit: () => void; onSearch: () => void; onSignOut: () => void }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [open]);
+
+  const item = "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold transition-colors hover:bg-white/10";
+  const icon = { viewBox: "0 0 24 24", className: "size-5 flex-none", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true } as const;
+  return (
+    <div ref={box} className="relative">
+      <button
+        type="button"
+        aria-label={t("პარამეტრები", "Settings", "Настройки")}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={`grid size-11 place-items-center text-white/75 ${HEADER_BTN}`}
+      >
+        <svg {...icon}>
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+        </svg>
+      </button>
+      {open && (
+        <div className={`${HEADER_MENU} left-0 right-auto w-60`}>
+          <button type="button" className={item} onClick={() => { setOpen(false); onEdit(); }}>
+            <svg {...icon}><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg>
+            {t("რედაქტირება", "Edit profile", "Редактировать")}
+          </button>
+          <button type="button" className={item} onClick={() => { setOpen(false); onSearch(); }}>
+            <svg {...icon}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+            {t("მოთამაშის ძებნა", "Find a player", "Найти игрока")}
+          </button>
+          <button type="button" className={`${item} text-red-300 hover:!bg-red-400/10`} onClick={() => { setOpen(false); onSignOut(); }}>
+            <svg {...icon}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
+            {t("გასვლა", "Sign out", "Выйти")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** A window over the page; Escape or a click outside closes it. */
+function Modal({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", esc);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", esc);
+      document.body.style.overflow = overflow;
+    };
+  }, [onClose]);
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-50 grid place-items-center bg-black/65 p-4 backdrop-blur-sm"
+      onPointerDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/15 bg-[var(--bg-b)] shadow-[0_40px_90px_-30px_rgb(0_0_0/0.9)]">{children}</div>
+    </div>
   );
 }
 
@@ -176,11 +264,8 @@ function EditProfile({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <form
-      onSubmit={save}
-      className="flex flex-col gap-7 rounded-3xl border border-white/10 bg-white/[0.04] p-6 sm:p-8"
-      style={rise(0)}
-    >
+    <form onSubmit={save} className="flex flex-col gap-7 p-6 sm:p-8">
+      <h2 className="text-2xl font-extrabold">{t("პროფილის რედაქტირება", "Edit profile", "Редактирование профиля")}</h2>
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
         <div className="flex flex-col items-center gap-3">
           <button

@@ -166,7 +166,7 @@ export function QueueLobby({
                       />
                       {kind === "ranked" && standing && (
                         <span className="absolute -bottom-2 -right-3">
-                          <RankEmblem rank={standing.rank} className="size-9" glow={false} />
+                          <RankEmblem rank={standing.rank} className="size-9" glow={false} compact />
                         </span>
                       )}
                     </div>

@@ -37,3 +37,11 @@ export const rise = (i: number): CSSProperties => ({
   animation: "menu-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both",
   animationDelay: `${80 + i * 110}ms`,
 });
+
+/** The round buttons and pills of the site header: a soft gradient, an amber edge and a lift on hover. */
+export const HEADER_BTN =
+  "rounded-full border border-white/10 bg-gradient-to-b from-white/[0.09] to-white/[0.02] shadow-[0_8px_20px_-14px_rgb(0_0_0/0.8)] transition-[border-color,translate,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-amber-300/50 hover:shadow-[0_10px_26px_-12px_rgb(252_211_77/0.45)] focus-visible:border-amber-300";
+
+/** The drop-down panels of the header: dark in the colour of the chosen theme. */
+export const HEADER_MENU =
+  "absolute right-0 top-14 z-40 overflow-hidden rounded-2xl border border-white/15 bg-[var(--bg-b)] p-1.5 shadow-[0_24px_50px_-16px_rgb(0_0_0/0.8)]";

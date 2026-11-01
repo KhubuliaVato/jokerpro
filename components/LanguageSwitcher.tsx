@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { LANGS, useLang, type Lang } from "@/lib/i18n";
+import { HEADER_BTN, HEADER_MENU } from "./ui";
 
 const CROSSES = [
   [5.2, 5.2],
@@ -78,12 +79,12 @@ export function LanguageSwitcher() {
         aria-label="Language"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="grid size-12 place-items-center rounded-full border border-white/10 bg-white/[0.04] transition-[border-color,background-color] duration-200 hover:border-white/30 hover:bg-white/[0.08]"
+        className={`grid size-12 place-items-center ${HEADER_BTN}`}
       >
         <Flag lang={lang} className="size-7" />
       </button>
       {open && (
-        <ul className="absolute right-0 top-14 z-40 w-44 overflow-hidden rounded-2xl border border-white/15 bg-[#0c2a1d] p-1.5 shadow-2xl">
+        <ul className={`${HEADER_MENU} w-44`}>
           {LANGS.map((l) => (
             <li key={l.id}>
               <button

@@ -311,7 +311,7 @@ function ProfileCard({
       </div>
 
       <div className="flex items-center gap-4 rounded-2xl bg-black/20 p-4">
-        <RankEmblem rank={standing.rank} className="size-16 flex-none" />
+        <RankEmblem rank={standing.rank} className="size-20 flex-none" progress={standing.progress} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <b className="text-lg" style={{ color: standing.rank.accent }}>

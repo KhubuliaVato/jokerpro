@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/lib/i18n";
+import { HEADER_BTN, HEADER_MENU } from "./ui";
 
 /** Background colours of the site; the values live in globals.css under [data-theme]. */
 export const THEMES = [
@@ -22,7 +23,7 @@ function apply(id: string) {
 export function ThemeSwitcher() {
   const t = useT();
   const [open, setOpen] = useState(false);
-  const [theme, setTheme] = useState("green");
+  const [theme, setTheme] = useState("wine");
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -68,7 +69,7 @@ export function ThemeSwitcher() {
         aria-label={t("ფონის ფერი", "Background colour", "Цвет фона")}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="grid size-11 place-items-center rounded-full border border-white/10 bg-white/[0.04] transition-[border-color,background-color] duration-200 hover:border-white/30 hover:bg-white/[0.08] min-[400px]:size-12"
+        className={`relative grid size-11 place-items-center min-[400px]:size-12 ${HEADER_BTN}`}
       >
         <svg viewBox="0 0 24 24" className="size-6" fill="none" aria-hidden>
           <path
@@ -81,9 +82,13 @@ export function ThemeSwitcher() {
           <circle cx="10.5" cy="7.2" r="1.4" fill="#fcd34d" />
           <circle cx="15" cy="7.8" r="1.4" fill="#34d399" />
         </svg>
+        <span
+          className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full ring-2 ring-[var(--bg-b)]"
+          style={{ background: THEMES.find((x) => x.id === theme)?.color }}
+        />
       </button>
       {open && (
-        <ul className="absolute right-0 top-14 z-40 w-48 overflow-hidden rounded-2xl border border-white/15 bg-[#10161c] p-1.5 shadow-2xl">
+        <ul className={`${HEADER_MENU} w-48`}>
           {THEMES.map((th) => (
             <li key={th.id}>
               <button

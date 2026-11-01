@@ -97,6 +97,15 @@ export async function activeTable(supabase: SupabaseClient): Promise<TableRow | 
   return row && row.id ? row : null;
 }
 
+/** Lobbies of random players waiting for someone, per game; empty when the database cannot tell. */
+export async function openTableCounts(supabase: SupabaseClient): Promise<Partial<Record<TableRow["game"], number>>> {
+  const { data, error } = await supabase.rpc("open_tables");
+  const out: Partial<Record<TableRow["game"], number>> = {};
+  if (error || !Array.isArray(data)) return out;
+  for (const r of data as { game: TableRow["game"]; waiting: number }[]) out[r.game] = r.waiting;
+  return out;
+}
+
 /** How far the server's clock is ahead of this device's (ms), so that deadlines are counted on the server's time. */
 export async function clockSkew(supabase: SupabaseClient): Promise<number> {
   const before = Date.now();

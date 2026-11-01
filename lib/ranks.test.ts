@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { RANKS, rankFor } from "./ranks";
 
 describe("rank ladder", () => {
-  it("has a rank every 50 points up to 400, then the Joker at 1000", () => {
+  it("has a rank every 50 points up to 400, then the GrandMaster at 1000", () => {
     expect(RANKS.map((r) => r.min)).toEqual([50, 100, 150, 200, 250, 300, 350, 400, 1000]);
-    expect(RANKS[RANKS.length - 1].name).toBe("Joker");
+    expect(RANKS[RANKS.length - 1].name).toBe("GrandMaster");
   });
 
   it("starts new players on the first rank", () => {
@@ -20,7 +20,7 @@ describe("rank ladder", () => {
     expect(rankFor(399).rank.name).toBe("Diamond");
     expect(rankFor(400).rank.name).toBe("Master");
     expect(rankFor(999).rank.name).toBe("Master");
-    expect(rankFor(1000).rank.name).toBe("Joker");
+    expect(rankFor(1000).rank.name).toBe("GrandMaster");
     expect(rankFor(97).rank.name).toBe("Bronze");
   });
 

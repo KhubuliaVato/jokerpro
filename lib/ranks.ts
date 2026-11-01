@@ -1,4 +1,4 @@
-/** The rank ladder: one rank per 50 rating points up to 400, then the Joker at 1000. */
+/** The rank ladder: one rank per 50 rating points up to 400, then the GrandMaster at 1000. */
 export interface Rank {
   /** 0-based position in the ladder. */
   index: number;
@@ -26,7 +26,7 @@ export const RANKS: Rank[] = [
   { index: 5, name: "Ruby", min: 300, metal: ["#ffc3c9", "#a3223a"], accent: "#fb607a", chevrons: 0, gem: "#ff4766" },
   { index: 6, name: "Diamond", min: 350, metal: ["#d9f6ff", "#3d7fb8"], accent: "#7fdcff", chevrons: 0, gem: "#9eeeff" },
   { index: 7, name: "Master", min: 400, metal: ["#ffd76a", "#5b3a06"], accent: "#ffc83d", chevrons: 0, crown: true },
-  { index: 8, name: "Joker", min: 1000, metal: ["#c58bff", "#3a1670"], accent: "#d6a8ff", chevrons: 0, star: true },
+  { index: 8, name: "GrandMaster", min: 1000, metal: ["#c58bff", "#3a1670"], accent: "#d6a8ff", chevrons: 0, star: true },
 ];
 
 /** The rating every new player starts with. */
