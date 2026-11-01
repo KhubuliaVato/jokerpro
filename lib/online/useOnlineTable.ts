@@ -9,7 +9,6 @@ import type { PokerAction, PokerState } from "@/lib/poker/engine";
 import type { PokerRules } from "@/lib/poker/online";
 import { HAND_PAUSE } from "@/lib/poker/usePokerGame";
 import { applyAction, realSeat, type Action } from "@/lib/joker/online";
-import { HAND_END_PAUSE, TRICK_PAUSE } from "@/lib/joker/useGame";
 import { getSupabase } from "@/lib/supabase";
 import { acceptMatch, callJoker, clockSkew, expireMatch, joinTable, leaveTable, pingTable, READY_SECONDS, type SeatRow, type TableRow, type ViewRow } from "./client";
 
@@ -27,8 +26,19 @@ const ROUND_PAUSE = 6000;
 /** A game of this table needs a decision from somebody (Joker: trump / bid / play; Bura: play). */
 const needsMove = (v: GameState | BuraState | PokerState) => ["trump", "bidding", "playing", "play", "call", "var", "betting"].includes(v.phase);
 
-/** A little randomness so that four browsers do not all ask the server for the same thing at once. */
-const jitter = (ms: number) => ms + Math.random() * 250;
+/**
+ * Pauses of an online table. The database is far away (Seoul), so the time a trick stays on screen is mostly the trip
+ * itself: the server's own floor (1200 ms after a trick, 500 after a hand) is what these wait for, less the trip.
+ */
+const ONLINE_TRICK_PAUSE = 800;
+const ONLINE_HAND_END_PAUSE = 300;
+/** A bot's turn: the server needs no wait, this only lets the last card land on the screen. */
+const BOT_THINK = 350;
+/** Only one browser (the "lead") drives the game forward; the others step in if it stays silent this long. */
+const FALLBACK_MS = 1400;
+
+/** A little randomness so that browsers do not all ask the server for the same thing at once. */
+const jitter = (ms: number) => ms + Math.random() * 100;
 
 /** Everything the screen of an online table needs, kept live through Realtime. */
 export function useOnlineTable(code: string) {
@@ -105,8 +115,8 @@ export function useOnlineTable(code: string) {
     const supabase = getSupabase();
     if (!supabase || !tableId) return;
     const first = setTimeout(() => {
+      // (the table row itself came back from join_table: no need to fetch it again)
       void loadSeats();
-      void loadTable();
       void loadView();
     }, 0);
     const channel = supabase
@@ -138,6 +148,8 @@ export function useOnlineTable(code: string) {
   }, [tableId]);
 
   const mySeat = seats.find((s) => s.user_id === userId);
+  // The human with the lowest seat number drives bots and pauses; the rest only back it up (fewer clashing requests).
+  const lead = seats.filter((s) => !s.bot).sort((a, b) => a.seat - b.seat)[0]?.user_id === userId;
   const capacity = table?.game === "bura" || table?.game === "poker" ? (table.rules as BuraRules | PokerRules).players : 4;
   const full = seats.length === capacity;
   const status = table?.status ?? null;
@@ -225,12 +237,17 @@ export function useOnlineTable(code: string) {
     if (!supabase || !tableId || !row) return;
     const phase = row.view.phase;
     if (phase !== "trickEnd" && phase !== "handEnd" && phase !== "roundEnd") return;
-    const t = setTimeout(
-      () => void callJoker(supabase, { action: "advance", table_id: tableId, version: row.version }, server),
-      jitter(phase === "trickEnd" ? TRICK_PAUSE : phase === "roundEnd" ? ROUND_PAUSE : table?.game === "poker" ? HAND_PAUSE : HAND_END_PAUSE),
-    );
-    return () => clearTimeout(t);
-  }, [tableId, row, server, table?.game]);
+    const pause =
+      phase === "trickEnd" ? ONLINE_TRICK_PAUSE : phase === "roundEnd" ? ROUND_PAUSE : table?.game === "poker" ? HAND_PAUSE : ONLINE_HAND_END_PAUSE;
+    const advance = () => void callJoker(supabase, { action: "advance", table_id: tableId, version: row.version }, server);
+    // The server refuses to move on before its own minimum pause: ask again until the screen changes.
+    const t = setTimeout(advance, jitter(pause) + (lead ? 0 : FALLBACK_MS));
+    const again = setInterval(advance, 1500 + (lead ? 0 : FALLBACK_MS));
+    return () => {
+      clearTimeout(t);
+      clearInterval(again);
+    };
+  }, [tableId, row, server, table?.game, lead]);
 
   // 5. A bot's turn, or a player's timer ran out: the server plays for them when asked.
   const realTurn = row
@@ -243,11 +260,17 @@ export function useOnlineTable(code: string) {
     const supabase = getSupabase();
     if (!supabase || !tableId || !row || !needsMove(row.view)) return;
     const deadline = row.turn_deadline ? Date.parse(row.turn_deadline) : null;
-    const wait = turnIsBot ? 700 : deadline ? Math.max(0, deadline - Date.now()) + 1600 : null;
+    const wait = turnIsBot ? BOT_THINK : deadline ? Math.max(0, deadline - Date.now()) + 1600 : null;
     if (wait === null) return;
-    const t = setTimeout(() => void callJoker(supabase, { action: "tick", table_id: tableId }, server), jitter(wait));
-    return () => clearTimeout(t);
-  }, [tableId, row, turnIsBot, server]);
+    const tick = () => void callJoker(supabase, { action: "tick", table_id: tableId }, server);
+    const t = setTimeout(tick, jitter(wait) + (lead || !turnIsBot ? 0 : FALLBACK_MS));
+    // A tick that came too early (the server paces bots at a Hold'em table) is simply repeated.
+    const again = turnIsBot ? setInterval(tick, 1200 + (lead ? 0 : FALLBACK_MS)) : undefined;
+    return () => {
+      clearTimeout(t);
+      clearInterval(again);
+    };
+  }, [tableId, row, turnIsBot, server, lead]);
 
   // Countdown shown on my own turn.
   const myDecision = !!row && needsMove(row.view) && row.view.turn === 0;

@@ -127,6 +127,21 @@ export async function leaveTable(supabase: SupabaseClient, tableId: string): Pro
  */
 const GAME_SERVER_REGION = "ap-northeast-2";
 
+let warmed = false;
+
+/**
+ * Wakes the Edge Functions and opens the connection to them before the first move (a cold start costs a second or two).
+ * The CORS pre-flight answers before any work is done, so this is free for the server.
+ */
+export function warmGameServers(): void {
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (warmed || !base) return;
+  warmed = true;
+  for (const server of ["joker", "poker"]) {
+    fetch(`${base}/functions/v1/${server}?forceFunctionRegion=${GAME_SERVER_REGION}`, { method: "OPTIONS" }).catch(() => {});
+  }
+}
+
 /** Calls the game server: Edge Function `joker` (Joker and Bura) or `poker` (Hold'em). Resolves to an error message, or null on success. */
 export async function callJoker(supabase: SupabaseClient, body: Record<string, unknown>, server: "joker" | "poker" = "joker"): Promise<string | null> {
   const { error } = await supabase.functions.invoke(`${server}?forceFunctionRegion=${GAME_SERVER_REGION}`, { body });

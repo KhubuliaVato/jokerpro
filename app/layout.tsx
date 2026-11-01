@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Georgian } from "next/font/google";
 import Script from "next/script";
+import { preconnect } from "react-dom";
 import { PageFade } from "@/components/PageFade";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
 import { LangProvider } from "@/lib/i18n";
@@ -23,6 +24,8 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  // open the connection to the database early: it is far away, so each handshake costs a noticeable moment
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL) preconnect(process.env.NEXT_PUBLIC_SUPABASE_URL, { crossOrigin: "anonymous" });
   return (
     <html lang="ka" className={notoGeorgian.variable} suppressHydrationWarning>
       <body>
