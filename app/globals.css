@@ -650,21 +650,125 @@ body {
 .fxw-w_confetti {
   box-shadow: 0 0 0 3px #f472b6, 0 0 20px rgb(244 114 182 / 0.7);
 }
-.fxw-w_confetti::after {
-  inset: -30% -10% -10%;
-  background:
-    radial-gradient(circle, #f472b6 0 2px, transparent 3px) 10% 0 / 40% 30% repeat-y,
-    radial-gradient(circle, #38bdf8 0 2px, transparent 3px) 45% 0 / 34% 26% repeat-y,
-    radial-gradient(circle, #fbbf24 0 2px, transparent 3px) 80% 0 / 38% 28% repeat-y,
-    radial-gradient(circle, #4ade80 0 2px, transparent 3px) 28% 0 / 30% 24% repeat-y;
-  animation: fxw-fall 1.3s linear infinite;
+.pc.fxw-w_confetti::before,
+.pc.fxw-w_confetti::after {
+  content: "";
+  position: absolute;
+  inset: auto;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px 0 0 -1.5px;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
 }
-@keyframes fxw-fall {
-  from {
-    background-position: 10% 0, 45% 0, 80% 0, 28% 0;
+.pc.fxw-w_confetti::after {
+  top: 42%;
+  left: 50%;
+  box-shadow:
+    32px 0px 0 #fde68a,
+    27px 13px 0 #fbbf24,
+    22px 28px 0 #fff,
+    6px 28px 0 #fde68a,
+    -8px 34px 0 #fbbf24,
+    -20px 25px 0 #fff,
+    -26px 12px 0 #fde68a,
+    -34px 0px 0 #fbbf24,
+    -26px -12px 0 #fff,
+    -21px -26px 0 #fde68a,
+    -6px -28px 0 #fbbf24,
+    6px -28px 0 #fff,
+    21px -26px 0 #fde68a,
+    34px -16px 0 #fbbf24,
+    18px 4px 0 #f472b6,
+    16px 12px 0 #fda4af,
+    11px 21px 0 #f472b6,
+    1px 26px 0 #fda4af,
+    -9px 21px 0 #f472b6,
+    -16px 14px 0 #fda4af,
+    -25px 6px 0 #f472b6,
+    -18px -4px 0 #fda4af,
+    -20px -15px 0 #f472b6,
+    -9px -18px 0 #fda4af,
+    0px -19px 0 #f472b6,
+    8px -17px 0 #fda4af,
+    16px -13px 0 #f472b6,
+    24px -6px 0 #fda4af,
+    10px 1px 0 #fff,
+    9px 8px 0 #fde68a,
+    3px 12px 0 #fff,
+    -5px 10px 0 #fde68a,
+    -11px 6px 0 #fff,
+    -10px -1px 0 #fde68a,
+    -7px -7px 0 #fff,
+    -2px -10px 0 #fde68a,
+    5px -12px 0 #fff,
+    10px -6px 0 #fde68a;
+  filter: drop-shadow(0 0 3px #fbbf24);
+  animation: fxw-burst 2.4s cubic-bezier(0.12, 0.7, 0.3, 1) infinite;
+}
+.pc.fxw-w_confetti::before {
+  top: 62%;
+  left: 28%;
+  box-shadow:
+    28px 3px 0 #38bdf8,
+    26px 16px 0 #7dd3fc,
+    16px 25px 0 #fff,
+    3px 27px 0 #38bdf8,
+    -11px 32px 0 #7dd3fc,
+    -23px 23px 0 #fff,
+    -25px 9px 0 #38bdf8,
+    -31px -3px 0 #7dd3fc,
+    -26px -16px 0 #fff,
+    -19px -29px 0 #38bdf8,
+    -4px -33px 0 #7dd3fc,
+    9px -26px 0 #fff,
+    25px -26px 0 #38bdf8,
+    24px -9px 0 #7dd3fc,
+    17px 5px 0 #a78bfa,
+    13px 15px 0 #c4b5fd,
+    3px 15px 0 #a78bfa,
+    -5px 17px 0 #c4b5fd,
+    -11px 10px 0 #a78bfa,
+    -19px 4px 0 #c4b5fd,
+    -19px -6px 0 #a78bfa,
+    -13px -14px 0 #c4b5fd,
+    -5px -20px 0 #a78bfa,
+    5px -16px 0 #c4b5fd,
+    14px -13px 0 #a78bfa,
+    18px -4px 0 #c4b5fd,
+    9px 0px 0 #fff,
+    6px 6px 0 #fff,
+    0px 10px 0 #fff,
+    -7px 7px 0 #fff,
+    -9px 0px 0 #fff,
+    -7px -7px 0 #fff,
+    0px -7px 0 #fff,
+    7px -7px 0 #fff;
+  filter: drop-shadow(0 0 3px #38bdf8);
+  animation: fxw-burst 2.4s cubic-bezier(0.12, 0.7, 0.3, 1) 1.2s infinite;
+}
+/* the shell flies up (the scale starts tiny), blows out, then the sparks sink and die */
+@keyframes fxw-burst {
+  0% {
+    opacity: 0;
+    transform: translateY(40px) scale(0.05);
   }
-  to {
-    background-position: 10% 100%, 45% 100%, 80% 100%, 28% 100%;
+  8% {
+    opacity: 1;
+    transform: translateY(0) scale(0.08);
+  }
+  14% {
+    opacity: 1;
+    transform: translateY(0) scale(0.55);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(5px) scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(26px) scale(1.3);
   }
 }
 .fxw-w_fire {
@@ -691,7 +795,8 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .avf::before,
   [class*="nick-n_"],
-  .pc[class*="fxw-"]::after {
+  .pc[class*="fxw-"]::after,
+  .pc[class*="fxw-"]::before {
     animation: none !important;
   }
 }

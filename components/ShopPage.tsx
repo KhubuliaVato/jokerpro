@@ -53,8 +53,8 @@ const SECTIONS: Record<SectionId, { kind: Kind; label: [string, string, string];
   themes: { kind: "theme", label: ["ფონები", "Backgrounds", "Фоны"], hint: ["ფერადი და მოძრავი", "Plain and moving", "Цветные и движущиеся"], glow: "#38bdf855" },
   emotes: { kind: "emote_pack", label: ["ემოციები და ფრაზები", "Emotes and phrases", "Эмоции и фразы"], hint: ["სწრაფი რეაქცია მაგიდასთან", "Quick reactions at the table", "Быстрые реакции за столом"], glow: "#34d39955" },
   frames: { kind: "frame", label: ["ჩარჩოები", "Frames", "Рамки"], hint: ["ავატარის ჩარჩო", "A frame for your avatar", "Рамка для аватара"], glow: "#fbbf2455" },
-  names: { kind: "name_style", label: ["სახელის სტილი", "Name styles", "Стили имени"], hint: ["შენი სახელი გამოირჩევა", "Make your name stand out", "Ваше имя заметят"], glow: "#a78bfa55" },
-  effects: { kind: "win_fx", label: ["მოგების ეფექტები", "Win effects", "Эффекты победы"], hint: ["როცა ხელს იღებ", "When you take a trick", "Когда берёте взятку"], glow: "#f9731655" },
+  names: { kind: "name_style", label: ["სახელის სტილი", "Name styles", "Стили имени"], hint: ["თქვენი სახელი გამოირჩევა", "Make your name stand out", "Ваше имя заметят"], glow: "#a78bfa55" },
+  effects: { kind: "win_fx", label: ["მოგების ეფექტები", "Win effects", "Эффекты победы"], hint: ["როცა ხელს იღებთ", "When you take a trick", "Когда берёте взятку"], glow: "#f9731655" },
 };
 const LEFT_IDS: SectionId[] = ["decks", "themes", "emotes"];
 const RIGHT_IDS: SectionId[] = ["frames", "names", "effects"];
@@ -131,7 +131,7 @@ export function ShopPage() {
     if (error) {
       setMessage({ id: item.id, text: error, ok: false });
     } else {
-      setMessage({ id: item.id, text: t("შეძენილია! ინვენტარში იპოვით.", "Bought! It is in your inventory.", "Куплено! Ищите в инвентаре."), ok: true });
+      setMessage({ id: item.id, text: t("ნივთი შეძენილია და ინვენტარშია.", "Bought! It is in your inventory.", "Куплено! Ищите в инвентаре."), ok: true });
       window.dispatchEvent(new Event(COINS_CHANGED));
     }
     await loadWallet();
@@ -177,7 +177,7 @@ export function ShopPage() {
     if (owned) {
       // an emote pack is not worn: owning it is the whole point
       if (item.kind === "emote_pack") {
-        return <div className={`rounded-full border border-emerald-400/40 bg-emerald-400/10 text-center font-extrabold text-emerald-300 ${dim}`}>✓ {t("გაქვთ", "Owned", "Куплено")}</div>;
+        return <div className={`rounded-full border border-emerald-400/40 bg-emerald-400/10 text-center font-extrabold text-emerald-300 ${dim}`}>✓ {t("ნაყიდია", "Owned", "Куплено")}</div>;
       }
       return (
         <button
@@ -445,7 +445,7 @@ export function ShopPage() {
               {section === "themes" && <p className="-mt-2 text-white/50">{t("ღვინისფერი და მწვანე უფასოა.", "Wine and green are free.", "Бордовый и зелёный бесплатны.")}</p>}
               {section === "emotes" && (
                 <p className="-mt-2 text-white/50">
-                  {t("ძირითადი ნაკრები უფასოა. ემოცია იგზავნება ჩათიდან (😀).", "The basic pack is free. Send emotes from the chat (😀).", "Базовый набор бесплатен. Эмоции отправляются из чата (😀).")}
+                  {t("ძირითადი ნაკრები უფასოა. ემოციებს ჩათიდან გააგზავნით (😀).", "The basic pack is free. Send emotes from the chat (😀).", "Базовый набор бесплатен. Эмоции отправляются из чата (😀).")}
                 </p>
               )}
               <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{(stock ?? []).filter((i) => i.kind === SECTIONS[section].kind).map(card)}</ul>

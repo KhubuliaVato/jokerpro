@@ -26,7 +26,7 @@ export function TableChat({
 const BOT_LINES: [string, string, string][] = [
   ["წარმატებებს გისურვებთ!", "Good luck!", "Удачи!"],
   ["კარგი სვლა იყო 👏", "Nice move 👏", "Хороший ход 👏"],
-  ["ეხლა ვნახოთ…", "Let us see…", "Посмотрим…"],
+  ["ახლა ვნახოთ…", "Let us see…", "Посмотрим…"],
   ["ჰმ, საინტერესოა", "Hmm, interesting", "Хм, интересно"],
   ["ამას არ ველოდი 😄", "Did not expect that 😄", "Не ожидал 😄"],
   ["კოზირი კარგი გაქვს?", "Got a good trump?", "Хороший козырь?"],

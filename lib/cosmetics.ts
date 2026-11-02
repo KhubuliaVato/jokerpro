@@ -37,7 +37,7 @@ export const NAME_STYLES = [
 export const WIN_FX = [
   { id: "w_sparks", names: ["ნაპერწკლები", "Sparks", "Искры"] as Names, accent: "#fde68a" },
   { id: "w_gold", names: ["ოქროს ბრწყინვა", "Golden shine", "Золотой блеск"] as Names, accent: "#fbbf24" },
-  { id: "w_confetti", names: ["კონფეტი", "Confetti", "Конфетти"] as Names, accent: "#f472b6" },
+  { id: "w_confetti", names: ["ფეიერვერკი", "Fireworks", "Салют"] as Names, accent: "#f472b6" },
   { id: "w_fire", names: ["ცეცხლი", "Fire", "Огонь"] as Names, accent: "#f97316" },
 ] as const;
 

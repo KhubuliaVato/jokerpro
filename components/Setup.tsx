@@ -36,7 +36,7 @@ export function Setup({
           className="rounded-2xl border border-red-400/40 bg-red-500/10 px-5 py-4 text-red-200"
           style={rise(1)}
         >
-          {t("ზედიზედ ორჯერ გამოტოვეთ სვლა და თამაშიდან გაგაგდეთ.", "You missed your turn twice in a row and were removed from the game.", "Вы дважды подряд пропустили ход и были исключены из игры.")}
+          {t("ზედიზედ ორჯერ გამოტოვეთ სვლა, ამიტომ თამაშიდან გამოგრიცხეს.", "You missed your turn twice in a row and were removed from the game.", "Вы дважды подряд пропустили ход и были исключены из игры.")}
         </p>
       )}
 

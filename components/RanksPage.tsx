@@ -53,7 +53,7 @@ export function RanksPage() {
         <h1 className="text-[clamp(1.8rem,9vw,2.4rem)] font-extrabold tracking-tight sm:text-5xl">{t("წოდებები", "Ranks", "Ранги")}</h1>
         <p className="hidden max-w-2xl text-base text-white/55 sm:block sm:text-lg">
           {t(
-            "ყველა იწყებს 50 ქულით. რეიტინგული თამაშის მერე ქულა იზრდება ან მცირდება, წოდებაც მას მიჰყვება.",
+            "ყველა 50 ქულით იწყებს. რეიტინგული თამაშის შემდეგ ქულა მატულობს ან კლებულობს და მასთან ერთად წოდებაც იცვლება.",
             "Everyone starts with 50 points. After a ranked game your points go up or down, and your rank follows.",
             "Все начинают с 50 очков. После рейтинговой игры очки растут или падают, а ранг следует за ними.",
           )}

@@ -42,7 +42,7 @@ export interface BotProfile {
 export const BOTS: BotProfile[] = [
   { id: "nika", name: "ნიკა", tier: "easy", trait: "ახალი სწავლობს და ხშირად ცდება", style: { bidNoise: 0.5, mistake: 0.3, bidBias: 0 }, color: "sky", icon: "♣" },
   { id: "mzia", name: "მზია", tier: "easy", trait: "ფრთხილია და ბევრჯერ პასს ამბობს", style: { bidNoise: 0.35, mistake: 0.25, bidBias: -1 }, color: "rose", icon: "♥" },
-  { id: "gio", name: "გიო", tier: "easy", trait: "სულ რისკავს და მეტს ამბობს", style: { bidNoise: 0.4, mistake: 0.3, bidBias: 1 }, color: "amber", icon: "♦" },
+  { id: "gio", name: "გიო", tier: "easy", trait: "ყოველთვის რისკავს და მეტს ამბობს", style: { bidNoise: 0.4, mistake: 0.3, bidBias: 1 }, color: "amber", icon: "♦" },
   { id: "levani", name: "ლევანი", tier: "medium", trait: "ჩვეულებრივი, გაწონასწორებული მოთამაშე", style: { bidNoise: 0.2, mistake: 0.1, bidBias: 0 }, color: "sky", icon: "♠" },
   { id: "nino", name: "ნინო", tier: "medium", trait: "ყურადღებიანია, იშვიათად ცდება", style: { bidNoise: 0.15, mistake: 0.08, bidBias: 0 }, color: "violet", icon: "♥" },
   { id: "mariami", name: "მარიამი", tier: "medium", trait: "ცოტა მეტს ამბობს, ვიდრე უნდა", style: { bidNoise: 0.18, mistake: 0.1, bidBias: 0.4 }, color: "emerald", icon: "♦" },
@@ -54,7 +54,7 @@ export const BOTS: BotProfile[] = [
 const BOT_TEXT: Record<string, { name: [string, string, string]; trait: [string, string, string] }> = {
   nika: { name: ["ნიკა", "Nika", "Ника"], trait: ["ახალი სწავლობს და ხშირად ცდება", "Still learning and often makes mistakes", "Ещё учится и часто ошибается"] },
   mzia: { name: ["მზია", "Mzia", "Мзия"], trait: ["ფრთხილია და ბევრჯერ პასს ამბობს", "Careful, passes a lot", "Осторожная, часто пасует"] },
-  gio: { name: ["გიო", "Gio", "Гио"], trait: ["სულ რისკავს და მეტს ამბობს", "Always takes risks and bids high", "Всегда рискует и заказывает больше"] },
+  gio: { name: ["გიო", "Gio", "Гио"], trait: ["ყოველთვის რისკავს და მეტს ამბობს", "Always takes risks and bids high", "Всегда рискует и заказывает больше"] },
   levani: { name: ["ლევანი", "Levani", "Леван"], trait: ["ჩვეულებრივი, გაწონასწორებული მოთამაშე", "An ordinary, balanced player", "Обычный, уравновешенный игрок"] },
   nino: { name: ["ნინო", "Nino", "Нино"], trait: ["ყურადღებიანია, იშვიათად ცდება", "Attentive, rarely makes mistakes", "Внимательная, редко ошибается"] },
   mariami: { name: ["მარიამი", "Mariami", "Мариами"], trait: ["ცოტა მეტს ამბობს, ვიდრე უნდა", "Bids a bit more than she should", "Заказывает чуть больше, чем нужно"] },

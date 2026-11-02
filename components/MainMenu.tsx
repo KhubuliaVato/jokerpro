@@ -110,7 +110,7 @@ export function MainMenu() {
     return g && g.played > 0 ? `${g.played} ${t("თამაში", "games", "игр")} · ${g.wins} ${t("გამარჯვება", "wins", "побед")} · ${g.winRate}%` : fallback;
   };
   const resumeFor = (game: TableRow["game"]) =>
-    runningTable?.game === game ? { href: tablePath(runningTable), text: t("გააგრძელე თამაში", "Resume your game", "Вернуться в игру") } : undefined;
+    runningTable?.game === game ? { href: tablePath(runningTable), text: t("გააგრძელეთ თამაში", "Resume your game", "Вернуться в игру") } : undefined;
   const botsText = t("ბოტებთან", "Vs bots", "С ботами");
   const onlineText = t("ონლაინ", "Online", "Онлайн");
 

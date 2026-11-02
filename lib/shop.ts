@@ -11,17 +11,17 @@ export interface CardBack {
 
 /** The pictures and names of the shop's items; the prices and the weekly stock come from the database. */
 export const CARD_BACKS: CardBack[] = [
-  { id: "crimson", get name() { return tt("ალისფერი", "Crimson", "Багрянец"); }, accent: "#e11d48" },
-  { id: "emerald", get name() { return tt("ზურმუხტი", "Emerald", "Изумруд"); }, accent: "#10b981" },
-  { id: "midnight", get name() { return tt("შუაღამე", "Midnight", "Полночь"); }, accent: "#6366f1" },
+  { id: "crimson", get name() { return "OldBlood"; }, accent: "#e11d48" },
+  { id: "emerald", get name() { return "Emerald"; }, accent: "#10b981" },
+  { id: "midnight", get name() { return "Goodnight"; }, accent: "#6366f1" },
   { id: "gilded", get name() { return tt("ოქროს ქსოვა", "Gilded", "Золочёная"); }, accent: "#fbbf24" },
   { id: "neon", get name() { return tt("ნეონი", "Neon", "Неон"); }, accent: "#22d3ee" },
   { id: "obsidian", get name() { return tt("ობსიდიანი", "Obsidian", "Обсидиан"); }, accent: "#a78bfa" },
   { id: "sakura", get name() { return tt("საკურა", "Sakura", "Сакура"); }, accent: "#f9a8d4" },
   { id: "aurora", get name() { return tt("ავრორა", "Aurora", "Аврора"); }, accent: "#34d399" },
-  { id: "carbon", get name() { return tt("კარბონი", "Carbon", "Карбон"); }, accent: "#94a3b8" },
-  { id: "damask", get name() { return tt("დამასკი", "Damask", "Дамаск"); }, accent: "#f43f5e" },
-  { id: "frost", get name() { return tt("ყინული", "Frost", "Иней"); }, accent: "#7dd3fc" },
+  { id: "carbon", get name() { return "Carbon"; }, accent: "#94a3b8" },
+  { id: "damask", get name() { return "Elegant"; }, accent: "#f43f5e" },
+  { id: "frost", get name() { return "Ice"; }, accent: "#7dd3fc" },
 ];
 
 export const cardBack = (id: string | null | undefined) => CARD_BACKS.find((b) => b.id === id);

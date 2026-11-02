@@ -48,7 +48,7 @@ export function PokerApp() {
 
       {kicked && (
         <p role="alert" className="rounded-2xl border border-red-400/40 bg-red-500/10 px-5 py-4 text-red-200" style={rise(1)}>
-          {t("ზედიზედ ორჯერ გამოტოვეთ სვლა და თამაშიდან გაგაგდეთ.", "You missed your turn twice in a row and were removed from the game.", "Вы дважды подряд пропустили ход и были исключены из игры.")}
+          {t("ზედიზედ ორჯერ გამოტოვეთ სვლა, ამიტომ თამაშიდან გამოგრიცხეს.", "You missed your turn twice in a row and were removed from the game.", "Вы дважды подряд пропустили ход и были исключены из игры.")}
         </p>
       )}
 
@@ -165,7 +165,7 @@ function RulesPanel() {
       "У каждого соперника, ушедшего олл-ин, вы можете выиграть лишь столько, сколько поставили сами: лишние ставки идут в отдельный побочный банк.",
     ],
     [
-      "თითო სვლაზე 40 წამია; ზედიზედ ორჯერ გამოტოვებაზე თამაშიდან გაგაგდებთ.",
+      "თითო სვლაზე 40 წამია; ზედიზედ ორჯერ გამოტოვებისას თამაშიდან გამოგრიცხავენ.",
       "You have 40 seconds per move; missing two in a row removes you from the game.",
       "На ход даётся 40 секунд; два пропуска подряд — и вас исключат из игры.",
     ],

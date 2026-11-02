@@ -212,7 +212,7 @@ function EditProfile({ onDone }: { onDone: () => void }) {
       setPhoto(blob);
       setPreview(URL.createObjectURL(blob));
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("სურათი ვერ აირჩა", "Could not pick the image", "Не удалось выбрать изображение"));
+      setError(err instanceof Error ? err.message : t("სურათის არჩევა ვერ მოხერხდა", "Could not pick the image", "Не удалось выбрать изображение"));
     }
   };
 
