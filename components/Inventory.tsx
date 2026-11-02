@@ -174,7 +174,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
       {/* what is worn right now, as the others see it */}
       <div className="relative overflow-hidden rounded-3xl border border-white/12 bg-gradient-to-br from-white/[0.09] to-white/[0.02] p-4 sm:p-5">
         <div className="pointer-events-none absolute -left-10 -top-16 size-56 rounded-full bg-amber-300/10 blur-3xl" />
-        <p className="relative mb-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white/45">{t("ახლა გაცვია", "Currently equipped", "Сейчас надето")}</p>
+        <p className="relative mb-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white/45">{t("არჩეული გაქვს", "Currently equipped", "Сейчас надето")}</p>
         <div className="relative flex flex-wrap items-center gap-x-8 gap-y-4">
           <div className="flex items-center gap-4">
             {avatarArt(wornFrame ?? undefined)}
