@@ -12,14 +12,16 @@ interface Props {
   size?: "md" | "sm" | "xs" | "opp";
   className?: string;
   style?: React.CSSProperties;
+  /** The shop deck the card belongs to: its back, and its face when a card is given. */
+  skin?: string | null;
 }
 
 /** A card face, or a card back when no card is given. */
-export function CardView({ card, size = "md", className = "", style }: Props) {
+export function CardView({ card, size = "md", className = "", style, skin }: Props) {
   const sizeClass = size === "md" ? "" : size;
   if (!card) {
     return (
-      <div className={`pc back ${sizeClass} ${className}`} style={style} />
+      <div className={`pc back ${sizeClass} ${className}`} style={style} data-skin={skin || undefined} />
     );
   }
   if (card.joker) {
@@ -35,6 +37,7 @@ export function CardView({ card, size = "md", className = "", style }: Props) {
     <div
       className={`pc ${isRed(card.suit) ? "red" : ""} ${sizeClass} ${className}`}
       style={style}
+      data-skin={skin || undefined}
       aria-label={`${rankLabel(card.rank)} ${SUIT_SYMBOL[card.suit]}`}
     >
       <CardFace card={card} />

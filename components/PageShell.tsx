@@ -1,4 +1,5 @@
 import { SiteHeader } from "./SiteHeader";
+import { ThemeFx } from "./ThemeFx";
 import { RISE_CSS, rise } from "./ui";
 
 /** Common frame of the hub pages: calm green backdrop, header, and a centred column that rises in. */
@@ -15,6 +16,7 @@ export function PageShell({
   return (
     <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(ellipse_at_50%_-10%,var(--bg-a),var(--bg-b)_70%)]">
       <style>{RISE_CSS}</style>
+      <ThemeFx />
       {glow && (
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] transition-[background] duration-500"

@@ -18,6 +18,11 @@ export interface SeatProfile {
   avatar_color: string;
   avatar_icon: string;
   avatar_url: string | null;
+  /** The card back this player wears (shop item id). */
+  equipped_back?: string | null;
+  equipped_frame?: string | null;
+  equipped_name?: string | null;
+  equipped_fx?: string | null;
 }
 
 /** Seconds the round result of Bura stays up before the next round is dealt. */
@@ -85,10 +90,14 @@ export function useOnlineTable(code: string) {
     setSeatsLoaded(true);
     const missing = list.map((s) => s.user_id).filter((id) => !profiles[id]);
     if (missing.length > 0) {
-      const { data: ps } = await supabase
+      const withBack = await supabase
         .from("profiles")
-        .select("id, nickname, avatar_color, avatar_icon, avatar_url")
+        .select("id, nickname, avatar_color, avatar_icon, avatar_url, equipped_back, equipped_frame, equipped_name, equipped_fx")
         .in("id", missing);
+      // a database without the shop has no such column: the players are still shown
+      const ps = withBack.error
+        ? (await supabase.from("profiles").select("id, nickname, avatar_color, avatar_icon, avatar_url").in("id", missing)).data
+        : withBack.data;
       if (ps) setProfiles((prev) => ({ ...prev, ...Object.fromEntries((ps as SeatProfile[]).map((p) => [p.id, p])) }));
     }
   }, [tableId, profiles]);

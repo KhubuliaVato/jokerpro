@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { isRed, SUIT_SYMBOL, sortHand, type NormalCard } from "@/lib/joker/cards";
 import { callName, canCall, handSize, isLegal, legalPlays, MAX_PRICE, molotka, needOf, nextLevel, teamOf, type BuraAction, type BuraState } from "@/lib/bura/engine";
 import { playCardSound, playDealSound } from "@/lib/sound";
+import { Nick } from "./Nick";
 import { Avatar } from "./Avatar";
 import { CardView } from "./CardView";
 import { MusicPlayer } from "./MusicPlayer";
@@ -179,6 +180,8 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
                   <div key={c.id} style={{ marginLeft: k === 0 ? 0 : `calc(var(--cw) * -0.45)` }}>
                     {/* a card thrown down face down shows its back to everybody but its owner (who sees it dimmed) */}
                     <CardView
+                      skin={avatars[player]?.back}
+                      className={best && avatars[player]?.fx ? `fxw-${avatars[player]?.fx}` : undefined}
                       card={c.id.startsWith("hidden-") || (hidden && player !== 0) ? undefined : c}
                       style={{
                         ...cw(TRICK_CW),
@@ -219,6 +222,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
         secondsLeft={secondsLeft}
         onPlay={onPlay}
         onAct={onAct}
+        skin={avatars[0]?.back}
       />
     </main>
   );
@@ -261,17 +265,17 @@ function Opponent({
     <div className={`absolute z-10 flex items-center gap-1.5 ${place}`}>
       <div className="flex items-center gap-2">
         <span className={`rounded-full transition-shadow ${active ? "shadow-[0_0_0_3px_rgb(252_211_77),0_0_18px_rgb(252_211_77/.6)]" : ""}`}>
-          <Avatar size="sm" color={avatar?.color} icon={avatar?.icon} url={avatar?.url} />
+          <Avatar size="sm" color={avatar?.color} icon={avatar?.icon} url={avatar?.url} frame={avatar?.frame} />
         </span>
         <span className="max-w-28 truncate text-sm font-bold">
-          {name}
+          <Nick name={name} style={avatar?.nick} />
           {partner && <span className="ml-1 text-xs text-emerald-300">{tt("გუნდელი", "Partner", "Партнёр")}</span>}
         </span>
       </div>
       <div className="flex">
         {Array.from({ length: cards }, (_, i) => (
           <div key={i} className={i === 0 ? "" : "ml-[calc(var(--cw)*-0.72)] sm:ml-[calc(var(--cw)*-0.5)]"}>
-            <CardView style={cw(OPP_CW)} />
+            <CardView skin={avatar?.back} style={cw(OPP_CW)} />
           </div>
         ))}
       </div>
@@ -286,8 +290,11 @@ function Hand({
   secondsLeft,
   onPlay,
   onAct,
+  skin,
 }: {
   game: BuraState;
+  /** The shop deck the player's own cards are drawn with. */
+  skin?: string | null;
   active: boolean;
   secondsLeft: number | null;
   onPlay: (ids: string[]) => void;
@@ -366,6 +373,7 @@ function Hand({
             >
               <CardView
                 card={card}
+                skin={skin}
                 style={{ ...cw(HAND_CW), boxShadow: on ? "0 0 0 3px rgb(252 211 77), 0 8px 16px rgb(0 0 0 / .45)" : undefined }}
               />
             </button>

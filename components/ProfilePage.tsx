@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { NICKNAME_MAX, validateNickname } from "@/lib/auth/messages";
 import { useT } from "@/lib/i18n";
 import { resizeToSquare } from "@/lib/image";
 import { loadResults } from "@/lib/results";
@@ -183,16 +182,15 @@ function Notice({ title, action }: { title: string; action?: React.ReactNode }) 
 }
 
 function EditProfile({ onDone }: { onDone: () => void }) {
-  const { profile, updateProfile, nicknameAvailable } = useAuth();
+  const { profile, updateProfile } = useAuth();
   const t = useT();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [nickname, setNickname] = useState(profile?.nickname ?? "");
+  const nickname = profile?.nickname ?? "";
   const [color, setColor] = useState(profile?.avatar_color ?? "amber");
   const [icon, setIcon] = useState(profile?.avatar_icon ?? "♠");
   /** undefined: keep the current photo, Blob: upload this one, null: remove it. */
   const [photo, setPhoto] = useState<Blob | null | undefined>(undefined);
   const [preview, setPreview] = useState<string | null>(null);
-  const [check, setCheck] = useState<{ name: string; free: boolean | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -203,32 +201,6 @@ function EditProfile({ onDone }: { onDone: () => void }) {
     },
     [preview],
   );
-
-  // Tell the player right away whether the name they typed is free.
-  const trimmed = nickname.trim();
-  const changed = trimmed !== (profile?.nickname ?? "");
-  const checkable = changed && validateNickname(trimmed) === null;
-  const nameState: "idle" | "checking" | "free" | "taken" = !checkable
-    ? "idle"
-    : check?.name !== trimmed
-      ? "checking"
-      : check.free === null
-        ? "idle"
-        : check.free
-          ? "free"
-          : "taken";
-  useEffect(() => {
-    if (!checkable) return;
-    let cancelled = false;
-    const t = setTimeout(async () => {
-      const free = await nicknameAvailable(trimmed);
-      if (!cancelled) setCheck({ name: trimmed, free });
-    }, 350);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
-  }, [trimmed, checkable, nicknameAvailable]);
 
   const pickFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -254,10 +226,9 @@ function EditProfile({ onDone }: { onDone: () => void }) {
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (nameState === "taken") return;
     setBusy(true);
     setError(null);
-    const err = await updateProfile({ nickname, avatar_color: color, avatar_icon: icon, photo });
+    const err = await updateProfile({ avatar_color: color, avatar_icon: icon, photo });
     setBusy(false);
     if (err) setError(err);
     else onDone();
@@ -316,21 +287,16 @@ function EditProfile({ onDone }: { onDone: () => void }) {
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <input
-            className={`${INPUT} ${nameState === "taken" ? "!border-red-400" : ""}`}
+            className={`${INPUT} cursor-not-allowed opacity-70`}
             value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            maxLength={NICKNAME_MAX}
+            readOnly
             aria-label={t("სახელი", "Name", "Имя")}
-            placeholder={t("სახელი", "Name", "Имя")}
-            required
           />
-          <p className="min-h-5 px-1 text-sm">
-            {nameState === "checking" && <span className="text-white/40">{t("ვამოწმებ…", "Checking…", "Проверяю…")}</span>}
-            {nameState === "free" && <span className="text-emerald-300">✓ {t("სახელი თავისუფალია", "Name is available", "Имя свободно")}</span>}
-            {nameState === "taken" && <span className="text-red-300">{t("ეს სახელი უკვე დაკავებულია", "This name is already taken", "Это имя уже занято")}</span>}
-            {nameState === "idle" && (
-              <span className="text-white/35">{t("სახელი უნიკალურია: ერთს მხოლოდ ერთი მოთამაშე ატარებს", "Names are unique: only one player can use each", "Имена уникальны: каждое принадлежит одному игроку")}</span>
-            )}
+          <p className="min-h-5 px-1 text-sm text-white/45">
+            {t("მეტსახელის შეცვლა ახლა მაღაზიაშია: ", "A nickname is now changed in the shop: ", "Никнейм теперь меняется в магазине: ")}
+            <Link href="/shop" className="font-bold text-amber-300 underline underline-offset-4">
+              {t("ახალი მეტსახელი", "New nickname", "Новый никнейм")}
+            </Link>
           </p>
         </div>
       </div>
@@ -376,7 +342,7 @@ function EditProfile({ onDone }: { onDone: () => void }) {
       )}
 
       <div className="flex gap-3">
-        <button className={BTN_PRIMARY} disabled={busy || nameState === "taken" || nameState === "checking"}>
+        <button className={BTN_PRIMARY} disabled={busy}>
           {busy ? t("ინახება…", "Saving…", "Сохраняю…") : t("შენახვა", "Save", "Сохранить")}
         </button>
         <button type="button" className={BTN_GHOST} onClick={onDone}>

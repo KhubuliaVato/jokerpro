@@ -23,26 +23,41 @@ export function Avatar({
   icon,
   url,
   size = "md",
+  frame,
 }: {
   color?: string;
   icon?: string;
   /** Uploaded photo; replaces the colour + icon when present. */
   url?: string | null;
   size?: keyof typeof SIZES;
+  /** A shop frame (id of the item) drawn around the avatar. */
+  frame?: string | null;
 }) {
+  const face = <AvatarFace color={color} icon={icon} url={url} size={size} />;
+  if (!frame) return face;
+  return (
+    <span className={`avf avf-${frame}`} style={{ ["--avf-w" as string]: FRAME_WIDTH[size] }}>
+      {face}
+    </span>
+  );
+}
+
+const FRAME_WIDTH = { tag: "2px", sm: "3px", md: "3px", lg: "5px", xl: "6px" } as const;
+
+function AvatarFace({ color, icon, url, size = "md" }: { color?: string; icon?: string; url?: string | null; size?: keyof typeof SIZES }) {
   if (url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={url}
         alt=""
-        className={`flex-none rounded-full object-cover shadow-inner ring-2 ring-white/30 ${SIZES[size]}`}
+        className={`avatar-face flex-none rounded-full object-cover shadow-inner ring-2 ring-white/30 ${SIZES[size]}`}
       />
     );
   }
   return (
     <span
-      className={`grid flex-none place-items-center rounded-full bg-gradient-to-br font-extrabold leading-none text-black/75 shadow-inner ring-2 ring-white/30 ${SIZES[size]} ${AVATAR_COLORS[color ?? ""] ?? AVATAR_COLORS.amber}`}
+      className={`avatar-face grid flex-none place-items-center rounded-full bg-gradient-to-br font-extrabold leading-none text-black/75 shadow-inner ring-2 ring-white/30 ${SIZES[size]} ${AVATAR_COLORS[color ?? ""] ?? AVATAR_COLORS.amber}`}
     >
       {icon ?? "♠"}
     </span>

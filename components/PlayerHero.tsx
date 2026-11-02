@@ -8,6 +8,8 @@ import { rankFor } from "@/lib/ranks";
 import type { RatingRow } from "@/lib/ratings";
 import type { PlayerSummary } from "@/lib/search";
 import { Avatar } from "./Avatar";
+import { Nick } from "./Nick";
+import { useWorn } from "./useWorn";
 import { RankEmblem } from "./RankEmblem";
 import { HEADER_BTN, rise } from "./ui";
 
@@ -62,6 +64,7 @@ export function PlayerHero({
   actions?: React.ReactNode;
 }) {
   const t = useT();
+  const worn = useWorn(player?.id);
   const points = rating?.rating ?? 50;
   const { rank, next, progress, toNext } = rankFor(points);
   return (
@@ -78,12 +81,12 @@ export function PlayerHero({
         <div className="flex min-w-0 flex-col items-center gap-5 text-center sm:flex-row sm:text-left">
           <div className="relative flex-none">
             <div className="absolute inset-0 scale-125 rounded-full bg-amber-300/20 blur-2xl" />
-            <div className="relative rounded-full p-1 max-sm:[&>*]:size-24! max-sm:[&>*]:text-5xl!" style={{ background: `linear-gradient(160deg, ${rank.accent}, ${rank.accent}33)` }}>
-              <Avatar size="xl" color={player?.avatar_color} icon={player?.avatar_icon} url={player?.avatar_url} />
+            <div className="relative rounded-full p-1 max-sm:[&_.avatar-face]:size-24! max-sm:[&_.avatar-face]:text-5xl!" style={{ background: `linear-gradient(160deg, ${rank.accent}, ${rank.accent}33)` }}>
+              <Avatar size="xl" color={player?.avatar_color} icon={player?.avatar_icon} url={player?.avatar_url} frame={worn.frame} />
             </div>
           </div>
           <div className="min-w-0">
-            <h1 className="truncate pb-1.5 text-4xl font-extrabold leading-[1.2] tracking-tight sm:text-5xl">{player?.nickname ?? "…"}</h1>
+            <h1 className="truncate pb-1.5 text-3xl font-extrabold leading-[1.2] tracking-tight sm:text-5xl"><Nick name={player?.nickname ?? "…"} style={worn.name} /></h1>
             <p className="mt-1 text-base text-white/50">
               {subtitle && <span className="block truncate">{subtitle}</span>}
               {player && <span className="block">{t(`წევრია ${formatDate(new Date(player.created_at))}-დან`, `Member since ${formatDate(new Date(player.created_at))}`, `Участник с ${formatDate(new Date(player.created_at))}`)}</span>}
@@ -95,12 +98,12 @@ export function PlayerHero({
           </div>
         </div>
 
-        <div className="flex flex-none items-center justify-center gap-5 rounded-3xl bg-black/20 p-4 sm:p-5">
-          <div className={rating ? "" : "opacity-50 grayscale"}>
-            <RankEmblem rank={rank} className="size-28 sm:size-32" progress={next ? progress : 1} />
+        <div className="flex flex-none items-center justify-center gap-3 rounded-3xl bg-black/20 p-3 sm:gap-5 sm:p-5">
+          <div className={`flex-none ${rating ? "" : "opacity-50 grayscale"}`}>
+            <RankEmblem rank={rank} className="size-24 sm:size-32" progress={next ? progress : 1} />
           </div>
-          <div className="min-w-[11rem]">
-            <b className="block text-3xl font-extrabold leading-tight" style={{ color: rank.accent }}>
+          <div className="min-w-0 flex-1 sm:min-w-[11rem] sm:flex-none">
+            <b className="block text-2xl sm:text-3xl font-extrabold leading-tight" style={{ color: rank.accent }}>
               {rank.name}
             </b>
             <span className="text-2xl font-black tabular-nums">{rating ? points : "—"}</span>

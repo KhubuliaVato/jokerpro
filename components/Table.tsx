@@ -30,6 +30,7 @@ import {
   setMasterVolume,
 } from "@/lib/sound";
 import { Avatar } from "./Avatar";
+import { Nick } from "./Nick";
 import { CardView } from "./CardView";
 import { MusicPlayer } from "./MusicPlayer";
 import { usePlayerAvatars, usePlayerNames } from "./names";
@@ -105,6 +106,7 @@ function PlayerTag({
       color={photo.color}
       icon={photo.icon}
       url={photo.url}
+      frame={photo.frame}
     />
   ) : (
     <span
@@ -188,7 +190,7 @@ function PlayerTag({
         <b
           className={`leading-none ${compact ? `truncate wide:text-sm ${side ? "max-w-full text-[0.66rem] min-[400px]:text-[0.8rem]" : "text-[0.72rem] min-[360px]:text-[0.8rem]"}` : "text-sm"}`}
         >
-          {names[seat]}
+          <Nick name={names[seat]} style={photo?.nick} />
         </b>
         {score}
       </span>
@@ -339,6 +341,11 @@ function JokerBadge({
 }
 
 /** A small deterministic wobble per card, so a trick never looks mechanically aligned. */
+/** The class of the cards of a won trick: the winner's own effect (a shop item) or the plain gold glow. */
+function winClass(fx?: string | null) {
+  return fx ? `fxw-${fx}` : "win-glow";
+}
+
 function wobble(id: string) {
   let h = 0;
   for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) | 0;
@@ -346,6 +353,7 @@ function wobble(id: string) {
 }
 
 function TrickArea({ game }: { game: GameState }) {
+  const avatars = usePlayerAvatars();
   return (
     <div className="relative h-full max-h-[17rem] w-full max-w-[26rem] [--tcw:clamp(2.6rem,min(15vw,calc((100dvh-24.5rem)/3.2)),6.2rem)] wide:[--tcw:clamp(3.4rem,min(15vw,11.5dvh),6.2rem)]">
       <style>{`@keyframes deal-in{from{opacity:0;transform:translate(var(--fx),var(--fy)) scale(.8)}to{opacity:1;transform:none}}@keyframes take-trick{to{translate:calc(-50% + var(--tcw) * var(--tx)) calc(-50% + var(--tcw) * var(--ty));scale:.55;opacity:0}}`}</style>
@@ -388,8 +396,9 @@ function TrickArea({ game }: { game: GameState }) {
                 // A joker given away ("გატანება") lies face down.
                 card={p.card.joker && p.mode === "low" ? undefined : p.card}
                 size="sm"
+                skin={avatars?.[p.player]?.back}
                 style={{ "--cw": "var(--tcw)" } as React.CSSProperties}
-                className={`shadow-[0_4px_10px_rgb(0_0_0/0.4)] ${game.trickWinner === p.player ? "win-glow" : ""}`}
+                className={`shadow-[0_4px_10px_rgb(0_0_0/0.4)] ${game.trickWinner === p.player ? winClass(avatars?.[p.player]?.fx) : ""}`}
               />
               {p.card.joker && <JokerBadge mode={p.mode} suit={p.suit} />}
             </div>
@@ -401,6 +410,7 @@ function TrickArea({ game }: { game: GameState }) {
 }
 
 function OpponentHand({ count, seat }: { count: number; seat: number }) {
+  const skin = usePlayerAvatars()?.[seat]?.back;
   const cw = "var(--opp-cw)";
   const step = 0.3;
   if (seat === 2) {
@@ -414,6 +424,7 @@ function OpponentHand({ count, seat }: { count: number; seat: number }) {
           <CardView
             key={i}
             size="opp"
+            skin={skin}
             style={{
               marginLeft: i === 0 ? 0 : `calc(${cw} * -0.66)`,
               transform: `translateY(${Math.pow(i - mid, 2) * 1.4}px) rotate(${(i - mid) * 4.5}deg)`,
@@ -438,6 +449,7 @@ function OpponentHand({ count, seat }: { count: number; seat: number }) {
         <CardView
           key={i}
           size="opp"
+          skin={skin}
           className="!absolute"
           style={{
             left: `calc(${cw} * 0.2)`,
@@ -472,6 +484,7 @@ export function Table({
 }: Props) {
   useLang(); // the table re-renders when the language is switched
   const names = usePlayerNames();
+  const mySkin = usePlayerAvatars()?.[0]?.back;
   // The pending joker choice only counts for the position it was made in.
   const moveKey = `${game.handIndex}:${game.played.length}`;
   const [pick, setPick] = useState<{ card: Card; key: string } | null>(null);
@@ -824,7 +837,7 @@ export function Table({
                     card.joker ? tt("ჯოკერი", "Joker", "Джокер") : card.id
                   }
                 >
-                  <CardView card={card} />
+                  <CardView card={card} skin={mySkin} />
                 </button>
               );
             })}
@@ -872,8 +885,6 @@ function Standings({ sums }: { sums: number[] }) {
   );
 }
 
-const GOOD = "text-emerald-300";
-const BAD = "text-red-300";
 const COLS = "grid grid-cols-4 items-center";
 
 type Entry =
@@ -960,9 +971,6 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
                 </p>
               ) : (
                 <>
-                  <p className="mb-1 text-center text-[0.62rem] font-semibold uppercase tracking-wide text-white/45">
-                    {tt("ნათქვამი", "Bid", "Заказ")} <span className="text-white/25">/</span> {tt("წაღებული", "Won", "Взято")} · {tt("ქულა", "Points", "Очки")}
-                  </p>
                   <div className="flex flex-col gap-0.5">
                     {entries.map((e) =>
                       e.kind === "premium" ? (
@@ -987,26 +995,16 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
                             const hit = bid === taken;
                             const pts = e.h.points[p];
                             return (
+                              // one number per cell: the points of the hand, green when the bid was met, red when not;
+                              // bid / taken stay one hover away so the list reads at a glance
                               <span
                                 key={p}
-                                className={`flex items-baseline justify-center gap-1 whitespace-nowrap rounded-lg py-0.5 leading-tight ring-1 ${
-                                  hit ? "bg-emerald-400/12 ring-emerald-400/30" : "bg-red-400/10 ring-red-400/25"
+                                title={`${tt("ნათქვამი", "Bid", "Заказ")} ${bid} · ${tt("წაღებული", "Won", "Взято")} ${taken}`}
+                                className={`flex items-center justify-center whitespace-nowrap rounded-lg py-1 text-sm font-extrabold tabular-nums leading-tight ${
+                                  hit ? "bg-emerald-400/12 text-emerald-300" : "bg-red-400/10 text-red-300"
                                 }`}
                               >
-                                <span className="flex items-baseline gap-0.5 tabular-nums">
-                                  <b className="text-sm font-extrabold">{bid === 0 ? "—" : bid}</b>
-                                  <span className="text-xs text-white/30">/</span>
-                                  {bid > 0 && taken === 0 ? (
-                                    <b title={tt("ხიშტი", "Khishti", "Хишти")} className="text-sm font-extrabold text-red-300">
-                                      ✕
-                                    </b>
-                                  ) : (
-                                    <b className={`text-sm font-extrabold ${hit ? GOOD : BAD}`}>{taken}</b>
-                                  )}
-                                </span>
-                                <span className={`text-[0.65rem] font-bold tabular-nums ${pts > 0 ? "text-emerald-300/80" : pts < 0 ? "text-red-300/80" : "text-white/40"}`}>
-                                  {pts > 0 ? `+${pts}` : pts}
-                                </span>
+                                {pts > 0 ? `+${pts}` : pts}
                               </span>
                             );
                           })}
@@ -1469,6 +1467,7 @@ function LastTrick({
   onClose: () => void;
 }) {
   const names = usePlayerNames();
+  const avatars = usePlayerAvatars();
   return (
     <div className="panel last-trick-pop absolute bottom-full right-0 z-10 mb-2 p-3">
       <div className="mb-2 flex items-center justify-between gap-6 text-xs font-bold">
@@ -1493,7 +1492,8 @@ function LastTrick({
                 // A joker given away ("გატანება") lies face down.
                 card={p.card.joker && p.mode === "low" ? undefined : p.card}
                 size="sm"
-                className={p.player === trick.winner ? "win-glow" : ""}
+                skin={avatars?.[p.player]?.back}
+                className={p.player === trick.winner ? winClass(avatars?.[p.player]?.fx) : ""}
               />
               {p.card.joker && <JokerBadge mode={p.mode} suit={p.suit} small />}
             </div>

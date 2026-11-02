@@ -1,8 +1,5 @@
 import { isRed, rankLabel, type NormalCard, type Suit } from "@/lib/joker/cards";
 
-const INK = "#141418";
-const RED = "#d3141c";
-
 /** Suit outlines on a 100 × 100 grid. */
 const SUIT_PATH: Record<Suit, string> = {
   H: "M50 90C22 66 8 48 8 31C8 17 19 8 31 8C41 8 47 14 50 21C53 14 59 8 69 8C81 8 92 17 92 31C92 48 78 66 50 90Z",
@@ -16,7 +13,7 @@ function Glyph({ suit, x, y, size, flip }: { suit: Suit; x: number; y: number; s
   const k = size / 100;
   return (
     <g transform={`translate(${x} ${y}) rotate(${flip ? 180 : 0}) scale(${k}) translate(-50 -50)`}>
-      <path d={SUIT_PATH[suit]} fill={isRed(suit) ? RED : INK} />
+      <path d={SUIT_PATH[suit]} style={{ fill: isRed(suit) ? "var(--pc-red, #d3141c)" : "var(--pc-ink, #141418)" }} />
     </g>
   );
 }
@@ -42,14 +39,14 @@ const SERIF = 'ui-serif, "Iowan Old Style", "Palatino Linotype", Georgia, "Times
 /** The printed face of a normal card, drawn in red suits and numerals in red, black ones in black, on cream paper. */
 export function CardFace({ card }: { card: NormalCard }) {
   const label = rankLabel(card.rank);
-  const ink = isRed(card.suit) ? RED : INK;
+  const ink = isRed(card.suit) ? "var(--pc-red, #d3141c)" : "var(--pc-ink, #141418)";
   const court = card.rank >= 11 && card.rank <= 13;
   const corner = (flip: boolean) => (
     <g transform={flip ? "rotate(180 50 70)" : undefined}>
-      <text x="12" y="23" textAnchor="middle" fontSize={label.length > 1 ? 19 : 23} fontWeight="700" fill={ink} fontFamily={SERIF}>
+      <text x="16" y="28" textAnchor="middle" fontSize={label.length > 1 ? 17 : 22} fontWeight="700" style={{ fill: ink }} fontFamily={SERIF}>
         {label}
       </text>
-      <Glyph suit={card.suit} x={12} y={36} size={13} />
+      <Glyph suit={card.suit} x={16} y={42} size={12} />
     </g>
   );
 
@@ -61,14 +58,14 @@ export function CardFace({ card }: { card: NormalCard }) {
       {court && (
         <g>
           <Glyph suit={card.suit} x={50} y={31} size={20} />
-          <text x="50" y="88" textAnchor="middle" fontSize="54" fontWeight="700" fontFamily={SERIF} fill={ink}>
+          <text x="50" y="88" textAnchor="middle" fontSize="54" fontWeight="700" fontFamily={SERIF} style={{ fill: ink }}>
             {label}
           </text>
           <Glyph suit={card.suit} x={50} y={117} size={20} flip />
         </g>
       )}
       {PIPS[card.rank]?.map(([x, y], i) => (
-        <Glyph key={i} suit={card.suit} x={x} y={y} size={20} flip={y > 70} />
+        <Glyph key={i} suit={card.suit} x={x} y={y} size={21} flip={y > 70} />
       ))}
     </svg>
   );

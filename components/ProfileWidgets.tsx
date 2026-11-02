@@ -1,4 +1,5 @@
 import type { GameInfo } from "@/lib/games";
+import { CoinIcon } from "./Coins";
 import { useT } from "@/lib/i18n";
 import type { Achievement } from "@/lib/stats";
 
@@ -152,6 +153,10 @@ export function Achievements({ items }: { items: Achievement[] }) {
             </span>
             <span className={`text-sm font-bold leading-tight ${a.done ? "" : "text-white/70"}`}>{a.title}</span>
             <span className="text-[0.7rem] leading-tight text-white/45">{a.hint}</span>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-extrabold tabular-nums ${a.done ? "bg-amber-300/20 text-amber-200" : "bg-white/[0.06] text-white/55"}`}>
+              <CoinIcon className="size-3.5" />
+              {a.done ? "✓" : `+${a.coins}`}
+            </span>
             {!a.done && (
               <span className="mt-auto w-full">
                 <span className="block h-1.5 overflow-hidden rounded-full bg-white/10">

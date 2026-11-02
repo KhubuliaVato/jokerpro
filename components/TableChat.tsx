@@ -3,6 +3,9 @@
 import { tt, useT } from "@/lib/i18n";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTableChat, type ChatMessage } from "@/lib/online/useTableChat";
+import { emoteBody, emoteText, EMOTE_PACKS, parseEmote } from "@/lib/cosmetics";
+import { loadInventory } from "@/lib/shop";
+import { getSupabase } from "@/lib/supabase";
 
 /** The chat of an online table: messages live in the database and are deleted with the game. */
 export function TableChat({
@@ -94,6 +97,44 @@ function ChatView({
   const [binShown, setBinShown] = useState(false);
   const list = useRef<HTMLDivElement>(null);
   const hadChat = useRef(false);
+  const [picker, setPicker] = useState(false);
+  const [owned, setOwned] = useState<string[]>([]);
+  const [toasts, setToasts] = useState<{ id: number; who: string; text: string }[]>([]);
+  const toasted = useRef<number | null>(null);
+
+  // the emote packs this player has bought (the basic one is free)
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase || myId.startsWith("bot:")) return;
+    let cancelled = false;
+    loadInventory(supabase, myId).then((ids) => {
+      if (!cancelled) setOwned(ids);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [myId]);
+  const packs = EMOTE_PACKS.filter((p) => p.id === "basic" || owned.includes(`e_${p.id}`));
+
+  // an emote or phrase from somebody else floats up for a moment, even while the chat is closed
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const last = messages[messages.length - 1].id;
+    if (toasted.current === null) {
+      toasted.current = last;
+      return;
+    }
+    const fresh = messages.filter((m) => m.id > (toasted.current ?? 0) && m.user_id !== myId);
+    toasted.current = last;
+    for (const m of fresh) {
+      const parsed = parseEmote(m.body);
+      const text = parsed && emoteText(parsed);
+      if (!text) continue;
+      const toast = { id: m.id, who: names[m.user_id] ?? "…", text };
+      setToasts((prev) => [...prev.slice(-3), toast]);
+      setTimeout(() => setToasts((prev) => prev.filter((x) => x.id !== toast.id)), 3800);
+    }
+  }, [messages, myId, names]);
 
   const lastId = messages.length > 0 ? messages[messages.length - 1].id : 0;
   const unread = open ? 0 : messages.filter((m) => m.id > seenId && m.user_id !== myId).length;
@@ -147,6 +188,19 @@ function ChatView({
 
   return (
     <div className="fixed bottom-3 right-3 z-50 flex flex-col items-end gap-2">
+      <style>{"@keyframes emote-float{0%{opacity:0;transform:translateY(12px) scale(.8)}12%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0;transform:translateY(-14px)}}"}</style>
+      <div className="pointer-events-none flex flex-col items-end gap-1.5" aria-live="polite">
+        {toasts.map((x) => (
+          <div
+            key={x.id}
+            className="flex items-center gap-2 rounded-2xl border border-white/15 bg-[#0b2a1b]/95 px-3 py-2 text-sm shadow-lg"
+            style={{ animation: "emote-float 3.8s ease-out both" }}
+          >
+            <b className="text-emerald-300">{x.who}</b>
+            <span className={x.text.length <= 2 ? "text-3xl leading-none" : "font-bold"}>{x.text}</span>
+          </div>
+        ))}
+      </div>
       {open && (
         <div className="flex h-72 max-h-[calc(100dvh-5rem)] w-72 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-[#0b2a1b]/95 shadow-2xl backdrop-blur">
           <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-sm font-bold">
@@ -162,11 +216,57 @@ function ChatView({
                 <span className={`font-bold ${m.user_id === myId ? "text-amber-300" : "text-emerald-300"}`}>
                   {m.user_id === myId ? t("თქვენ", "You", "Вы") : (names[m.user_id] ?? "…")}:
                 </span>{" "}
-                <span className="text-white/90">{m.body}</span>
+                <MessageBody body={m.body} />
               </p>
             ))}
           </div>
+          {picker && (
+            <div className="max-h-32 overflow-y-auto border-t border-white/10 px-2 py-1.5">
+              {packs.map((p) => (
+                <div key={p.id} className="mb-1">
+                  <div className="text-[0.65rem] font-bold uppercase tracking-wide text-white/40">{t(p.names[0], p.names[1], p.names[2])}</div>
+                  <div className="flex flex-wrap gap-1">
+                    {p.emotes.map((e, i) => (
+                      <button
+                        key={`e${i}`}
+                        type="button"
+                        onClick={() => {
+                          void send(emoteBody("e", p.id, i));
+                          setPicker(false);
+                        }}
+                        className="rounded-lg bg-white/10 px-2 py-1 text-xl leading-none hover:bg-white/20"
+                      >
+                        {e}
+                      </button>
+                    ))}
+                    {p.phrases.map((ph, i) => (
+                      <button
+                        key={`p${i}`}
+                        type="button"
+                        onClick={() => {
+                          void send(emoteBody("p", p.id, i));
+                          setPicker(false);
+                        }}
+                        className="rounded-lg bg-white/10 px-2 py-1 text-xs font-bold leading-tight hover:bg-white/20"
+                      >
+                        {t(ph[0], ph[1], ph[2])}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           <form onSubmit={submit} className="flex gap-2 border-t border-white/10 p-2">
+            <button
+              type="button"
+              onClick={() => setPicker((v) => !v)}
+              aria-label={t("ემოციები", "Emotes", "Эмоции")}
+              aria-expanded={picker}
+              className={`rounded-full px-2 text-lg leading-none transition-colors ${picker ? "bg-amber-300/25" : "bg-white/10 hover:bg-white/20"}`}
+            >
+              😀
+            </button>
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -198,4 +298,12 @@ function ChatView({
       )}
     </div>
   );
+}
+
+/** The text of a chat message; an emote or a phrase of a shop pack is shown big, in the reader's language. */
+function MessageBody({ body }: { body: string }) {
+  const parsed = parseEmote(body);
+  const text = parsed && emoteText(parsed);
+  if (text) return <span className={text.length <= 2 ? "align-middle text-2xl leading-none" : "font-bold italic text-amber-100"}>{text}</span>;
+  return <span className="text-white/90">{body}</span>;
 }

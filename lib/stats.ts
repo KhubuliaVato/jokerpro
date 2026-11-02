@@ -71,6 +71,8 @@ export interface Achievement {
   title: string;
   hint: string;
   done: boolean;
+  /** Coins paid once when the achievement is reached (the same table is in the coins migration). */
+  coins: number;
   /** How far the player is, e.g. 7 of 10 games; `value` never exceeds `max`. */
   progress: { value: number; max: number };
 }
@@ -80,12 +82,13 @@ const progress = (value: number, max: number) => ({ value: Math.min(Math.max(0, 
 export function achievements(results: Pick<GameResult, "place" | "score" | "format">[]): Achievement[] {
   const stats = computeStats(results);
   return [
-    { id: "first", icon: "★", title: tt("პირველი გამარჯვება", "First win", "Первая победа"), hint: tt("მოიგეთ ერთი თამაში", "Win a game", "Выиграйте одну игру"), done: stats.wins >= 1, progress: progress(stats.wins, 1) },
-    { id: "ten", icon: "♠", title: tt("10 თამაში", "10 games", "10 игр"), hint: tt("დაასრულეთ 10 თამაში", "Finish 10 games", "Завершите 10 игр"), done: stats.played >= 10, progress: progress(stats.played, 10) },
-    { id: "score", icon: "♦", title: tt("500 ქულა", "500 points", "500 очков"), hint: tt("ერთ თამაშში 500+", "500+ in one game", "500+ за одну игру"), done: (stats.best ?? 0) >= 500, progress: progress(stats.best ?? 0, 500) },
-    { id: "streak", icon: "♥", title: tt("სამი ზედიზედ", "Three in a row", "Три подряд"), hint: tt("მოიგეთ სამი თამაში ზედიზედ", "Win three games in a row", "Выиграйте три игры подряд"), done: bestStreak(results) >= 3, progress: progress(bestStreak(results), 3) },
+    { id: "first", coins: 5, icon: "★", title: tt("პირველი გამარჯვება", "First win", "Первая победа"), hint: tt("მოიგეთ ერთი თამაში", "Win a game", "Выиграйте одну игру"), done: stats.wins >= 1, progress: progress(stats.wins, 1) },
+    { id: "ten", coins: 5, icon: "♠", title: tt("10 თამაში", "10 games", "10 игр"), hint: tt("დაასრულეთ 10 თამაში", "Finish 10 games", "Завершите 10 игр"), done: stats.played >= 10, progress: progress(stats.played, 10) },
+    { id: "score", coins: 7, icon: "♦", title: tt("500 ქულა", "500 points", "500 очков"), hint: tt("ერთ თამაშში 500+", "500+ in one game", "500+ за одну игру"), done: (stats.best ?? 0) >= 500, progress: progress(stats.best ?? 0, 500) },
+    { id: "streak", coins: 8, icon: "♥", title: tt("სამი ზედიზედ", "Three in a row", "Три подряд"), hint: tt("მოიგეთ სამი თამაში ზედიზედ", "Win three games in a row", "Выиграйте три игры подряд"), done: bestStreak(results) >= 3, progress: progress(bestStreak(results), 3) },
     {
       id: "full",
+      coins: 10,
       icon: "♛",
       title: tt("სრული თამაშის ოსტატი", "Full game master", "Мастер полной игры"),
       hint: tt("მოიგეთ სრული თამაში", "Win a full game", "Выиграйте полную игру"),

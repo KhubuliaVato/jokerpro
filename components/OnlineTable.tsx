@@ -13,6 +13,7 @@ import type { GameState } from "@/lib/joker/engine";
 import type { PokerState } from "@/lib/poker/engine";
 import type { PokerRules } from "@/lib/poker/online";
 import { Avatar } from "./Avatar";
+import { CoinsEarned } from "./Coins";
 import { PlayerNamesProvider } from "./names";
 import { PageShell } from "./PageShell";
 import { QueueLobby } from "./QueueLobby";
@@ -170,7 +171,7 @@ export function OnlineTable({ code }: { code: string }) {
   const names = t.players.map((p, k) => (p?.profile?.nickname ?? (k === 0 ? tt("თქვენ", "You", "Вы") : "…")) + (p?.bot && k !== 0 ? ` · ${tt("ბოტი", "bot", "бот")}` : ""));
   const avatars = t.players.map((p) =>
     p?.profile
-      ? { color: p.profile.avatar_color, icon: p.profile.avatar_icon, url: p.profile.avatar_url }
+      ? { color: p.profile.avatar_color, icon: p.profile.avatar_icon, url: p.profile.avatar_url, back: p.profile.equipped_back, frame: p.profile.equipped_frame, nick: p.profile.equipped_name, fx: p.profile.equipped_fx }
       : null,
   );
 
@@ -180,9 +181,15 @@ export function OnlineTable({ code }: { code: string }) {
       : tt("დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს.", "Are you sure? A bot will take your seat when you leave.", "Вы уверены? После выхода ваше место займёт бот.");
   const note =
     t.table.kind === "ranked" ? (
-      <RatingResult tableId={t.table.id} userId={user.id} />
+      <div className="flex flex-col items-center gap-3">
+        <RatingResult tableId={t.table.id} userId={user.id} />
+        <CoinsEarned tableId={t.table.id} userId={user.id} />
+      </div>
     ) : t.table.kind === "friendly" ? (
-      <span className="text-emerald-300">✓ {tt("თამაში ჩაიწერა ისტორიაში", "The game was saved to your history", "Игра записана в историю")}</span>
+      <div className="flex flex-col items-center gap-3">
+        <span className="text-emerald-300">✓ {tt("თამაში ჩაიწერა ისტორიაში", "The game was saved to your history", "Игра записана в историю")}</span>
+        <CoinsEarned tableId={t.table.id} userId={user.id} />
+      </div>
     ) : (
       <span className="text-white/60">{tt("კერძო თამაში არ იწერება ისტორიაში", "Private games are not saved to the history", "Частные игры не записываются в историю")}</span>
     );

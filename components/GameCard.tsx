@@ -86,8 +86,8 @@ export function GameCard({ title, href, cards, front, accent, badges, line, wait
       {/* the glow is clipped on its own layer: clipping the card itself makes its rounded border jagged */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
         <div
-          className="absolute -right-12 -top-12 size-80 rounded-full blur-3xl transition-opacity duration-500"
-          style={{ background: `${accent}80` }}
+          className="absolute -right-16 -top-16 size-56 rounded-full blur-3xl transition-opacity duration-500 sm:-right-12 sm:-top-12 sm:size-80"
+          style={{ background: `${accent}59` }}
         />
       </div>
       <Link href={href} className="flex flex-1 items-center gap-4 outline-none sm:flex-col sm:items-stretch sm:gap-0" aria-label={title}>
@@ -95,7 +95,7 @@ export function GameCard({ title, href, cards, front, accent, badges, line, wait
           <Fan cards={cards} front={front} />
         </div>
         <div className="min-w-0 flex-1 sm:flex-none">
-          <h2 className="text-3xl font-extrabold min-[360px]:text-4xl sm:text-5xl">{title}</h2>
+          <h2 className="text-2xl font-extrabold min-[400px]:text-3xl sm:text-5xl">{title}</h2>
           <div className="mt-2 flex flex-wrap gap-1.5">
             {badges.map((b) => (
               <span key={b} className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-bold text-white/70">

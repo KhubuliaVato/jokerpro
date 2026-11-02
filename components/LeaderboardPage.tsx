@@ -8,6 +8,7 @@ import { GAMES } from "@/lib/games";
 import { rankFor } from "@/lib/ranks";
 import { loadLeaderboard, loadPosition, type LeaderRow } from "@/lib/ratings";
 import { getSupabase } from "@/lib/supabase";
+import { Nick } from "./Nick";
 import { Avatar } from "./Avatar";
 import { PageShell } from "./PageShell";
 import { RankEmblem } from "./RankEmblem";
@@ -74,7 +75,7 @@ export function LeaderboardPage() {
   return (
     <PageShell width="max-w-4xl" glow={accent}>
       <section className="flex flex-col gap-4" style={rise(1)}>
-        <h1 className="text-[clamp(1.8rem,11.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">{t("ლიდერბორდი", "Leaderboard", "Рейтинг")}</h1>
+        <h1 className="text-[clamp(1.6rem,8.5vw,3rem)] font-extrabold tracking-tight sm:text-7xl">{t("ლიდერბორდი", "Leaderboard", "Рейтинг")}</h1>
         <div className="flex flex-wrap gap-2">
           {GAMES.map((g) => (
             <button
@@ -144,7 +145,7 @@ export function LeaderboardPage() {
                   <div className="relative">
                     {p.pos === 1 && <Crown color={medal} />}
                     <div
-                      className={`rounded-full p-1 ${first ? "max-sm:[&>*]:size-24! max-sm:[&>*]:text-5xl!" : ""}`}
+                      className={`rounded-full p-1 ${first ? "max-sm:[&_.avatar-face]:size-20! max-sm:[&_.avatar-face]:text-4xl!" : "max-sm:[&_.avatar-face]:size-14! max-sm:[&_.avatar-face]:text-2xl!"}`}
                       style={{ background: `linear-gradient(160deg, ${medal}, ${medal}55)`, boxShadow: first ? `0 0 40px -6px ${medal}aa` : undefined }}
                     >
                       <Avatar
@@ -155,16 +156,16 @@ export function LeaderboardPage() {
                       />
                     </div>
                     <span
-                      className="absolute -bottom-2 left-1/2 grid size-8 -translate-x-1/2 place-items-center rounded-full text-base font-black text-black"
+                      className="absolute -bottom-2 left-1/2 grid size-6 -translate-x-1/2 place-items-center rounded-full text-sm sm:size-8 sm:text-base font-black text-black"
                       style={{ background: medal }}
                     >
                       {p.pos}
                     </span>
                   </div>
-                  <b className="mt-3 max-w-full truncate text-lg font-extrabold group-hover:text-amber-300 sm:text-xl">
-                    {p.nickname}
+                  <b className="mt-3 max-w-full truncate text-base font-extrabold sm:text-lg group-hover:text-amber-300 sm:text-xl">
+                    <Nick name={p.nickname} style={p.equipped_name} />
                   </b>
-                  <RankEmblem rank={standing.rank} className={first ? "size-16" : "size-12"} />
+                  <RankEmblem rank={standing.rank} className={first ? "size-14 sm:size-16" : "size-10 sm:size-12"} />
                   <span className="text-xs font-bold sm:text-sm" style={{ color: standing.rank.accent }}>
                     {standing.rank.name}
                   </span>
@@ -234,10 +235,10 @@ function Row({ r, me }: { r: LeaderRow; me: boolean }) {
         }`}
       >
         <b className="w-10 text-center text-lg tabular-nums text-white/50">{r.pos}</b>
-        <Avatar size="md" color={r.avatar_color} icon={r.avatar_icon} url={r.avatar_url} />
+        <Avatar size="md" color={r.avatar_color} icon={r.avatar_icon} url={r.avatar_url} frame={r.equipped_frame} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-lg font-bold">
-            {r.nickname}
+            <Nick name={r.nickname} style={r.equipped_name} />
             {me && <span className="ml-2 text-sm font-semibold text-amber-300">{t("თქვენ", "You", "Вы")}</span>}
           </span>
           <span className="block text-sm text-white/45">

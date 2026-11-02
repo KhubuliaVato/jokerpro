@@ -1,41 +1,59 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { useT } from "@/lib/i18n";
+import { COINS_CHANGED, loadInventory } from "@/lib/shop";
+import { getSupabase } from "@/lib/supabase";
+import { applyTheme, DEFAULT_THEME, savedTheme, THEME_CHANGED, themeById, THEMES } from "@/lib/themes";
 import { HEADER_BTN, HEADER_MENU } from "./ui";
 
-/** Background colours of the site; the values live in globals.css under [data-theme]. */
-export const THEMES = [
-  { id: "green", color: "#1f7a4d", name: ["მწვანე", "Green", "Зелёный"] },
-  { id: "blue", color: "#25588f", name: ["ლურჯი", "Blue", "Синий"] },
-  { id: "purple", color: "#5a3392", name: ["იისფერი", "Purple", "Фиолетовый"] },
-  { id: "wine", color: "#8a2540", name: ["ღვინისფერი", "Wine", "Бордовый"] },
-  { id: "graphite", color: "#454b55", name: ["გრაფიტი", "Graphite", "Графит"] },
-] as const;
-
-const KEY = "theme";
-
-function apply(id: string) {
-  document.documentElement.dataset.theme = id;
-}
-
-/** A palette button in the header: pick the colour of the site's background (remembered in this browser). */
+/** A palette button in the header: pick the colour of the site's background; the colours beyond wine and green are bought in the shop. */
 export function ThemeSwitcher() {
   const t = useT();
+  const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
-  const [theme, setTheme] = useState("wine");
+  const [theme, setTheme] = useState<string>(DEFAULT_THEME);
+  const [bought, setBought] = useState<{ userId: string; ids: string[] } | null>(null);
   const box = useRef<HTMLDivElement>(null);
 
+  const userId = user?.id ?? null;
+  const owned = useMemo(() => (bought && bought.userId === userId ? bought.ids : []), [bought, userId]);
+
+  // read once on the client: the page script has already painted the saved theme
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(KEY);
-      // read once on the client: the page script has already painted the saved theme
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (saved && THEMES.some((x) => x.id === saved)) setTheme(saved);
-    } catch {
-      // private mode: the colour just is not remembered
-    }
+    const sync = () => setTheme(savedTheme());
+    sync();
+    window.addEventListener(THEME_CHANGED, sync);
+    return () => window.removeEventListener(THEME_CHANGED, sync);
   }, []);
+
+  // the colours this player has bought (reloaded after a purchase in the shop)
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase || !userId) return;
+    let cancelled = false;
+    const load = () =>
+      loadInventory(supabase, userId).then((ids) => {
+        if (!cancelled) setBought({ userId, ids });
+      });
+    void load();
+    window.addEventListener(COINS_CHANGED, load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(COINS_CHANGED, load);
+    };
+  }, [userId]);
+
+  // a colour that is not (or no longer) this player's goes back to the free one
+  useEffect(() => {
+    if (loading) return;
+    const current = themeById(theme);
+    if (!current || current.free) return;
+    const known = userId === null || (bought !== null && bought.userId === userId);
+    if (known && !owned.includes(theme)) applyTheme(DEFAULT_THEME);
+  }, [loading, theme, userId, bought, owned]);
 
   useEffect(() => {
     if (!open) return;
@@ -52,13 +70,7 @@ export function ThemeSwitcher() {
   }, [open]);
 
   const pick = (id: string) => {
-    setTheme(id);
-    apply(id);
-    try {
-      localStorage.setItem(KEY, id);
-    } catch {
-      // not remembered
-    }
+    applyTheme(id);
     setOpen(false);
   };
 
@@ -84,23 +96,32 @@ export function ThemeSwitcher() {
         </svg>
         <span
           className="absolute -bottom-0.5 -right-0.5 size-3.5 rounded-full ring-2 ring-[var(--bg-b)]"
-          style={{ background: THEMES.find((x) => x.id === theme)?.color }}
+          style={{ background: themeById(theme)?.color }}
         />
       </button>
       {open && (
         <ul className={`${HEADER_MENU} w-48`}>
-          {THEMES.map((th) => (
-            <li key={th.id}>
-              <button
-                type="button"
-                onClick={() => pick(th.id)}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold transition-colors hover:bg-white/10 ${th.id === theme ? "text-amber-300" : "text-white/80"}`}
-              >
-                <span className="size-6 flex-none rounded-full ring-2 ring-white/30" style={{ background: th.color }} />
-                {t(th.name[0], th.name[1], th.name[2])}
-              </button>
-            </li>
-          ))}
+          {THEMES.map((th) => {
+            const mine = th.free || owned.includes(th.id);
+            const row = `flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold transition-colors hover:bg-white/10 ${th.id === theme ? "text-amber-300" : mine ? "text-white/80" : "text-white/45"}`;
+            const dot = <span className="size-6 flex-none rounded-full ring-2 ring-white/30" style={{ background: th.color }} />;
+            return (
+              <li key={th.id}>
+                {mine ? (
+                  <button type="button" onClick={() => pick(th.id)} className={row}>
+                    {dot}
+                    {t(th.name[0], th.name[1], th.name[2])}
+                  </button>
+                ) : (
+                  <Link href="/shop" onClick={() => setOpen(false)} className={row}>
+                    {dot}
+                    <span className="flex-1">{t(th.name[0], th.name[1], th.name[2])}</span>
+                    <span aria-label={t("მაღაზიაში", "In the shop", "В магазине")}>🔒</span>
+                  </Link>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

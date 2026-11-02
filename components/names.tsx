@@ -13,6 +13,12 @@ export interface SeatAvatar {
   color?: string;
   icon?: string;
   url?: string | null;
+  /** The shop card back this player wears; their hidden cards are drawn with it. */
+  back?: string | null;
+  /** Their avatar frame, nickname style and win effect (shop items). */
+  frame?: string | null;
+  nick?: string | null;
+  fx?: string | null;
 }
 
 const NamesContext = createContext<string[]>(PLAYER_NAMES);
@@ -47,6 +53,6 @@ export function useMe(): { name: string; avatar: SeatAvatar | null } {
   if (!profile) return { name: tt("თქვენ", "You", "Вы"), avatar: null };
   return {
     name: profile.nickname,
-    avatar: { color: profile.avatar_color, icon: profile.avatar_icon, url: profile.avatar_url },
+    avatar: { color: profile.avatar_color, icon: profile.avatar_icon, url: profile.avatar_url, back: profile.equipped_back, frame: profile.equipped_frame, nick: profile.equipped_name, fx: profile.equipped_fx },
   };
 }

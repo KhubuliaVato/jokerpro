@@ -7,6 +7,9 @@ import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
 import { warmGameServers } from "@/lib/online/client";
 import { authMessage, validateNickname } from "./messages";
 
+/** Fired after something the profile shows was changed outside the profile form (what is worn, a bought nickname). */
+export const PROFILE_CHANGED = "profile:changed";
+
 export interface Profile {
   id: string;
   nickname: string;
@@ -14,6 +17,11 @@ export interface Profile {
   avatar_icon: string;
   /** Uploaded photo; when set it is shown instead of the colour + icon. */
   avatar_url: string | null;
+  /** The card back worn at the table (a shop item), or null for the standard one. */
+  equipped_back?: string | null;
+  equipped_frame?: string | null;
+  equipped_name?: string | null;
+  equipped_fx?: string | null;
   created_at: string;
 }
 
@@ -78,16 +86,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = getSupabase();
     if (!supabase || !userId) return;
     let cancelled = false;
-    supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setProfileRow((data as Profile | null) ?? null);
-      });
+    const load = () =>
+      supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!cancelled) setProfileRow((data as Profile | null) ?? null);
+        });
+    void load();
+    // the shop changes what the player wears (and the nickname): read the profile again
+    window.addEventListener(PROFILE_CHANGED, load);
     return () => {
       cancelled = true;
+      window.removeEventListener(PROFILE_CHANGED, load);
     };
   }, [userId]);
 

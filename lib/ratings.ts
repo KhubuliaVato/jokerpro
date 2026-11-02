@@ -14,6 +14,9 @@ export interface LeaderRow {
   avatar_color: string;
   avatar_icon: string;
   avatar_url: string | null;
+  /** Shop frame and nickname style (the leaderboard function of a database with the shop). */
+  equipped_frame?: string | null;
+  equipped_name?: string | null;
   rating: number;
   games: number;
   wins: number;

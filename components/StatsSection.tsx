@@ -11,6 +11,7 @@ import { loadPosition, loadRating, type RatingRow } from "@/lib/ratings";
 import type { PlayerSummary } from "@/lib/search";
 import { getSupabase } from "@/lib/supabase";
 import { PlayerHero } from "./PlayerHero";
+import { Inventory } from "./Inventory";
 import { Achievements, Donut, GameTabs, Panel, PlaceBars, Sparkline } from "./ProfileWidgets";
 import { FORMAT_LABEL, rise } from "./ui";
 
@@ -22,7 +23,7 @@ const PLACE_STYLE = [
   "border border-white/25 text-white/80",
 ];
 
-type Tab = "overview" | "stats" | "achievements" | "history";
+type Tab = "overview" | "stats" | "achievements" | "inventory" | "history";
 
 /**
  * The whole page of a player below the header bar: the hero card with the rank of the chosen game, then tabs
@@ -87,6 +88,7 @@ export function StatsSection({
     { id: "overview", label: t("მიმოხილვა", "Overview", "Обзор") },
     { id: "stats", label: t("სტატისტიკა", "Stats", "Статистика") },
     { id: "achievements", label: t("მიღწევები", "Achievements", "Достижения") },
+    { id: "inventory", label: t("ინვენტარი", "Inventory", "Инвентарь") },
     { id: "history", label: t("ისტორია", "History", "История") },
   ];
 
@@ -193,6 +195,8 @@ export function StatsSection({
               <p className="text-white/50">{t("ამ თამაშისთვის მიღწევები ჯერ არ არის.", "No achievements for this game yet.", "Для этой игры достижений пока нет.")}</p>
             </Panel>
           ))}
+
+        {tab === "inventory" && <Inventory userId={userId} owner={owner} avatar={player ? { color: player.avatar_color, icon: player.avatar_icon, url: player.avatar_url } : undefined} nickname={player?.nickname} />}
 
         {tab === "history" && (
           <section className="flex flex-col gap-4">

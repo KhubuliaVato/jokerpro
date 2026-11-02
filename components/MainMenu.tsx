@@ -12,9 +12,11 @@ import { getSupabase } from "@/lib/supabase";
 import { rankFor } from "@/lib/ranks";
 import { loadRating, type RatingRow } from "@/lib/ratings";
 import { Avatar } from "./Avatar";
+import { Nick } from "./Nick";
 import { GameCard } from "./GameCard";
 import { RankEmblem } from "./RankEmblem";
 import { SiteHeader } from "./SiteHeader";
+import { ThemeFx } from "./ThemeFx";
 import { RISE_CSS, rise } from "./ui";
 
 const ACE: Card = { joker: false, suit: "S", rank: 14, id: "S14" };
@@ -115,6 +117,7 @@ export function MainMenu() {
   return (
     <main className="relative min-h-dvh overflow-hidden bg-[radial-gradient(ellipse_at_50%_-10%,var(--bg-a),var(--bg-b)_70%)]">
       <style>{RISE_CSS}</style>
+      <ThemeFx />
 
       <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-8 px-5 py-6 sm:gap-12 sm:px-8 sm:py-8">
         <div className="relative z-30" style={rise(0)}>
@@ -123,21 +126,21 @@ export function MainMenu() {
 
         <section className="flex items-center gap-4 sm:gap-6" style={rise(1)}>
           {user && (
-            <Link href="/profile" aria-label={t("პროფილი", "Profile", "Профиль")} className="flex-none transition-transform duration-300 hover:scale-105 max-sm:[&>*]:size-16! max-sm:[&>*]:text-3xl!">
-              <Avatar size="lg" color={profile?.avatar_color} icon={profile?.avatar_icon} url={profile?.avatar_url} />
+            <Link href="/profile" aria-label={t("პროფილი", "Profile", "Профиль")} className="flex-none transition-transform duration-300 hover:scale-105 max-sm:[&_.avatar-face]:size-16! max-sm:[&_.avatar-face]:text-3xl!">
+              <Avatar size="lg" color={profile?.avatar_color} icon={profile?.avatar_icon} url={profile?.avatar_url} frame={profile?.equipped_frame} />
             </Link>
           )}
           <div className="flex min-w-0 flex-col gap-3">
-            <h1 className="text-4xl font-extrabold tracking-tight sm:text-6xl">
+            <h1 className="text-2xl font-extrabold leading-tight tracking-tight min-[400px]:text-3xl sm:text-6xl">
               {user ? (
                 <>
-                  {t("გამარჯობა", "Hello", "Привет")}, <span className="text-amber-300">{profile?.nickname ?? t("მოთამაშე", "Player", "Игрок")}</span>
+                  {t("გამარჯობა", "Hello", "Привет")}, <span className="text-amber-300"><Nick name={profile?.nickname ?? t("მოთამაშე", "Player", "Игрок")} style={profile?.equipped_name} /></span>
                 </>
               ) : (
                 t("თამაშები", "Games", "Игры")
               )}
             </h1>
-            <p className="text-lg text-white/55 sm:text-xl">
+            <p className="text-sm text-white/55 min-[400px]:text-base sm:text-xl">
               {user && stats && stats.played > 0 ? (
                 <>
                   {stats.played} {t("თამაში", "games", "игр")} · {stats.wins} {t("გამარჯვება", "wins", "побед")} · {stats.winRate}%

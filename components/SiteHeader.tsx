@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useT } from "@/lib/i18n";
 import { Avatar } from "./Avatar";
+import { Nick } from "./Nick";
+import { CoinBalance } from "./Coins";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Logo } from "./Logo";
@@ -37,6 +39,18 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    href: "/shop",
+    ka: "მაღაზია",
+    en: "Shop",
+    ru: "Магазин",
+    icon: (
+      <svg viewBox="0 0 24 24" {...ICON}>
+        <path d="M5 8h14l-1 12H6L5 8z" />
+        <path d="M9 8V6.5a3 3 0 0 1 6 0V8" />
+      </svg>
+    ),
+  },
 ];
 
 /** Top bar of the hub pages: the brand on the left, the language, and the player (or a sign-in link) on the right. */
@@ -45,10 +59,10 @@ export function SiteHeader() {
   const t = useT();
   const path = usePathname();
   return (
-    <header className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-6">
-        <Logo />
-        <nav className="hidden items-center gap-2 md:flex">
+    <header className="@container flex items-center justify-between gap-3">
+      <div className="flex min-w-0 items-center gap-4 lg:gap-5">
+        <Logo hideWordOnPhones />
+        <nav className="hidden items-center gap-1.5 md:flex">
           {NAV.map((n) => {
             const active = path === n.href || path.startsWith(`${n.href}/`);
             return (
@@ -56,21 +70,24 @@ export function SiteHeader() {
                 key={n.href}
                 href={n.href}
                 aria-current={active ? "page" : undefined}
-                className={`group flex items-center gap-2 rounded-full border px-4 py-2.5 text-base font-bold transition-[color,background-color,border-color,translate,box-shadow] duration-200 hover:-translate-y-0.5 ${
+                aria-label={t(n.ka, n.en, n.ru)}
+                title={t(n.ka, n.en, n.ru)}
+                className={`group flex items-center gap-2 rounded-full border px-3 py-2.5 text-base font-bold transition-[color,background-color,border-color,translate,box-shadow] duration-200 hover:-translate-y-0.5 ${
                   active
                     ? "border-amber-300/60 bg-amber-300/15 text-amber-200 shadow-[0_8px_24px_-12px_rgb(252_211_77/0.6)]"
                     : "border-white/10 bg-white/[0.04] text-white/65 hover:border-amber-300/40 hover:bg-white/[0.08] hover:text-amber-200"
                 }`}
               >
                 <span className="transition-transform duration-200 group-hover:scale-110">{n.icon}</span>
-                {t(n.ka, n.en, n.ru)}
+                <span className="hidden @[900px]:inline">{t(n.ka, n.en, n.ru)}</span>
               </Link>
             );
           })}
         </nav>
       </div>
 
-      <div className="flex items-center gap-2 min-[380px]:gap-3">
+      <div className="flex items-center gap-2 min-[380px]:gap-2.5">
+        <CoinBalance />
         <ThemeSwitcher />
         <LanguageSwitcher />
         {loading ? (
@@ -78,12 +95,12 @@ export function SiteHeader() {
         ) : user ? (
           <Link
             href="/profile"
-            className={`group flex items-center gap-3 p-1.5 min-[430px]:py-1.5 min-[430px]:pl-1.5 min-[430px]:pr-5 ${HEADER_BTN}`}
+            className={`group flex items-center gap-3 p-1.5 @[1100px]:pr-5 ${HEADER_BTN}`}
           >
             <span className="rounded-full ring-2 ring-amber-300/60 transition-shadow duration-200 group-hover:ring-amber-300">
-              <Avatar size="sm" color={profile?.avatar_color} icon={profile?.avatar_icon} url={profile?.avatar_url} />
+              <Avatar size="sm" color={profile?.avatar_color} icon={profile?.avatar_icon} url={profile?.avatar_url} frame={profile?.equipped_frame} />
             </span>
-            <span className="hidden max-w-32 truncate text-base font-bold min-[430px]:inline">{profile?.nickname ?? t("პროფილი", "Profile", "Профиль")}</span>
+            <span className="hidden max-w-32 truncate text-base font-bold @[1100px]:inline"><Nick name={profile?.nickname ?? t("პროფილი", "Profile", "Профиль")} style={profile?.equipped_name} /></span>
           </Link>
         ) : (
           configured && (
