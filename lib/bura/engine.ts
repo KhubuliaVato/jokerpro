@@ -85,6 +85,8 @@ export const callName = (level: number) => CALL_NAMES[level - 2] ?? "";
 export interface Call {
   by: number;
   level: number;
+  /** Who was on turn when the first call was made: they play on once the call is settled (not always the last caller). */
+  from?: number;
 }
 
 export type BuraAction =
@@ -442,7 +444,7 @@ export const nextLevel = (s: BuraState) => s.price + 1;
 export function makeCall(s: BuraState): BuraState {
   if (!canCall(s)) throw new Error("cannot call now");
   const next = structuredClone(s);
-  next.call = { by: next.turn, level: s.price + 1 };
+  next.call = { by: next.turn, level: s.price + 1, from: next.turn };
   next.phase = "call";
   next.turn = (next.turn + 1) % next.players;
   return next;
@@ -459,12 +461,26 @@ export function answerCall(s: BuraState, answer: "accept" | "raise" | "fold"): B
     next.raised = teamOf(call.by);
     next.call = null;
     next.phase = "play";
-    next.turn = call.by;
+    next.turn = call.from ?? call.by;
     return next;
   }
   if (call.level >= MAX_PRICE) throw new Error("nothing above shashi");
-  next.call = { by: next.turn, level: call.level + 1 };
+  next.call = { by: next.turn, level: call.level + 1, from: call.from ?? call.by };
   next.turn = (next.turn + 1) % next.players;
+  return next;
+}
+
+/**
+ * A game saved by the old rules can be stuck: a trick is half played and the player on turn has nothing left to put
+ * down (a raised call handed the turn to the wrong player). Passes the turn to whoever has cards to put down, or ends
+ * the trick; any other state is returned as it is.
+ */
+export function heal(s: BuraState): BuraState {
+  if (s.phase !== "play" || s.trick.length === 0 || needOf(s, s.turn) > 0) return s;
+  const next = structuredClone(s);
+  const after = nextToAct(next);
+  if (after === null) next.phase = "trickEnd";
+  else next.turn = after;
   return next;
 }
 

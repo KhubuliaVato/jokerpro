@@ -1,6 +1,6 @@
 import type { NormalCard } from "../joker/cards";
 import { botAct, STRONG_STYLE } from "./bot";
-import { act, finishTrick, nextRound, teamOf, type BuraAction, type BuraState, type Play } from "./engine";
+import { act, finishTrick, heal, nextRound, teamOf, type BuraAction, type BuraState, type Play } from "./engine";
 
 export { ONLINE_AFK_LIMIT, ONLINE_TURN_SECONDS } from "../joker/online";
 
@@ -66,13 +66,18 @@ export function viewFor(state: BuraState, seat: number): BuraState {
 
 /** The bots' moves, until a human has to decide (or the trick / round is over and the clients take a breath). */
 export function settle(state: BuraState, isBot: (seat: number) => boolean): BuraState {
-  let s = state;
+  let s = heal(state);
   for (let i = 0; i < 400 && isActivePhase(s) && isBot(s.turn); i++) s = botStep(s);
   return s;
 }
 
 /** One move of the standard bot for whoever is on turn (also used when a player's time runs out). */
-export const botStep = (s: BuraState): BuraState => act(s, botAct(s, { ...STRONG_STYLE, samples: 24 }));
+export function botStep(state: BuraState): BuraState {
+  const s = heal(state);
+  // a stuck game only gets its turn straightened out; the move itself comes with the next request
+  if (s !== state) return s;
+  return act(s, botAct(s, { ...STRONG_STYLE, samples: 24 }));
+}
 
 /** After the pause that lets everybody see the finished trick or round. */
 export function advance(s: BuraState): BuraState {

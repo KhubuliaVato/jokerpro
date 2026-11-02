@@ -10,6 +10,7 @@ import {
   createGame,
   decideVar,
   finishTrick,
+  heal,
   isLegal,
   makeCall,
   molotka,
@@ -479,7 +480,7 @@ describe("calls", () => {
     expect(canCall(g0())).toBe(true);
     const asked = makeCall(g0());
     expect(asked.phase).toBe("call");
-    expect(asked.call).toEqual({ by: 0, level: 2 });
+    expect(asked.call).toEqual({ by: 0, level: 2, from: 0 });
     expect(asked.turn).toBe(1);
     const on = answerCall(asked, "accept");
     expect(on).toMatchObject({ phase: "play", price: 2, turn: 0, call: null, raised: 0 });
@@ -496,13 +497,16 @@ describe("calls", () => {
   it("raising makes the earlier call the price; giving in to the raise pays that price", () => {
     const raised = answerCall(makeCall(g0()), "raise");
     expect(raised.price).toBe(2);
-    expect(raised.call).toEqual({ by: 1, level: 3 });
+    expect(raised.call).toEqual({ by: 1, level: 3, from: 0 });
     expect(raised.turn).toBe(0);
     const done = answerCall(raised, "fold");
     expect(done.result).toMatchObject({ winner: 1, gain: 2 });
     const accepted = answerCall(raised, "accept");
-    expect(accepted).toMatchObject({ price: 3, turn: 1, raised: 1 });
-    expect(canCall(accepted)).toBe(false);
+    // whoever was on turn when the first call came plays on, not the one who raised
+    expect(accepted).toMatchObject({ price: 3, turn: 0, raised: 1 });
+    // the raising side cannot raise again, the other side can
+    expect(canCall(accepted, 1)).toBe(false);
+    expect(canCall(accepted)).toBe(true);
   });
 
   it("nothing goes above shashi, and the round pays the price when it is won", () => {
@@ -513,6 +517,22 @@ describe("calls", () => {
     const r = { ...g0(), price: 5 };
     const asked = makeCall(r);
     expect(() => answerCall(answerCall(asked, "raise"), "raise")).toThrow();
+  });
+
+  it("a raise accepted in the middle of a trick gives the turn back to the player who still has to answer it", () => {
+    const g = playCards(g0(), ["S14"]);
+    const accepted = answerCall(answerCall(makeCall(g), "raise"), "accept");
+    expect(accepted).toMatchObject({ phase: "play", price: 3, turn: 1 });
+    expect(isLegal(accepted, ["S9"])).toBe(true);
+  });
+
+  it("heal gets a game out of the half-played trick whose turn went to a player with nothing to put down", () => {
+    const stuck = { ...playCards(g0(), ["S14"]), turn: 0 };
+    expect(legalPlays(stuck)).toEqual([]);
+    const healed = heal(stuck);
+    expect(healed.turn).toBe(1);
+    expect(legalPlays(healed).length).toBeGreaterThan(0);
+    expect(heal(healed)).toBe(healed);
   });
 
   it("a call needs your turn in the play phase", () => {
