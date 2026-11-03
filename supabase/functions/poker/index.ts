@@ -5,11 +5,12 @@
 // into table_views, which the clients receive live through Realtime), but only for poker: play chips between friends,
 // nothing is rated and nothing is recorded. It needs none of the private rating code.
 //
-// Actions (POST JSON, signed-in user): start, move, advance, tick, sync.
+// Actions (POST JSON, signed-in user): start, move, advance, tick, sync, return.
 // Built into one file with `npm run build:poker` (esbuild), because Deno needs explicit import paths.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { act, type PokerState } from "../../../lib/poker/engine";
 import { advance, botStep, createPoker, isActivePhase, ONLINE_AFK_LIMIT, ONLINE_TURN_SECONDS, parseAction, viewFor, type PokerRules } from "../../../lib/poker/online";
+import { RETURN_WINDOW_MS } from "../../../lib/online/penalty";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -42,6 +43,9 @@ interface Seat {
   seat: number;
   user_id: string;
   bot: boolean;
+  /** When the player left (or was kicked); the seat is a bot's since. */
+  left_at: string | null;
+  returned: boolean;
 }
 interface GameRow {
   table_id: string;
@@ -61,7 +65,7 @@ interface Table {
 async function loadTable(tableId: string, userId: string) {
   const [{ data: table }, { data: seats }] = await Promise.all([
     admin.from("game_tables").select("id, status, game, rules").eq("id", tableId).maybeSingle(),
-    admin.from("table_seats").select("seat, user_id, bot").eq("table_id", tableId).order("seat"),
+    admin.from("table_seats").select("seat, user_id, bot, left_at, returned").eq("table_id", tableId).order("seat"),
   ]);
   if (!table || table.game !== "poker") throw new UserError("table not found");
   const mine = (seats as Seat[] | null)?.find((s) => s.user_id === userId);
@@ -115,6 +119,8 @@ async function withGame(
     afk?: Record<string, number>;
     /** Seats whose player timed out too often: a bot owns them from now on. */
     kick?: number[];
+    /** Seats whose player took them back from the bot. */
+    revive?: number[];
   } | null,
 ) {
   for (let attempt = 0; attempt < 6; attempt++) {
@@ -126,7 +132,12 @@ async function withGame(
     if (!out) return { ok: true, noop: true };
     if (await save(ctx.table, ctx.seats, row, out.state, out.afk ?? row.afk)) {
       for (const seat of out.kick ?? []) {
-        await admin.from("table_seats").update({ bot: true }).eq("table_id", tableId).eq("seat", seat);
+        const user = ctx.seats.find((s) => s.seat === seat)?.user_id;
+        if (user) await admin.rpc("abandon_seat", { p_table: tableId, p_user: user });
+      }
+      for (const seat of out.revive ?? []) {
+        await admin.from("table_seats").update({ bot: false, returned: true }).eq("table_id", tableId).eq("seat", seat);
+        await admin.from("play_bans").delete().eq("user_id", userId).eq("table_id", tableId);
       }
       return { ok: true, version: row.version + 1 };
     }
@@ -165,6 +176,18 @@ async function handle(userId: string, body: Record<string, unknown>) {
         if (body.version !== row.version) return null;
         if (Date.now() - Date.parse(row.updated_at) < HAND_END_MIN_PAUSE_MS) return null;
         return { state: advance(s) };
+      });
+
+    // The player who left (or was kicked) takes the seat back from the bot, if it was less than 7 minutes ago.
+    case "return":
+      return withGame(tableId, userId, ({ table, me, row }) => {
+        if (!me.bot) return null;
+        if (table.status !== "playing") throw new UserError("the game is over");
+        if (!me.left_at || me.returned || Date.now() - Date.parse(me.left_at) > RETURN_WINDOW_MS) {
+          throw new UserError("too late to return");
+        }
+        me.bot = false;
+        return { state: row.state, afk: { ...row.afk, [me.seat]: 0 }, revive: [me.seat] };
       });
 
     // A timer ran out on someone's screen, or a bot is on turn: do what is due.

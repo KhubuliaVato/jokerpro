@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Sans_Georgian } from "next/font/google";
 import Script from "next/script";
 import { preconnect } from "react-dom";
+import { BanBanner } from "@/components/BanBanner";
 import { PageFade } from "@/components/PageFade";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
 import { LangProvider } from "@/lib/i18n";
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Script>
         <LangProvider>
           <AuthProvider>
+            <BanBanner />
             <PageFade>{children}</PageFade>
           </AuthProvider>
         </LangProvider>

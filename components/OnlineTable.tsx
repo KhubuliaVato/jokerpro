@@ -78,17 +78,7 @@ export function OnlineTable({ code }: { code: string }) {
 
   // My seat was taken over by a bot (I left or timed out twice): I can only watch the end, so show the way out.
   if (t.mySeat?.bot && t.table.status !== "waiting") {
-    return (
-      <Message
-        title={tt("ადგილი ბოტმა დაიკავა", "A bot took your seat", "Ваше место занял бот")}
-        text={tt("ზედიზედ ორჯერ გამოტოვეთ სვლა ან მაგიდა დატოვეთ.", "You missed your turn twice in a row or left the table.", "Вы дважды подряд пропустили ход или покинули стол.")}
-        action={
-          <Link href={`/${game}`} className={`${BTN_GHOST} w-fit`}>
-            ← {tt("უკან", "Back", "Назад")}
-          </Link>
-        }
-      />
-    );
+    return <SeatTaken game={game} returnLeft={t.returnLeft} onReturn={t.returnToGame} ranked={t.table.kind === "ranked"} />;
   }
 
   // The ready check ran out before I accepted: the seat is gone.
@@ -177,8 +167,10 @@ export function OnlineTable({ code }: { code: string }) {
 
   const quitConfirm =
     t.table.kind === "ranked"
-      ? tt("დარწმუნებული ხართ? თამაშიდან გასვლა წოდებისთვის ბრძოლაში −10 ქულას ნიშნავს და თქვენს ადგილს ბოტი დაიკავებს.", "Are you sure? Leaving a ranked game costs −10 points and a bot takes your seat.", "Вы уверены? Выход из рейтинговой игры стоит −10 очков, а ваше место займёт бот.")
-      : tt("დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს.", "Are you sure? A bot will take your seat when you leave.", "Вы уверены? После выхода ваше место займёт бот.");
+      ? tt("დარწმუნებული ხართ? თამაშიდან გასვლა წოდებისთვის ბრძოლაში −6-დან −10 ქულამდე ჯარიმაა (რაც ადრე, მით მეტი), ახალ მაგიდაზე 2 საათით ვერ დაჯდებით და თქვენს ადგილს ბოტი დაიკავებს. დაბრუნება 7 წუთის განმავლობაში შეგიძლიათ.", "Are you sure? Leaving a ranked game costs 6 to 10 points (more the earlier you go), you cannot join a new table for 2 hours, and a bot takes your seat. You can return within 7 minutes.", "Вы уверены? Выход из рейтинговой игры стоит от 6 до 10 очков (чем раньше, тем больше), 2 часа нельзя садиться за новый стол, а ваше место займёт бот. Вернуться можно в течение 7 минут.")
+      : t.table.kind === "friendly"
+        ? tt("დარწმუნებული ხართ? გასვლისას ახალ მაგიდაზე 2 საათით ვერ დაჯდებით და თქვენს ადგილს ბოტი დაიკავებს. დაბრუნება 7 წუთის განმავლობაში შეგიძლიათ.", "Are you sure? You cannot join a new table for 2 hours after leaving, and a bot takes your seat. You can return within 7 minutes.", "Вы уверены? После выхода 2 часа нельзя садиться за новый стол, а ваше место займёт бот. Вернуться можно в течение 7 минут.")
+        : tt("დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს. დაბრუნება 7 წუთის განმავლობაში შეგიძლიათ.", "Are you sure? A bot will take your seat when you leave. You can return within 7 minutes.", "Вы уверены? После выхода ваше место займёт бот. Вернуться можно в течение 7 минут.");
   const note =
     t.table.kind === "ranked" ? (
       <div className="flex flex-col items-center gap-3">
@@ -251,6 +243,66 @@ function Notice({ text }: { text: string }) {
     >
       {text}
     </div>
+  );
+}
+
+/** A bot has my seat: for 7 minutes I can take it back, after that the game goes on without me. */
+function SeatTaken({
+  game,
+  returnLeft,
+  onReturn,
+  ranked,
+}: {
+  game: string;
+  returnLeft: number | null;
+  onReturn: () => Promise<string | null>;
+  ranked: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canReturn = returnLeft !== null && returnLeft > 0;
+  const clock = returnLeft === null ? "" : `${Math.floor(returnLeft / 60)}:${String(returnLeft % 60).padStart(2, "0")}`;
+  return (
+    <Message
+      title={tt("ადგილი ბოტმა დაიკავა", "A bot took your seat", "Ваше место занял бот")}
+      text={
+        canReturn
+          ? tt(
+              `თამაშს დაბრუნება შეგიძლიათ კიდევ ${clock}. ${ranked ? "ამ შემთხვევაში წოდებისთვის ბრძოლაში ჯარიმა განახევრდება." : ""}`,
+              `You can return to the game for another ${clock}. ${ranked ? "Then the rating penalty is halved." : ""}`,
+              `Вернуться в игру можно ещё ${clock}. ${ranked ? "Тогда штраф к рейтингу уменьшится вдвое." : ""}`,
+            )
+          : tt(
+              "ზედიზედ ორჯერ გამოტოვეთ სვლა ან მაგიდა დატოვეთ და დაბრუნების დრო გავიდა.",
+              "You missed your turn twice in a row or left the table, and the time to return is over.",
+              "Вы дважды подряд пропустили ход или покинули стол, и время возвращения вышло.",
+            )
+      }
+      action={
+        <div className="flex flex-col gap-3">
+          {error && <p className="font-semibold text-rose-300">{error}</p>}
+          <div className="flex flex-wrap gap-3">
+            {canReturn && (
+              <button
+                type="button"
+                disabled={busy}
+                className={`${BTN_PRIMARY} w-fit`}
+                onClick={async () => {
+                  setBusy(true);
+                  setError(await onReturn());
+                  setBusy(false);
+                }}
+              >
+                {tt("თამაშში დაბრუნება", "Return to the game", "Вернуться в игру")}
+              </button>
+            )}
+            <Link href={`/${game}`} className={`${BTN_GHOST} w-fit`}>
+              ← {tt("უკან", "Back", "Назад")}
+            </Link>
+          </div>
+        </div>
+      }
+    />
   );
 }
 

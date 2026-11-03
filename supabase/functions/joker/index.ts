@@ -5,7 +5,7 @@
 // (table_views) which the clients receive live through Realtime.
 //
 // Plays Joker, Bura and Hold'em tables (table.game); everything below dispatches on it.
-// Actions (POST JSON, signed-in user): start, move, advance, tick, sync.
+// Actions (POST JSON, signed-in user): start, move, advance, tick, sync, return.
 // Built into one file with `npm run build:functions` (esbuild), because Deno needs explicit import paths.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { createGame, PLAYERS, type GameState } from "../../../lib/joker/engine";
@@ -22,6 +22,7 @@ import {
   type Action,
 } from "../../../lib/joker/online";
 import type { Rules } from "../../../lib/joker/rules";
+import { onlineTierFor, type OnlineBotTier } from "../../../lib/joker/botProfiles";
 import { act as actBura, createGame as createBura, type BuraState } from "../../../lib/bura/engine";
 import * as bura from "../../../lib/bura/online";
 import { act as actPoker, type PokerState } from "../../../lib/poker/engine";
@@ -29,6 +30,7 @@ import * as poker from "../../../lib/poker/online";
 // Private: the rating formulas live outside the public repository (see .gitignore).
 import { rateGame } from "../../../lib/secret/rating";
 import { rateBura } from "../../../lib/secret/buraRating";
+import { leftProgress, quitPenalty, RETURN_WINDOW_MS, returnedPenalty } from "../../../lib/online/penalty";
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -61,6 +63,11 @@ interface Seat {
   bot: boolean;
   /** Said "yes" in the ready check of a table of random players. */
   accepted: boolean;
+  /** When the player left (or was kicked) and at which version of the game; the seat is a bot's since. */
+  left_at: string | null;
+  left_version: number | null;
+  /** The player already took the seat back once. */
+  returned: boolean;
 }
 type AnyState = GameState | BuraState | PokerState;
 interface GameRow {
@@ -78,12 +85,14 @@ interface Table {
   rules: Rules | bura.BuraRules | poker.PokerRules;
   /** private: friends with a code (nothing recorded). friendly / ranked: random players. */
   kind: "private" | "friendly" | "ranked";
+  /** How strong the bots at this table are (Joker): set when the game starts, from the humans' ratings. */
+  bot_tier: OnlineBotTier;
 }
 
 async function loadTable(tableId: string, userId: string) {
   const [{ data: table }, { data: seats }] = await Promise.all([
-    admin.from("game_tables").select("id, status, game, rules, kind").eq("id", tableId).maybeSingle(),
-    admin.from("table_seats").select("seat, user_id, bot, accepted").eq("table_id", tableId).order("seat"),
+    admin.from("game_tables").select("id, status, game, rules, kind, bot_tier").eq("id", tableId).maybeSingle(),
+    admin.from("table_seats").select("seat, user_id, bot, accepted, left_at, left_version, returned").eq("table_id", tableId).order("seat"),
   ]);
   if (!table) throw new UserError("table not found");
   const mine = (seats as Seat[] | null)?.find((s) => s.user_id === userId);
@@ -97,21 +106,21 @@ const botSeat = (seats: Seat[]) => (seat: number) => seats.find((s) => s.seat ==
 const isBura = (t: Table) => t.game === "bura";
 const isPoker = (t: Table) => t.game === "poker";
 const capacity = (t: Table) => (isBura(t) || isPoker(t) ? (t.rules as bura.BuraRules).players : PLAYERS);
-const create = (t: Table, isBot: (seat: number) => boolean): AnyState =>
+const create = (t: Table, isBot: (seat: number) => boolean, tier: OnlineBotTier): AnyState =>
   isPoker(t)
     ? poker.createPoker(t.rules as poker.PokerRules)
     : isBura(t)
       ? bura.settle(createBura((t.rules as bura.BuraRules).players), isBot)
-      : settle(createGame(t.rules as Rules), isBot);
+      : settle(createGame(t.rules as Rules), isBot, tier);
 const viewOf = (t: Table, state: AnyState, seat: number) =>
   isPoker(t) ? poker.viewFor(state as PokerState, seat) : isBura(t) ? bura.viewFor(state as BuraState, seat) : viewFor(state as GameState, seat);
 const active = (t: Table, state: AnyState) =>
   isPoker(t) ? poker.isActivePhase(state as PokerState) : isBura(t) ? bura.isActivePhase(state as BuraState) : isActivePhase(state as GameState);
 // Hold'em bots move one at a time (each on its own tick), so the players can follow the betting.
 const settleFor = (t: Table, state: AnyState, isBot: (seat: number) => boolean): AnyState =>
-  isPoker(t) ? state : isBura(t) ? bura.settle(state as BuraState, isBot) : settle(state as GameState, isBot);
+  isPoker(t) ? state : isBura(t) ? bura.settle(state as BuraState, isBot) : settle(state as GameState, isBot, t.bot_tier);
 const botOnce = (t: Table, state: AnyState): AnyState =>
-  isPoker(t) ? poker.botStep(state as PokerState) : isBura(t) ? bura.botStep(state as BuraState) : botMove(state as GameState);
+  isPoker(t) ? poker.botStep(state as PokerState) : isBura(t) ? bura.botStep(state as BuraState) : botMove(state as GameState, t.bot_tier);
 const advanceFor = (t: Table, state: AnyState): AnyState =>
   isPoker(t) ? poker.advance(state as PokerState) : isBura(t) ? bura.advance(state as BuraState) : advance(state as GameState);
 const isPause = (t: Table, state: AnyState) =>
@@ -161,15 +170,17 @@ async function save(
     })),
   );
 
-  if (state.phase === "gameEnd") await finish(table, seats, state);
+  if (state.phase === "gameEnd") await finish(table, seats, state, version);
   return true;
 }
 
 /**
  * The game is over. Private tables record nothing. Friendly matches record the result of everyone who stayed.
- * Ranked matches also rate everyone: players who left (a bot finished their seat) lose the full penalty.
+ * Ranked matches also rate everyone: a player who left (a bot finished their seat) loses a fixed penalty of 6 to 10
+ * points, the more the earlier they left; one who left but came back in time loses half of it on top of the result.
+ * `endVersion` is the version of the game at its end: a seat's `left_version` over it is how far the game had got.
  */
-async function finish(table: Table, seats: Seat[], state: AnyState) {
+async function finish(table: Table, seats: Seat[], state: AnyState, endVersion: number) {
   // Hold'em is for friends with play chips only: nothing is recorded.
   if (table.kind !== "private" && !isPoker(table)) {
     const { data: profiles } = await admin
@@ -199,6 +210,12 @@ async function finish(table: Table, seats: Seat[], state: AnyState) {
       verdict = isBura(table)
         ? { delta: rateBura(state as BuraState, before, quit), detail: quit.map(() => ({})) }
         : rateGame(state as GameState, before, quit);
+      bySeat.forEach((s, i) => {
+        if (!s.left_at) return;
+        const progress = leftProgress(s.left_version, endVersion);
+        if (s.bot) verdict!.delta[i] = -quitPenalty(progress);
+        else if (s.returned) verdict!.delta[i] = Math.round(verdict!.delta[i]) - returnedPenalty(progress);
+      });
     }
 
     const rows = bySeat
@@ -270,6 +287,8 @@ async function withGame(
     afk?: Record<string, number>;
     /** Seats whose player timed out too often: a bot owns them from now on. */
     kick?: number[];
+    /** Seats whose player took them back from the bot. */
+    revive?: number[];
   } | null,
 ) {
   for (let attempt = 0; attempt < 6; attempt++) {
@@ -281,7 +300,12 @@ async function withGame(
     if (!out) return { ok: true, noop: true };
     if (await save(ctx.table, ctx.seats, row, out.state, out.afk ?? row.afk)) {
       for (const seat of out.kick ?? []) {
-        await admin.from("table_seats").update({ bot: true }).eq("table_id", tableId).eq("seat", seat);
+        const user = ctx.seats.find((s) => s.seat === seat)?.user_id;
+        if (user) await admin.rpc("abandon_seat", { p_table: tableId, p_user: user });
+      }
+      for (const seat of out.revive ?? []) {
+        await admin.from("table_seats").update({ bot: false, returned: true }).eq("table_id", tableId).eq("seat", seat);
+        await admin.from("play_bans").delete().eq("user_id", userId).eq("table_id", tableId);
       }
       return { ok: true, version: row.version + 1 };
     }
@@ -294,7 +318,16 @@ async function start(tableId: string, userId: string) {
   if (table.status !== "waiting") return { ok: true, noop: true };
   if (seats.length < capacity(table)) throw new UserError("the table is not full yet");
   if (table.kind !== "private" && !seats.every((s) => s.accepted)) throw new UserError("the match is not accepted yet");
-  const state = create(table, botSeat(seats));
+  // The bots are as strong as the humans at the table: the average rating of the players decides.
+  const { data: rated } = await admin
+    .from("player_ratings")
+    .select("user_id, rating")
+    .eq("game", table.game)
+    .in("user_id", seats.filter((s) => !s.bot).map((s) => s.user_id));
+  const ratings = seats.filter((s) => !s.bot).map((s) => rated?.find((r) => r.user_id === s.user_id)?.rating ?? 50);
+  table.bot_tier = onlineTierFor(ratings.reduce((a, b) => a + b, 0) / Math.max(1, ratings.length));
+  await admin.from("game_tables").update({ bot_tier: table.bot_tier }).eq("id", table.id);
+  const state = create(table, botSeat(seats), table.bot_tier);
   // `insert` loses to a concurrent start, which is exactly what we want.
   const saved = await save(table, seats, null, state, {});
   if (saved) await admin.from("game_tables").update({ status: "playing" }).eq("id", table.id).eq("status", "waiting");
@@ -332,6 +365,18 @@ async function handle(userId: string, body: Record<string, unknown>) {
         if (body.version !== row.version) return null;
         if (Date.now() - Date.parse(row.updated_at) < MIN_PAUSE_MS[s.phase as keyof typeof MIN_PAUSE_MS]) return null;
         return { state: settleFor(table, advanceFor(table, s), botSeat(seats)) };
+      });
+
+    // The player who left (or was kicked) takes the seat back from the bot, if it was less than 7 minutes ago.
+    case "return":
+      return withGame(tableId, userId, ({ table, me, row }) => {
+        if (!me.bot) return null;
+        if (table.status !== "playing") throw new UserError("the game is over");
+        if (!me.left_at || me.returned || Date.now() - Date.parse(me.left_at) > RETURN_WINDOW_MS) {
+          throw new UserError("too late to return");
+        }
+        me.bot = false;
+        return { state: row.state, afk: { ...row.afk, [me.seat]: 0 }, revive: [me.seat] };
       });
 
     // A timer ran out on someone's screen, or a seat was handed to a bot: do what is due.

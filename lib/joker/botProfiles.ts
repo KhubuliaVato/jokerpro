@@ -8,9 +8,33 @@ export interface BotStyle {
   mistake: number;
   /** Leans its bids up (+) or down (−) by this many tricks. */
   bidBias: number;
+  /** Chance that it still remembers a card that was already played (1 or missing: it never forgets). */
+  memory?: number;
 }
 
 export const STANDARD_STYLE: BotStyle = { bidNoise: 0, mistake: 0, bidBias: 0 };
+
+/** Never errs and remembers every card. */
+export const PERFECT_STYLE: BotStyle = { ...STANDARD_STYLE, memory: 1 };
+
+/**
+ * The bots that fill empty seats of online tables, by the level of the humans at the table:
+ * weak errs and forgets a lot, strong plays well and now and then loses a card, pro thinks ahead (see proBot.ts).
+ */
+export type OnlineBotTier = "weak" | "strong" | "pro";
+
+export const ONLINE_STYLE: Record<OnlineBotTier, BotStyle> = {
+  weak: { bidNoise: 0.35, mistake: 0.18, bidBias: 0, memory: 0.6 },
+  strong: { bidNoise: 0.06, mistake: 0.02, bidBias: 0, memory: 0.9 },
+  pro: PERFECT_STYLE,
+};
+
+/** Which bot sits at a table where the humans have this average rating (Master is 400, GrandMaster 1000). */
+export function onlineTierFor(averageRating: number): OnlineBotTier {
+  if (averageRating >= 400) return "pro";
+  if (averageRating >= 200) return "strong";
+  return "weak";
+}
 
 export type BotTier = "easy" | "medium" | "hard";
 

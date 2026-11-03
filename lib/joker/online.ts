@@ -1,4 +1,6 @@
 import { botBid, botChooseTrump, botPlay } from "./bot";
+import { ONLINE_STYLE, STANDARD_STYLE, type OnlineBotTier } from "./botProfiles";
+import { proBid, proPlay } from "./proBot";
 import type { Card, Suit } from "./cards";
 import {
   chooseTrump,
@@ -80,19 +82,24 @@ export function applyAction(state: GameState, seat: number, action: Action): Gam
   return playCard(state, action.option);
 }
 
-/** The move a bot makes for whoever is on turn (also used when a player's timer runs out). */
-export function botMove(state: GameState): GameState {
+/**
+ * The move a bot makes for whoever is on turn (also used when a player's timer runs out).
+ * `tier` is how strong the bot is (see botProfiles.ts); without it the ordinary bot plays.
+ */
+export function botMove(state: GameState, tier?: OnlineBotTier): GameState {
+  const style = tier ? ONLINE_STYLE[tier] : STANDARD_STYLE;
+  const pro = tier === "pro";
   if (state.phase === "trump") return chooseTrump(state, botChooseTrump(state.hands[state.turn]));
-  if (state.phase === "bidding") return placeBid(state, botBid(state, state.turn));
-  if (state.phase === "playing") return playCard(state, botPlay(state, state.turn));
+  if (state.phase === "bidding") return placeBid(state, pro ? proBid(state, state.turn) : botBid(state, state.turn, style));
+  if (state.phase === "playing") return playCard(state, pro ? proPlay(state, state.turn) : botPlay(state, state.turn, style));
   throw new Error("nothing to decide right now");
 }
 
 /** Lets bots move for as long as it is a bot seat's turn. */
-export function settle(state: GameState, isBot: (seat: number) => boolean): GameState {
+export function settle(state: GameState, isBot: (seat: number) => boolean, tier?: OnlineBotTier): GameState {
   let s = state;
   // A hand has at most 36 decisions per seat; the cap only guards against a logic error.
-  for (let guard = 0; guard < 400 && isActivePhase(s) && isBot(s.turn); guard++) s = botMove(s);
+  for (let guard = 0; guard < 400 && isActivePhase(s) && isBot(s.turn); guard++) s = botMove(s, tier);
   return s;
 }
 

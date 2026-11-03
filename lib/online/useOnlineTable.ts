@@ -10,7 +10,8 @@ import type { PokerRules } from "@/lib/poker/online";
 import { HAND_PAUSE } from "@/lib/poker/usePokerGame";
 import { applyAction, realSeat, type Action } from "@/lib/joker/online";
 import { getSupabase } from "@/lib/supabase";
-import { acceptMatch, callJoker, clockSkew, expireMatch, joinTable, leaveTable, pingTable, READY_SECONDS, type SeatRow, type TableRow, type ViewRow } from "./client";
+import { acceptMatch, BAN_CHANGED, callJoker, clockSkew, expireMatch, joinTable, leaveTable, pingTable, READY_SECONDS, returnToTable, type SeatRow, type TableRow, type ViewRow } from "./client";
+import { RETURN_WINDOW_MS } from "./penalty";
 
 export interface SeatProfile {
   id: string;
@@ -84,7 +85,7 @@ export function useOnlineTable(code: string) {
   const loadSeats = useCallback(async () => {
     const supabase = getSupabase();
     if (!supabase || !tableId) return;
-    const { data } = await supabase.from("table_seats").select("seat, user_id, bot, accepted").eq("table_id", tableId).order("seat");
+    const { data } = await supabase.from("table_seats").select("seat, user_id, bot, accepted, left_at, returned").eq("table_id", tableId).order("seat");
     const list = (data ?? []) as SeatRow[];
     setSeats(list);
     setSeatsLoaded(true);
@@ -237,6 +238,18 @@ export function useOnlineTable(code: string) {
     };
   }, [tableId, expired]);
 
+  // A seat a bot took over after I left (or missed two turns) can be taken back for 7 minutes.
+  const returnable = !!mySeat?.bot && !!mySeat.left_at && !mySeat.returned && status === "playing";
+  useEffect(() => {
+    if (!returnable) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [returnable]);
+  const returnLeft =
+    returnable && mySeat?.left_at
+      ? Math.max(0, Math.ceil((Date.parse(mySeat.left_at) + RETURN_WINDOW_MS - (now + skew)) / 1000))
+      : null;
+
   const view = optimistic && row && optimistic.version === row.version ? optimistic.view : (row?.view ?? null);
   const version = row?.version ?? 0;
 
@@ -353,9 +366,22 @@ export function useOnlineTable(code: string) {
   );
   const playCards = useCallback((ids: string[]) => buraAct({ type: "play", ids }), [buraAct]);
 
+  /** Takes my seat back from the bot. Resolves to an error message, or null when I am playing again. */
+  const returnToGame = useCallback(async (): Promise<string | null> => {
+    const supabase = getSupabase();
+    if (!supabase || !tableId || !table) return null;
+    const err = await returnToTable(supabase, tableId, table.game);
+    if (!err) {
+      void loadSeats();
+      void loadView();
+    }
+    return err;
+  }, [tableId, table, loadSeats, loadView]);
+
   const leave = useCallback(async () => {
     const supabase = getSupabase();
     if (supabase && tableId) await leaveTable(supabase, tableId);
+    window.dispatchEvent(new Event(BAN_CHANGED));
   }, [tableId]);
 
   // Players in the order the screen shows them: me first, then clockwise.
@@ -377,6 +403,8 @@ export function useOnlineTable(code: string) {
     version,
     secondsLeft,
     readyLeft,
+    returnLeft,
+    returnToGame,
     kicked,
     accept,
     error,

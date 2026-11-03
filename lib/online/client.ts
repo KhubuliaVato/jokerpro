@@ -25,9 +25,22 @@ export interface SeatRow {
   user_id: string;
   bot: boolean;
   accepted: boolean;
+  /** When the player left (or was kicked): a bot has the seat since, and the player can take it back for 7 minutes. */
+  left_at?: string | null;
+  returned?: boolean;
 }
 
 export const READY_SECONDS = 30;
+
+/** Fired on the window after leaving a game, so the red ban strip looks at the database again. */
+export const BAN_CHANGED = "ban:changed";
+
+/** The ban a player got for leaving a game: no new tables until `until`; the old seat can be won back until `returnUntil`. */
+export interface PlayBan {
+  until: string;
+  returnUntil: string | null;
+  tableId: string | null;
+}
 
 /** The player's own, already rotated view of the game, as the server wrote it. */
 export interface ViewRow {
@@ -40,6 +53,18 @@ export interface ViewRow {
 /** Georgian text for what the database and the game server can answer. */
 export function onlineMessage(message: string): string {
   const m = message.toLowerCase();
+  const ban = /play ban until (\S+)/i.exec(message);
+  if (ban) {
+    const until = new Date(ban[1]);
+    const at = Number.isNaN(until.getTime()) ? "" : until.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return tt(
+      `თამაშიდან გასვლის გამო ახალ მაგიდაზე ${at}-მდე ვერ დაჯდებით`,
+      `You left a game, so you cannot join a new table until ${at}`,
+      `Вы покинули игру, поэтому не можете сесть за новый стол до ${at}`,
+    );
+  }
+  if (m.includes("too late to return")) return tt("დაბრუნების დრო გავიდა", "The time to return is over", "Время возвращения вышло");
+  if (m.includes("the game is over")) return tt("თამაში უკვე დასრულდა", "The game is already over", "Игра уже закончилась");
   if (m.includes("table not found")) return tt("ასეთი კოდით მაგიდა ვერ მოიძებნა", "No table with this code", "Стола с таким кодом нет");
   if (m.includes("already started")) return tt("ამ მაგიდაზე თამაში უკვე დაიწყო", "The game at this table has already started", "Игра за этим столом уже началась");
   if (m.includes("table is full")) return tt("მაგიდა სავსეა", "The table is full", "Стол заполнен");
@@ -96,6 +121,29 @@ export async function activeTable(supabase: SupabaseClient): Promise<TableRow | 
   const row = (Array.isArray(data) ? data[0] : data) as TableRow | null;
   return row && row.id ? row : null;
 }
+
+/** The ban the signed-in player has right now, or null. Players can read only their own. */
+export async function myPlayBan(supabase: SupabaseClient, userId: string): Promise<PlayBan | null> {
+  const { data } = await supabase
+    .from("play_bans")
+    .select("until, return_until, table_id")
+    .eq("user_id", userId)
+    .gt("until", new Date().toISOString())
+    .maybeSingle();
+  if (!data) return null;
+  return { until: data.until as string, returnUntil: (data.return_until as string | null) ?? null, tableId: (data.table_id as string | null) ?? null };
+}
+
+/** The running game this player left less than 7 minutes ago and can still return to. */
+export async function returnableTable(supabase: SupabaseClient): Promise<TableRow | null> {
+  const { data } = await supabase.rpc("my_returnable_table");
+  const row = (Array.isArray(data) ? data[0] : data) as TableRow | null;
+  return row && row.id ? row : null;
+}
+
+/** Takes the seat back from the bot. Resolves to an error message, or null on success. */
+export const returnToTable = (supabase: SupabaseClient, tableId: string, game: TableRow["game"]) =>
+  callJoker(supabase, { action: "return", table_id: tableId }, game === "poker" ? "poker" : "joker");
 
 /** Lobbies of random players waiting for someone, per game; empty when the database cannot tell. */
 export async function openTableCounts(supabase: SupabaseClient): Promise<Partial<Record<TableRow["game"], number>>> {

@@ -49,13 +49,16 @@ export function botBid(s: GameState, player: number, style: BotStyle = STANDARD_
 
 const fullDeck = buildDeck();
 
-function unseenCards(s: GameState, hand: Card[]): Card[] {
-  const known = new Set([...hand, ...s.played].map((c) => c.id));
+/** Cards the bot cannot place: those not in its hand and not played. A forgetful bot also counts some played ones. */
+function unseenCards(s: GameState, hand: Card[], style: BotStyle = STANDARD_STYLE): Card[] {
+  const memory = style.memory ?? 1;
+  const remembered = memory >= 1 ? s.played : s.played.filter(() => Math.random() < memory);
+  const known = new Set([...hand, ...remembered].map((c) => c.id));
   return fullDeck.filter((c) => !known.has(c.id));
 }
 
 /** Chance that a card played now still holds the trick against those yet to play. */
-function winChance(s: GameState, player: number, opt: PlayOption): number {
+function winChance(s: GameState, player: number, opt: PlayOption, style: BotStyle): number {
   const plays: Play[] = [...s.trick, { player, ...opt }];
   if (trickWinner(plays, s.trump) !== player) return 0;
   const remaining = PLAYERS - plays.length;
@@ -67,7 +70,7 @@ function winChance(s: GameState, player: number, opt: PlayOption): number {
   const suit = lead.card.joker ? (lead.suit as Suit) : lead.card.suit;
   const mine = card.suit === s.trump ? "trump" : "side";
   let threat = 0;
-  for (const c of unseenCards(s, s.hands[player])) {
+  for (const c of unseenCards(s, s.hands[player], style)) {
     if (c.joker) {
       threat += 0.6;
     } else if (c.suit === s.trump) {
@@ -85,11 +88,11 @@ function cost(s: GameState, c: Card): number {
   return c.rank - 6 + (c.suit === s.trump ? 10 : 0);
 }
 
-function pickSuit(s: GameState, hand: Card[], mode: "high" | "low"): Suit {
+export function pickSuit(s: GameState, hand: Card[], mode: "high" | "low", style: BotStyle = STANDARD_STYLE): Suit {
   const count = (suit: Suit) =>
     hand.filter((c) => !c.joker && c.suit === suit).length;
   const unseen = (suit: Suit) =>
-    unseenCards(s, hand).filter((c) => !c.joker && c.suit === suit).length;
+    unseenCards(s, hand, style).filter((c) => !c.joker && c.suit === suit).length;
   // A high joker makes others burn their best card of the suit: pick one I hold least of.
   // A low joker only works when others follow the suit: pick the one most still out.
   const score = (suit: Suit) =>
@@ -106,9 +109,9 @@ export function botPlay(s: GameState, player: number, style: BotStyle = STANDARD
   }
   if (s.trick.length === 0) {
     // Jokers lead with a heuristically chosen suit instead of all four.
-    options = options.filter(
-      (o) => !o.card.joker || o.suit === pickSuit(s, hand, o.mode ?? "high"),
-    );
+    // (the suit is chosen once per mode: a forgetful bot's choice varies from call to call)
+    const suitFor = { high: pickSuit(s, hand, "high", style), low: pickSuit(s, hand, "low", style) };
+    options = options.filter((o) => !o.card.joker || o.suit === suitFor[o.mode ?? "high"]);
   }
   if (options.length === 1) return options[0];
 
@@ -117,7 +120,7 @@ export function botPlay(s: GameState, player: number, style: BotStyle = STANDARD
   const wantWin = need !== 0;
   const scored = options.map((opt) => ({
     opt,
-    p: winChance(s, player, opt),
+    p: winChance(s, player, opt, style),
     cost: cost(s, opt.card),
   }));
 
