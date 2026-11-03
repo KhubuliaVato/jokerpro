@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { readCache, writeCache } from "@/lib/cache";
 import { loadBalance, loadTableGrants, type CoinGrant } from "@/lib/coins";
 import { useT } from "@/lib/i18n";
 import { COINS_CHANGED } from "@/lib/shop";
@@ -39,8 +40,14 @@ export function CoinBalance() {
     let cancelled = false;
     const load = () =>
       loadBalance(supabase, user.id).then((b) => {
-        if (!cancelled) setBalance(b);
+        if (cancelled) return;
+        setBalance(b);
+        writeCache("coins", user.id, b);
       });
+    // the last known balance shows at once; the fresh one replaces it
+    const last = readCache<number>("coins", user.id);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (last !== null) setBalance((now) => now ?? last);
     void load();
     window.addEventListener(COINS_CHANGED, load);
     return () => {

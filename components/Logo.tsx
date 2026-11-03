@@ -3,7 +3,7 @@ import Link from "next/link";
 /** The ProJoker mark: a winking jester on a card, in a gold and red ribbon. */
 export function LogoMark({ className = "size-9" }: { className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/logo.webp" alt="" width={512} height={482} className={`${className} object-contain`} draggable={false} />;
+  return <img src="/logo.webp" alt="" width={192} height={181} className={`${className} object-contain`} draggable={false} />;
 }
 
 /** Mark plus the "ProJoker" wordmark, linking home. */

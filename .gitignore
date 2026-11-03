@@ -51,3 +51,4 @@ dev.log
 # Built function bundle: it contains the private rating formula
 /supabase/functions/joker/dist/
 /supabase/functions/poker/dist/
+/.next-build/

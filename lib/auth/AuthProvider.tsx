@@ -4,6 +4,7 @@ import { tt } from "@/lib/lang";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+import { readCache, writeCache } from "@/lib/cache";
 import { warmGameServers } from "@/lib/online/client";
 import { authMessage, validateNickname } from "./messages";
 
@@ -68,7 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = getSupabase();
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+      const found = data.session?.user ?? null;
+      // draw the header from the last profile this browser saw while the fresh one loads
+      if (found) setProfileRow((now) => now ?? readCache<Profile>("profile", found.id));
+      setUser(found);
       setLoading(false);
       if (data.session) warmGameServers();
     });
@@ -93,7 +97,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq("id", userId)
         .maybeSingle()
         .then(({ data }) => {
-          if (!cancelled) setProfileRow((data as Profile | null) ?? null);
+          if (cancelled) return;
+          setProfileRow((data as Profile | null) ?? null);
+          if (data) writeCache("profile", userId, data as Profile);
         });
     void load();
     // the shop changes what the player wears (and the nickname): read the profile again
@@ -133,6 +139,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await getSupabase()?.auth.signOut();
+    writeCache("profile", "", null);
+    writeCache("coins", "", null);
   }, []);
 
   const nicknameAvailable = useCallback(async (nickname: string) => {
