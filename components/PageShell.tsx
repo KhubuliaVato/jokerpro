@@ -23,11 +23,12 @@ export function PageShell({
           style={{ background: `radial-gradient(ellipse 60% 100% at 50% 0%, ${glow}30, transparent)` }}
         />
       )}
-      <div className={`relative mx-auto flex min-h-dvh w-full flex-col gap-10 px-5 py-6 sm:gap-14 sm:px-8 sm:py-8 ${width}`}>
+      {/* The header always spans the same width (as on the main menu); only the page under it follows `width`. */}
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-10 px-5 py-6 sm:gap-14 sm:px-8 sm:py-8">
         <div className="relative z-30" style={rise(0)}>
           <SiteHeader />
         </div>
-        {children}
+        <div className={`mx-auto flex w-full flex-1 flex-col gap-10 sm:gap-14 ${width}`}>{children}</div>
       </div>
     </main>
   );
