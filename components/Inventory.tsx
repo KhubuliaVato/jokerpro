@@ -5,12 +5,14 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { PROFILE_CHANGED } from "@/lib/auth/AuthProvider";
 import { cosmetic, EMOTE_PACKS, loadWorn, wear, type Slot, type Worn } from "@/lib/cosmetics";
 import { useT } from "@/lib/i18n";
+import { INVENTORY_CHANGED } from "@/lib/gifts";
 import { cardBack, loadInventory } from "@/lib/shop";
 import { getSupabase } from "@/lib/supabase";
 import { applyTheme, DEFAULT_THEME, savedTheme, THEME_CHANGED, themeById, THEMES } from "@/lib/themes";
 import { Avatar } from "./Avatar";
 import { BackPreview } from "./BackPreview";
 import { CardView } from "./CardView";
+import { GiftDialog } from "./GiftDialog";
 import { Nick } from "./Nick";
 
 const KING = { joker: false, suit: "H", rank: 13, id: "H13" } as const;
@@ -46,6 +48,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
   const [state, setState] = useState<{ userId: string; owned: string[]; worn: Worn } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cat, setCat] = useState<Cat>("all");
+  const [giftFor, setGiftFor] = useState<string | null>(null);
   const theme = useSyncExternalStore(subscribeTheme, savedTheme, () => DEFAULT_THEME);
 
   const load = useCallback(async () => {
@@ -54,6 +57,12 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
     const [owned, worn] = await Promise.all([loadInventory(supabase, userId), loadWorn(supabase, userId)]);
     setState({ userId, owned, worn });
   }, [userId]);
+
+  // a gift arrived (or went) while this page is open
+  useEffect(() => {
+    window.addEventListener(INVENTORY_CHANGED, load);
+    return () => window.removeEventListener(INVENTORY_CHANGED, load);
+  }, [load]);
 
   useEffect(() => {
     const supabase = getSupabase();
@@ -113,6 +122,15 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
           {r && <span className="text-[0.65rem] font-extrabold uppercase tracking-wider" style={{ color }}>{t(...LOOK[rarityOf(id!)].label)}</span>}
         </div>
         {action}
+        {owner && id && (
+          <button
+            type="button"
+            onClick={() => setGiftFor(id)}
+            className="-mt-1 w-full rounded-full border border-white/10 px-3 py-1 text-xs font-extrabold text-white/55 transition-colors hover:border-amber-300 hover:text-amber-300"
+          >
+            🎁 {t("გაჩუქება", "Gift", "Подарить")}
+          </button>
+        )}
       </li>
     );
   };
@@ -300,6 +318,8 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
         ),
         packs.length,
       )}
+
+      {giftFor && <GiftDialog itemId={giftFor} onClose={() => setGiftFor(null)} onSent={() => void load()} />}
 
       {total === 0 && (
         <p className="text-white/45">
