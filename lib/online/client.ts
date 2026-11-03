@@ -129,12 +129,12 @@ export async function leaveTable(supabase: SupabaseClient, tableId: string): Pro
 }
 
 /**
- * The Edge Function must run in the region of the database. Left alone it runs near the player (Europe) while the
- * database is in Seoul, and each of its half-dozen queries then crosses the planet: ~2 s per move instead of ~0.5 s.
+ * The Edge Function must run in the region of the database. Left alone it may run far from the database (it
+ * used to sit in Seoul, now it is in Frankfurt), and each of its half-dozen queries then crosses the planet.
  * Sent as a query parameter only (the `region` option would also add an `x-region` header the function's CORS
  * answer does not allow). If the project's database ever moves, change this to the new region.
  */
-const GAME_SERVER_REGION = "ap-northeast-2";
+const GAME_SERVER_REGION = "eu-central-1";
 
 let warmed = false;
 
