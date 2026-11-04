@@ -4,11 +4,11 @@ import { useState } from "react";
 import { useAuth, type OAuthProvider } from "@/lib/auth/AuthProvider";
 import { useT } from "@/lib/i18n";
 
-/** The providers switched on for this site: NEXT_PUBLIC_OAUTH_PROVIDERS="google,facebook" (each must also be enabled in Supabase). */
+/** The providers switched on for this site: NEXT_PUBLIC_OAUTH_PROVIDERS="google" (it must also be enabled in Supabase). */
 const ENABLED = (process.env.NEXT_PUBLIC_OAUTH_PROVIDERS ?? "")
   .split(",")
   .map((p) => p.trim())
-  .filter((p): p is OAuthProvider => p === "google" || p === "facebook");
+  .filter((p): p is OAuthProvider => p === "google");
 
 function GoogleMark() {
   return (
@@ -21,16 +21,7 @@ function GoogleMark() {
   );
 }
 
-function FacebookMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-6" aria-hidden>
-      <rect width="24" height="24" rx="5" fill="#1877F2" />
-      <path fill="#fff" d="M16.6 24v-8.7h2.9l.5-3.4h-3.4V9.8c0-1 .3-1.7 1.7-1.7H20V5.1c-.3 0-1.4-.1-2.6-.1-2.6 0-4.3 1.6-4.3 4.4v2.5H10v3.4h3.1V24h3.5z" />
-    </svg>
-  );
-}
-
-/** "Continue with Google / Facebook" buttons; nothing is drawn when no provider is switched on. */
+/** "Continue with Google" button; nothing is drawn when no provider is switched on. */
 export function SocialSignIn() {
   const t = useT();
   const { signInWithProvider } = useAuth();
@@ -51,7 +42,6 @@ export function SocialSignIn() {
 
   const LABEL: Record<OAuthProvider, string> = {
     google: t("Google-ით შესვლა", "Continue with Google", "Войти через Google"),
-    facebook: t("Facebook-ით შესვლა", "Continue with Facebook", "Войти через Facebook"),
   };
 
   return (
@@ -64,7 +54,7 @@ export function SocialSignIn() {
           onClick={() => void go(p)}
           className="flex w-full items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white/[0.06] px-5 py-3 text-base font-bold text-white transition-colors hover:border-amber-300/60 hover:bg-white/[0.1] disabled:opacity-60"
         >
-          {p === "google" ? <GoogleMark /> : <FacebookMark />}
+          <GoogleMark />
           {LABEL[p]}
         </button>
       ))}

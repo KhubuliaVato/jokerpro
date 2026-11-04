@@ -38,9 +38,9 @@ const SECTIONS: { title: Text; body: Text[] }[] = [
         "Игровые данные: результаты, рейтинг, монеты, предметы и подарки, сообщения в чате за столом.",
       ],
       [
-        "Google-ით ან Facebook-ით შესვლისას ვიღებთ მხოლოდ ელფოსტას და პროფილის საბაზისო მონაცემებს. თქვენს მეგობრებს, პოსტებს ან სხვა მონაცემებს არ ვითხოვთ.",
-        "When you sign in with Google or Facebook we receive only your email and basic profile details. We do not ask for your friends, posts or other data.",
-        "При входе через Google или Facebook мы получаем только почту и базовые данные профиля. Друзей, публикации и прочее мы не запрашиваем.",
+        "Google-ით შესვლისას ვიღებთ მხოლოდ ელფოსტას და პროფილის საბაზისო მონაცემებს. თქვენს მეგობრებს, პოსტებს ან სხვა მონაცემებს არ ვითხოვთ.",
+        "When you sign in with Google we receive only your email and basic profile details. We do not ask for your friends, posts or other data.",
+        "При входе через Google мы получаем только почту и базовые данные профиля. Друзей, публикации и прочее мы не запрашиваем.",
       ],
     ],
   },
@@ -58,9 +58,9 @@ const SECTIONS: { title: Text; body: Text[] }[] = [
     title: ["სად ინახება", "Where it is kept", "Где это хранится"],
     body: [
       [
-        "მონაცემები ინახება Supabase-ის სერვერზე ევროპაში (ფრანკფურტი), საიტი კი Netlify-ზეა განთავსებული. Google და Facebook მხოლოდ მაშინ მონაწილეობენ, როცა მათით შედიხართ.",
-        "Data is kept on Supabase servers in Europe (Frankfurt), and the site is hosted on Netlify. Google and Facebook take part only when you sign in with them.",
-        "Данные хранятся на серверах Supabase в Европе (Франкфурт), сайт размещён на Netlify. Google и Facebook участвуют только когда вы входите через них.",
+        "მონაცემები ინახება Supabase-ის სერვერზე ევროპაში (ფრანკფურტი), საიტი კი Netlify-ზეა განთავსებული. Google მხოლოდ მაშინ მონაწილეობს, როცა მათით შედიხართ.",
+        "Data is kept on Supabase servers in Europe (Frankfurt), and the site is hosted on Netlify. Google takes part only when you sign in with it.",
+        "Данные хранятся на серверах Supabase в Европе (Франкфурт), сайт размещён на Netlify. Google участвует только когда вы входите через него.",
       ],
       [
         "ბრაუზერში ვინახავთ მხოლოდ საჭიროს: შესვლის სესიას, ენას, არჩეულ ფონს და მსგავს პარამეტრებს. სარეკლამო თრექერებს არ ვიყენებთ.",
@@ -83,9 +83,9 @@ const SECTIONS: { title: Text; body: Text[] }[] = [
         `Если вы больше не можете войти, напишите на ${CONTACT_EMAIL} с почты, на которую регистрировались, и мы удалим аккаунт.`,
       ],
       [
-        "Google-ით ან Facebook-ით შესვლისას ამ პროვაიდერის მხარეს ჩვენთვის მიცემულ წვდომასაც შეგიძლიათ გააუქმოთ მათ პარამეტრებში.",
-        "If you signed in with Google or Facebook, you can also revoke the access you gave us in that provider's own settings.",
-        "Если вы входили через Google или Facebook, вы можете также отозвать выданный нам доступ в настройках этого сервиса.",
+        "Google-ით შესვლისას ამ პროვაიდერის მხარეს ჩვენთვის მიცემულ წვდომასაც შეგიძლიათ გააუქმოთ მათ პარამეტრებში.",
+        "If you signed in with Google, you can also revoke the access you gave us in your Google account settings.",
+        "Если вы входили через Google, вы можете также отозвать выданный нам доступ в настройках аккаунта Google.",
       ],
     ],
   },
@@ -116,7 +116,7 @@ const SECTIONS: { title: Text; body: Text[] }[] = [
   },
 ];
 
-/** The privacy policy (also where deleting an account is explained, as Facebook and Google ask for). */
+/** The privacy policy (also where deleting an account is explained, as Google asks for). */
 export function PrivacyPage() {
   const t = useT();
   return (

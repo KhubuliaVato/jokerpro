@@ -31,7 +31,7 @@ type ProfilePatch = Partial<Pick<Profile, "nickname" | "avatar_color" | "avatar_
   photo?: Blob | null;
 };
 
-export type OAuthProvider = "google" | "facebook";
+export type OAuthProvider = "google";
 
 interface AuthValue {
   /** False while NEXT_PUBLIC_SUPABASE_* are missing. */

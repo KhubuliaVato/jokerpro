@@ -11,7 +11,7 @@ import { BTN_PRIMARY, INPUT } from "./ui";
 const GENERATED = /^მოთამაშე[0-9a-f]{4}$/;
 
 /**
- * Asked once, right after the first sign-in with Google / Facebook, which give no nickname:
+ * Asked once, right after the first sign-in with Google, which gives no nickname:
  * the player picks the name they play under (free; later changes cost coins). It can be put off.
  */
 export function NicknamePrompt() {
