@@ -15,6 +15,7 @@ import { Avatar } from "./Avatar";
 import { Nick } from "./Nick";
 import { GameCard } from "./GameCard";
 import { RankEmblem } from "./RankEmblem";
+import { FooterLinks } from "./FooterLinks";
 import { SiteHeader } from "./SiteHeader";
 import { ThemeFx } from "./ThemeFx";
 import { RISE_CSS, rise } from "./ui";
@@ -243,6 +244,7 @@ export function MainMenu() {
             {t("პროფილები ჯერ არ არის ჩართული (Supabase არ არის მიერთებული), მაგრამ ჯოკერის თამაში შეიძლება.", "Profiles are not enabled yet (Supabase is not connected), but you can still play Joker.", "Профили пока не включены (Supabase не подключён), но в Джокер играть можно.")}
           </p>
         )}
+        <FooterLinks />
       </div>
     </main>
   );

@@ -1,3 +1,4 @@
+import { FooterLinks } from "./FooterLinks";
 import { SiteHeader } from "./SiteHeader";
 import { ThemeFx } from "./ThemeFx";
 import { RISE_CSS, rise } from "./ui";
@@ -29,6 +30,7 @@ export function PageShell({
           <SiteHeader />
         </div>
         <div className={`mx-auto flex w-full flex-1 flex-col gap-10 sm:gap-14 ${width}`}>{children}</div>
+        <FooterLinks />
       </div>
     </main>
   );
