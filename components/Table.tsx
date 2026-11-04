@@ -224,8 +224,8 @@ function BidBalance({
       } ${className}`}
     >
       {bal.over
-        ? tt("შეტენვა", "Over", "Перебор")
-        : tt("წაგლეჯვა", "Under", "Недобор")}
+        ? tt("წაგლეჯვა", "Over", "Перебор")
+        : tt("შეტენვა", "Under", "Недобор")}
       <b className="text-sm">
         {bal.over ? "+" : "−"}
         {bal.n}
@@ -888,8 +888,8 @@ function Standings({ sums }: { sums: number[] }) {
 const COLS = "grid grid-cols-4 items-center";
 
 type Entry =
-  | { kind: "hand"; h: GameState["history"][number]; n: number }
-  | { kind: "premium"; pulka: number };
+  | { kind: "hand"; h: GameState["history"][number]; n: number; k: number }
+  | { kind: "sum"; pulka: number; bonus: number[]; total: number[] };
 
 /**
  * Top-left standings: names and totals. Hovering (or tapping) unfolds the whole game
@@ -901,15 +901,18 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
   const top = Math.max(...sums);
   const started = game.history.length > 0;
 
+  // Like the paper sheet: the hands are numbered 1, 2, 3… within their round, and when a round
+  // ends a line sums up everything scored so far (the round's bonus included).
   const entries: Entry[] = [];
+  let running = Array(PLAYERS).fill(0) as number[];
   game.history.forEach((h, i) => {
-    entries.push({ kind: "hand", h, n: i + 1 });
     const { inPulka, pulkaLength } = locateHand(game.rules, i);
-    if (
-      inPulka === pulkaLength - 1 &&
-      game.premiums[h.pulka].some((v) => v > 0)
-    ) {
-      entries.push({ kind: "premium", pulka: h.pulka });
+    running = running.map((v, p) => v + h.points[p]);
+    entries.push({ kind: "hand", h, n: i + 1, k: inPulka + 1 });
+    if (inPulka === pulkaLength - 1) {
+      const bonus = game.premiums[h.pulka];
+      running = running.map((v, p) => v + bonus[p]);
+      entries.push({ kind: "sum", pulka: h.pulka, bonus, total: running });
     }
   });
   entries.reverse();
@@ -973,22 +976,23 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
                 <>
                   <div className="flex flex-col gap-0.5">
                     {entries.map((e) =>
-                      e.kind === "premium" ? (
+                      e.kind === "sum" ? (
                         <div key={`pr${e.pulka}`} className={`${COLS} relative gap-1 rounded-xl bg-amber-300/10 py-0.5 text-center text-sm font-extrabold text-amber-300 ring-1 ring-amber-300/30`}>
-                          <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[0.6rem]">★</span>
-                          {game.premiums[e.pulka].map((v, p) => (
-                            <span key={p} className="tabular-nums">
-                              {v > 0 ? `+${v}` : ""}
+                          <span title={tt("ეტაპის ჯამი", "Round total", "Итог этапа")} className="absolute left-1 top-1/2 -translate-y-1/2 text-[0.6rem]">★</span>
+                          {e.total.map((v, p) => (
+                            <span key={p} className="flex flex-col items-center leading-tight tabular-nums">
+                              {e.bonus[p] > 0 && <span className="text-[0.6rem] font-bold text-emerald-300">+{e.bonus[p]}</span>}
+                              {v}
                             </span>
                           ))}
                         </div>
                       ) : (
                         <div key={e.n} className={`${COLS} relative gap-1`}>
                           <span
-                            title={tt("კარტი ხელში", "Cards dealt", "Карт в раздаче")}
+                            title={`${tt("კარტი ხელში", "Cards dealt", "Карт в раздаче")}: ${e.h.cards}`}
                             className="absolute -left-1 top-1/2 z-10 grid size-4 -translate-y-1/2 place-items-center rounded-full bg-black/70 text-[0.55rem] font-bold text-white/60 ring-1 ring-white/15"
                           >
-                            {e.h.cards}
+                            {e.k}
                           </span>
                           {e.h.bids.map((bid, p) => {
                             const taken = e.h.taken[p];
@@ -1000,11 +1004,14 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
                               <span
                                 key={p}
                                 title={`${tt("ნათქვამი", "Bid", "Заказ")} ${bid} · ${tt("წაღებული", "Won", "Взято")} ${taken}`}
-                                className={`flex items-center justify-center whitespace-nowrap rounded-lg py-1 text-sm font-extrabold tabular-nums leading-tight ${
+                                className={`flex flex-col items-center justify-center whitespace-nowrap rounded-lg py-0.5 tabular-nums leading-none ${
                                   hit ? "bg-emerald-400/12 text-emerald-300" : "bg-red-400/10 text-red-300"
                                 }`}
                               >
-                                {pts > 0 ? `+${pts}` : pts}
+                                <span className="text-[0.6rem] font-bold opacity-70">
+                                  {bid === 0 ? tt("პასი", "pass", "пас") : bid} / {taken}
+                                </span>
+                                <span className="text-sm font-extrabold">{pts > 0 ? `+${pts}` : pts}</span>
                               </span>
                             );
                           })}
@@ -1012,6 +1019,9 @@ function Scoreboard({ sums, game }: { sums: number[]; game: GameState }) {
                       ),
                     )}
                   </div>
+                  <p className="mt-1.5 text-center text-[0.6rem] leading-none opacity-45">
+                    {tt("ნათქვამი / აღებული", "bid / won", "заказ / взято")}
+                  </p>
                 </>
               )}
             </div>

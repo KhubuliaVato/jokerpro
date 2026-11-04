@@ -31,6 +31,8 @@ type ProfilePatch = Partial<Pick<Profile, "nickname" | "avatar_color" | "avatar_
   photo?: Blob | null;
 };
 
+export type OAuthProvider = "google" | "facebook";
+
 interface AuthValue {
   /** False while NEXT_PUBLIC_SUPABASE_* are missing. */
   configured: boolean;
@@ -45,7 +47,11 @@ interface AuthValue {
     password: string,
     nickname: string,
   ) => Promise<{ error: string | null; needsConfirm: boolean }>;
+  /** Leaves for the provider's sign-in page; comes back to /login (and from there to `?next=`). Resolves only on a failure to leave. */
+  signInWithProvider: (provider: OAuthProvider) => Promise<string | null>;
   signOut: () => Promise<void>;
+  /** Deletes the signed-in player's account for good; returns an error message, or null when it is gone. */
+  deleteAccount: () => Promise<string | null>;
   updateProfile: (patch: ProfilePatch) => Promise<string | null>;
   /** Whether a nickname is free (the player's own current one counts as free). */
   nicknameAvailable: (nickname: string) => Promise<boolean | null>;
@@ -137,11 +143,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null, needsConfirm: !data.session };
   }, []);
 
+  const signInWithProvider = useCallback(async (provider: OAuthProvider) => {
+    const supabase = getSupabase();
+    if (!supabase) return tt("მონაცემთა ბაზა ჯერ არ არის მიერთებული", "The database is not connected yet", "База данных ещё не подключена");
+    const next = new URLSearchParams(window.location.search).get("next");
+    const back = `${window.location.origin}/login${next && next.startsWith("/") && !next.startsWith("//") ? `?next=${encodeURIComponent(next)}` : ""}`;
+    const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: back } });
+    return error ? tt("ამ გზით შესვლა ჯერ ვერ მოხერხდა", "Signing in this way is not available yet", "Вход этим способом пока недоступен") : null;
+  }, []);
+
   const signOut = useCallback(async () => {
     await getSupabase()?.auth.signOut();
     writeCache("profile", "", null);
     writeCache("coins", "", null);
   }, []);
+
+  const deleteAccount = useCallback(async () => {
+    const supabase = getSupabase();
+    if (!supabase || !userId) return tt("ჯერ შედით ანგარიშში", "Sign in first", "Сначала войдите");
+    // the photo file is not removed with the account by the database: take it away first (nothing to do when there is none)
+    await supabase.storage.from("avatars").remove([`${userId}/avatar.webp`]);
+    const { error } = await supabase.rpc("delete_my_account");
+    if (error) {
+      if (error.message.includes("leave your table")) return tt("ჯერ დატოვეთ მაგიდა, სადაც ზიხართ", "Leave your table first", "Сначала покиньте стол, за которым сидите");
+      if (error.message.includes("second step")) return tt("უსაფრთხოებისთვის ჯერ გამოდით და შედით თავიდან, მეორე დადასტურებით", "For safety, sign out and sign in again with the second step first", "Для безопасности выйдите и войдите снова со вторым подтверждением");
+      return authMessage(error.message);
+    }
+    await signOut();
+    return null;
+  }, [userId, signOut]);
 
   const nicknameAvailable = useCallback(async (nickname: string) => {
     const supabase = getSupabase();
@@ -191,11 +221,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profile,
       signIn,
       signUp,
+      signInWithProvider,
       signOut,
+      deleteAccount,
       updateProfile,
       nicknameAvailable,
     }),
-    [loading, user, profile, signIn, signUp, signOut, updateProfile, nicknameAvailable],
+    [loading, user, profile, signIn, signUp, signInWithProvider, signOut, deleteAccount, updateProfile, nicknameAvailable],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

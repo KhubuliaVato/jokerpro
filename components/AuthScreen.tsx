@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { NICKNAME_MAX } from "@/lib/auth/messages";
 import { useT } from "@/lib/i18n";
 import { PageShell } from "./PageShell";
+import { SocialSignIn } from "./SocialSignIn";
 import { BTN_PRIMARY, INPUT, rise } from "./ui";
 
 type Mode = "signin" | "signup";
@@ -101,6 +102,7 @@ export function AuthScreen() {
           </section>
 
           <form onSubmit={submit} className="flex flex-col gap-4" style={rise(2)}>
+            <SocialSignIn />
             {mode === "signup" && (
               <input
                 className={INPUT}
@@ -149,6 +151,10 @@ export function AuthScreen() {
               {t("ანგარიშის გარეშეც შეგიძლიათ ითამაშოთ, უბრალოდ შედეგები არ შეინახება.", "You can play without an account, results just will not be saved.", "Можно играть и без аккаунта, но результаты не сохранятся.")}{" "}
               <Link href="/" className="underline underline-offset-4 hover:text-amber-300">
                 {t("მთავარი", "Home", "Главная")}
+              </Link>
+              {" · "}
+              <Link href="/privacy" className="underline underline-offset-4 hover:text-amber-300">
+                {t("კონფიდენციალურობა", "Privacy", "Конфиденциальность")}
               </Link>
             </p>
           </form>

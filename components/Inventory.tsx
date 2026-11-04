@@ -108,12 +108,12 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
     return (
       <li
         key={key}
-        className={`group relative flex flex-col items-center gap-3 overflow-hidden rounded-3xl border p-3 pt-4 text-center transition-[translate,box-shadow,border-color] duration-300 hover:-translate-y-1 ${isWorn ? "border-amber-300/70 shadow-[0_0_0_1px_rgb(252_211_77/0.35),0_20px_40px_-22px_rgb(252_211_77/0.5)]" : "border-white/10 hover:border-white/25"}`}
+        className={`group relative flex flex-col items-center gap-2 overflow-hidden rounded-3xl border p-3 pt-3 text-center transition-[translate,box-shadow,border-color] duration-300 hover:-translate-y-1 ${isWorn ? "border-amber-300/70 shadow-[0_0_0_1px_rgb(252_211_77/0.35),0_20px_40px_-22px_rgb(252_211_77/0.5)]" : "border-white/10 hover:border-white/25"}`}
         style={{ background: `linear-gradient(180deg, ${color}1f, rgb(255 255 255 / 0.02) 55%)` }}
       >
         <span className="absolute inset-x-6 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
         {isWorn && <span className="absolute right-2 top-2 grid size-6 place-items-center rounded-full bg-amber-300 text-sm font-black text-black">✓</span>}
-        <div className="relative grid h-28 w-full place-items-center rounded-2xl bg-black/20">
+        <div className="relative grid h-24 w-full place-items-center rounded-2xl bg-black/20">
           <div className="pointer-events-none absolute size-24 rounded-full blur-2xl" style={{ background: `${color}33` }} />
           <div className="relative">{art}</div>
         </div>
@@ -137,7 +137,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
 
   const wearButton = (slot: Slot, id: string | null) => {
     const isWorn = mine.worn[slot] === id;
-    if (!owner) return isWorn ? <span className="rounded-full bg-amber-300/15 px-3 py-1 text-xs font-extrabold text-amber-200">{t("ჩაცმულია", "Equipped", "Надето")}</span> : <span className="h-8" />;
+    if (!owner) return isWorn ? <span className="rounded-full bg-amber-300/15 px-3 py-1 text-xs font-extrabold text-amber-200">{t("დაყენებულია", "Equipped", "Надето")}</span> : <span className="h-8" />;
     return (
       <button
         type="button"
@@ -145,7 +145,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
         onClick={() => void put(slot, id)}
         className={`w-full rounded-full border px-4 py-2 text-sm font-extrabold transition-colors ${isWorn ? "border-amber-300/50 bg-amber-300/15 text-amber-200" : "border-white/20 text-white/85 hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-300"}`}
       >
-        {isWorn ? t("ჩაცმულია", "Equipped", "Надето") : t("ჩაცმა", "Equip", "Надеть")}
+        {isWorn ? t("დაყენებულია", "Equipped", "Надето") : t("დაყენება", "Equip", "Надеть")}
       </button>
     );
   };
@@ -158,12 +158,20 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
 
   const section = (id: Cat, title: string, children: React.ReactNode, count: number) =>
     (cat === "all" || cat === id) && (
-      <div key={id} className="flex flex-col gap-3">
+      <div key={id} className="flex max-w-full flex-col gap-3">
         <h3 className="flex items-center gap-2 text-lg font-extrabold text-white/85">
           {title}
           <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold text-white/60">{count}</span>
         </h3>
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{children}</ul>
+        <ul
+          className={
+            cat === "all"
+              ? "-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-2 [&>li]:w-40 [&>li]:shrink-0 [&>li]:snap-start"
+              : "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+          }
+        >
+          {children}
+        </ul>
       </div>
     );
 
@@ -178,7 +186,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
   ];
 
   return (
-    <section className="flex flex-col gap-6">
+    <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-2xl font-extrabold">{t("ინვენტარი", "Inventory", "Инвентарь")}</h2>
         {owner && (
@@ -193,7 +201,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
       <div className="relative overflow-hidden rounded-3xl border border-white/12 bg-gradient-to-br from-white/[0.09] to-white/[0.02] p-4 sm:p-5">
         <div className="pointer-events-none absolute -left-10 -top-16 size-56 rounded-full bg-amber-300/10 blur-3xl" />
         <p className="relative mb-3 text-xs font-extrabold uppercase tracking-[0.18em] text-white/45">{t("არჩეული გაქვს", "Currently equipped", "Сейчас надето")}</p>
-        <div className="relative flex flex-wrap items-center gap-x-8 gap-y-4">
+        <div className="relative grid items-center gap-x-8 gap-y-4 sm:grid-cols-[1fr_auto_1fr]">
           <div className="flex items-center gap-4">
             {avatarArt(wornFrame ?? undefined)}
             <div className="text-2xl font-extrabold">{wornName ? <Nick name={nickname ?? "ProJoker"} style={wornName} /> : (nickname ?? "ProJoker")}</div>
@@ -212,7 +220,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
               <figcaption className="text-[0.7rem] font-bold text-white/50">{t("ფონი", "Background", "Фон")}</figcaption>
             </figure>
           </div>
-          <p className="ml-auto text-sm font-bold text-white/50">
+          <p className="text-sm font-bold text-white/50 sm:justify-self-end">
             {t("სულ", "Total", "Всего")}: {total} {t("ნივთი", "items", "предм.")}
           </p>
         </div>
@@ -232,6 +240,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
         ))}
       </nav>
 
+      <div className={cat === "all" ? "flex flex-wrap items-start gap-x-8 gap-y-6" : "flex flex-col gap-6"}>
       {section(
         "decks",
         t("კარტები", "Card decks", "Колоды"),
@@ -260,7 +269,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
                   onClick={() => applyTheme(th.id)}
                   className={`w-full rounded-full border px-4 py-2 text-sm font-extrabold transition-colors ${theme === th.id ? "border-amber-300/50 bg-amber-300/15 text-amber-200" : "border-white/20 text-white/85 hover:border-amber-300 hover:bg-amber-300/10 hover:text-amber-300"}`}
                 >
-                  {theme === th.id ? t("ჩართულია", "Active", "Включён") : t("ჩართვა", "Use", "Включить")}
+                  {theme === th.id ? t("დაყენებულია", "Active", "Включён") : t("დაყენება", "Use", "Включить")}
                 </button>
               ) : (
                 <span className="h-8" />
@@ -318,6 +327,8 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
         ),
         packs.length,
       )}
+
+      </div>
 
       {giftFor && <GiftDialog itemId={giftFor} onClose={() => setGiftFor(null)} onSent={() => void load()} />}
 

@@ -23,6 +23,7 @@ export function ProfilePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const userId = user?.id ?? null;
   useEffect(() => {
@@ -73,6 +74,7 @@ export function ProfilePage() {
               <ProfileMenu
                 onEdit={() => setEditing(true)}
                 onSearch={() => setSearching((v) => !v)}
+                onDelete={() => setDeleting(true)}
                 onSignOut={async () => {
                   await signOut();
                   router.replace("/");
@@ -80,6 +82,16 @@ export function ProfilePage() {
               />
             }
           />
+
+          {deleting && profile && (
+            <Modal onClose={() => setDeleting(false)}>
+              <DeleteAccount
+                nickname={profile.nickname}
+                onCancel={() => setDeleting(false)}
+                onDeleted={() => router.replace("/")}
+              />
+            </Modal>
+          )}
 
           {editing && profile && (
             <Modal onClose={() => setEditing(false)}>
@@ -93,7 +105,7 @@ export function ProfilePage() {
 }
 
 /** The gear on the hero card: edit the profile, search for a player, sign out. */
-function ProfileMenu({ onEdit, onSearch, onSignOut }: { onEdit: () => void; onSearch: () => void; onSignOut: () => void }) {
+function ProfileMenu({ onEdit, onSearch, onSignOut, onDelete }: { onEdit: () => void; onSearch: () => void; onSignOut: () => void; onDelete: () => void }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -142,6 +154,10 @@ function ProfileMenu({ onEdit, onSearch, onSignOut }: { onEdit: () => void; onSe
             <svg {...icon}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>
             {t("გასვლა", "Sign out", "Выйти")}
           </button>
+          <button type="button" className={`${item} text-white/45 hover:!bg-red-400/10 hover:text-red-300`} onClick={() => { setOpen(false); onDelete(); }}>
+            <svg {...icon}><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-12M9 7V4h6v3" /></svg>
+            {t("ანგარიშის წაშლა", "Delete account", "Удалить аккаунт")}
+          </button>
         </div>
       )}
     </div>
@@ -169,6 +185,62 @@ function Modal({ onClose, children }: { onClose: () => void; children: React.Rea
     >
       <div className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-white/15 bg-[var(--bg-b)] shadow-[0_40px_90px_-30px_rgb(0_0_0/0.9)]">{children}</div>
     </div>
+  );
+}
+
+/** Deleting the account for good: the player types their nickname to confirm. */
+function DeleteAccount({ nickname, onCancel, onDeleted }: { nickname: string; onCancel: () => void; onDeleted: () => void }) {
+  const t = useT();
+  const { deleteAccount } = useAuth();
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (typed.trim().toLowerCase() !== nickname.toLowerCase() || busy) return;
+    setBusy(true);
+    setError(null);
+    const failed = await deleteAccount();
+    setBusy(false);
+    if (failed) setError(failed);
+    else onDeleted();
+  };
+
+  return (
+    <form onSubmit={submit} className="flex flex-col gap-5 p-6 sm:p-8">
+      <h2 className="text-2xl font-extrabold text-red-300">{t("ანგარიშის წაშლა", "Delete account", "Удаление аккаунта")}</h2>
+      <p className="text-base text-white/70">
+        {t(
+          "ანგარიში სამუდამოდ წაიშლება: პროფილი, მონეტები, ნივთები, რეიტინგი, თამაშების ისტორია და საჩუქრები. ამის გაუქმება შეუძლებელია.",
+          "Your account will be deleted for good: the profile, coins, items, rating, game history and gifts. This cannot be undone.",
+          "Аккаунт будет удалён навсегда: профиль, монеты, предметы, рейтинг, история игр и подарки. Отменить это нельзя.",
+        )}{" "}
+        <Link href="/privacy" className="font-bold text-amber-300 underline underline-offset-4">
+          {t("დეტალები", "Details", "Подробнее")}
+        </Link>
+      </p>
+      <label className="flex flex-col gap-2 text-sm text-white/60">
+        {t(`დასადასტურებლად ჩაწერეთ თქვენი მეტსახელი: ${nickname}`, `To confirm, type your nickname: ${nickname}`, `Для подтверждения введите ваш никнейм: ${nickname}`)}
+        <input className={INPUT} value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
+      </label>
+      {error && (
+        <p role="alert" className="text-base text-red-300">
+          {error}
+        </p>
+      )}
+      <div className="flex gap-3">
+        <button
+          className="rounded-full bg-red-500 px-6 py-3 text-base font-extrabold text-white transition-colors hover:bg-red-400 disabled:bg-white/10 disabled:text-white/45"
+          disabled={busy || typed.trim().toLowerCase() !== nickname.toLowerCase()}
+        >
+          {busy ? t("იშლება…", "Deleting…", "Удаляю…") : t("სამუდამოდ წაშლა", "Delete for good", "Удалить навсегда")}
+        </button>
+        <button type="button" className={BTN_GHOST} onClick={onCancel}>
+          {t("გაუქმება", "Cancel", "Отмена")}
+        </button>
+      </div>
+    </form>
   );
 }
 

@@ -34,7 +34,6 @@ import { CoinIcon } from "./Coins";
 import { DeckViewer } from "./DeckViewer";
 import { Nick } from "./Nick";
 import { PageShell } from "./PageShell";
-import { ThemeShowcase } from "./ThemeShowcase";
 import { rise } from "./ui";
 
 interface Wallet {
@@ -186,7 +185,7 @@ export function ShopPage() {
           onClick={() => (item.kind === "theme" ? applyTheme(item.id) : void putOn(item))}
           className={`rounded-full border font-extrabold transition-colors disabled:opacity-50 ${dim} ${worn ? "border-amber-300/60 bg-amber-300/15 text-amber-200" : "border-white/20 text-white/80 hover:border-amber-300 hover:text-amber-300"}`}
         >
-          {worn ? `✓ ${t("ჩაცმულია", "Equipped", "Надето")}` : t("ჩაცმა", "Equip", "Надеть")}
+          {worn ? `✓ ${t("დაყენებულია", "Equipped", "Надето")}` : t("დაყენება", "Equip", "Надеть")}
         </button>
       );
     }
@@ -269,84 +268,39 @@ export function ShopPage() {
     return (
       <li
         key={item.id}
-        className={`group flex flex-col items-center gap-3 rounded-3xl border bg-gradient-to-b from-white/[0.1] to-white/[0.02] p-4 text-center transition-[translate,border-color] duration-300 hover:-translate-y-1 ${worn ? "border-amber-300/70" : "border-amber-300/25 hover:border-amber-300/60"}`}
+        className={`flex flex-col items-center gap-3 rounded-2xl border bg-white/[0.04] p-4 text-center transition-colors duration-200 ${worn ? "border-amber-300/70" : "border-white/10 hover:border-amber-300/50"}`}
       >
         {previewOf(item)}
-        <b className="text-lg font-extrabold leading-tight">{labelOf(item)}</b>
+        <b className="text-base font-extrabold leading-tight">{labelOf(item)}</b>
         {actionFor(item)}
         {note && <span className={`text-xs font-bold ${note.ok ? "text-emerald-300" : "text-red-300"}`}>{note.text}</span>}
       </li>
     );
   };
 
-  /** The art of a category box. */
-  const boxArt = (id: SectionId) => {
-    const mine = profile ?? null;
-    switch (id) {
-      case "decks":
-        return <BackPreview skin="crimson" accent="#e11d48" width="4.6rem" />;
-      case "themes":
-        return <ThemeShowcase />;
-      case "frames":
-        return (
-          <div className="flex items-center gap-2 [&_.avatar-face]:size-14! [&_.avatar-face]:text-2xl!">
-            {(["f_gold", "f_flame", "f_neon"] as const).map((f) => (
-              <Avatar key={f} size="lg" color={mine?.avatar_color ?? "amber"} icon={mine?.avatar_icon} url={mine?.avatar_url} frame={f} />
-            ))}
-          </div>
-        );
-      case "names":
-        return (
-          <div className="flex flex-col items-center text-xl font-extrabold leading-tight">
-            {(["n_rainbow", "n_fire", "n_neon"] as const).map((n) => (
-              <Nick key={n} name={mine?.nickname ?? "ProJoker"} style={n} />
-            ))}
-          </div>
-        );
-      case "emotes":
-        return (
-          <div className="flex flex-wrap items-center justify-center gap-2 text-3xl">
-            {["🔥", "😎", "🎉", "😅", "🏆", "👏"].map((e, i) => (
-              <span key={i} className="transition-transform duration-300 group-hover:-translate-y-1" style={{ transitionDelay: `${i * 40}ms` }}>
-                {e}
-              </span>
-            ))}
-          </div>
-        );
-      case "effects":
-        return (
-          <div className="flex items-center gap-4">
-            {(["w_sparks", "w_gold", "w_fire"] as const).map((fx) => (
-              <CardView key={fx} card={KING} className={`fxw-${fx}`} style={{ "--cw": "3.2rem" } as React.CSSProperties} />
-            ))}
-          </div>
-        );
-    }
-  };
-
   const boxFor = (id: SectionId) => {
     const x = SECTIONS[id];
     const items = (stock ?? []).filter((i) => i.kind === x.kind);
     if (items.length === 0) return null;
-    const mine = items.filter((i) => wallet?.owned.includes(i.id)).length;
+    const ownedItems = items.filter((i) => wallet?.owned.includes(i.id));
+    const mine = ownedItems.length;
+    // one item as a sample: the one worn, else one bought, else the first on sale
+    const sample = ownedItems.find(isWorn) ?? ownedItems[0] ?? items[0];
     return (
       <li key={id}>
         <button
           type="button"
           onClick={() => setSection(id)}
-          className="group relative flex w-full flex-col items-center gap-3 overflow-hidden rounded-[1.75rem] border border-white/12 bg-gradient-to-b from-white/[0.09] to-white/[0.02] p-4 text-center shadow-[0_18px_40px_-24px_rgb(0_0_0/0.7)] transition-[translate,border-color,box-shadow] duration-300 hover:-translate-y-1.5 hover:border-amber-300/60 hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)]"
+          className="group flex w-full flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-5 text-center transition-colors duration-200 hover:border-amber-300/50 hover:bg-white/[0.07]"
         >
-          <div className="pointer-events-none absolute -right-10 -top-10 size-44 rounded-full blur-3xl" style={{ background: x.glow }} />
-          <div className={`relative grid w-full place-items-center ${id === "themes" ? "h-36 pb-4" : "h-32"}`}>{boxArt(id)}</div>
-          <h2 className="relative text-xl font-extrabold leading-tight">{t(x.label[0], x.label[1], x.label[2])}</h2>
-          <div className="relative flex flex-wrap items-center justify-center gap-1.5">
-            <span className="rounded-full bg-white/10 px-2.5 py-0.5 text-[0.7rem] font-bold text-white/70">
-              {items.length} {t("ნივთი", "items", "предм.")}
-            </span>
-            {userId && mine > 0 && (
-              <span className="rounded-full bg-amber-300/15 px-2.5 py-0.5 text-[0.7rem] font-bold text-amber-200">✓ {mine}</span>
-            )}
+          <div className="pointer-events-none grid min-h-32 w-full place-items-center">
+            {sample.kind === "card_back" ? <BackPreview skin={sample.id} accent={cardBack(sample.id)?.accent} width="4.6rem" /> : previewOf(sample)}
           </div>
+          <h2 className="text-xl font-extrabold leading-tight">{t(x.label[0], x.label[1], x.label[2])}</h2>
+          <span className="text-xs font-bold text-white/45">
+            {items.length} {t("ნივთი", "items", "предм.")}
+            {userId && mine > 0 && <span className="text-amber-200"> · ✓ {mine}</span>}
+          </span>
         </button>
       </li>
     );
@@ -357,17 +311,10 @@ export function ShopPage() {
       <button
         type="button"
         onClick={() => setNickOpen(true)}
-        className="group relative flex w-full flex-col items-center gap-3 overflow-hidden rounded-[1.75rem] border border-white/12 bg-gradient-to-b from-white/[0.09] to-white/[0.02] p-4 text-center shadow-[0_18px_40px_-24px_rgb(0_0_0/0.7)] transition-[translate,border-color,box-shadow] duration-300 hover:-translate-y-1.5 hover:border-amber-300/60"
+        className="group flex w-full flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-5 text-center transition-colors duration-200 hover:border-amber-300/50 hover:bg-white/[0.07]"
       >
-        <div className="relative grid h-32 w-full place-items-center">
-          <div className="flex items-center gap-3 rounded-2xl bg-black/25 px-4 py-3 ring-1 ring-white/10">
-            <span className="text-base font-bold text-white/50 line-through">{profile?.nickname ?? "TOJI"}</span>
-            <span className="text-lg text-amber-300">→</span>
-            <span className="text-xl font-extrabold">?</span>
-          </div>
-        </div>
-        <h2 className="relative text-xl font-extrabold leading-tight">{t("ახალი მეტსახელი", "A new nickname", "Новый никнейм")}</h2>
-        <span className="relative flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-0.5 text-[0.7rem] font-bold text-white/70">
+        <h2 className="text-xl font-extrabold leading-tight">{t("ახალი მეტსახელი", "A new nickname", "Новый никнейм")}</h2>
+        <span className="flex items-center gap-1.5 text-xs font-bold text-white/45">
           <CoinIcon className="size-3.5" /> {NICKNAME_PRICE}
         </span>
       </button>

@@ -4,6 +4,7 @@ import Script from "next/script";
 import { preconnect } from "react-dom";
 import { BanBanner } from "@/components/BanBanner";
 import { GiftPopup } from "@/components/GiftPopup";
+import { NicknamePrompt } from "@/components/NicknamePrompt";
 import { PageFade } from "@/components/PageFade";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
 import { LangProvider } from "@/lib/i18n";
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <AuthProvider>
             <BanBanner />
             <GiftPopup />
+            <NicknamePrompt />
             <PageFade>{children}</PageFade>
           </AuthProvider>
         </LangProvider>
