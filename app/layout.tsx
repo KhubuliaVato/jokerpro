@@ -4,6 +4,7 @@ import Script from "next/script";
 import { preconnect } from "react-dom";
 import { BanBanner } from "@/components/BanBanner";
 import { GiftPopup } from "@/components/GiftPopup";
+import { InviteWelcome } from "@/components/InviteWelcome";
 import { NicknamePrompt } from "@/components/NicknamePrompt";
 import { PageFade } from "@/components/PageFade";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
@@ -15,9 +16,14 @@ const notoGeorgian = Noto_Sans_Georgian({
   subsets: ["georgian", "latin"],
 });
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "https://projoker.netlify.app";
+
 export const metadata: Metadata = {
-  title: "ProJoker",
-  description: "ქართული კარტის თამაშები",
+  metadataBase: new URL(SITE),
+  title: { default: "ProJoker: ჯოკერი, ბურა და პოკერი ონლაინ", template: "%s | ProJoker" },
+  description: "ითამაშე ჯოკერი, ბურა და პოკერი ონლაინ ქართულად: ბოტებთან უფასოდ, მეგობრებთან კოდით ან რეიტინგიან მაგიდაზე. წოდებები, ლიდერბორდი და მაღაზია.",
+  openGraph: { siteName: "ProJoker", type: "website", locale: "ka_GE" },
+  twitter: { card: "summary_large_image" },
 };
 
 export const viewport: Viewport = {
@@ -39,6 +45,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <LangProvider>
           <AuthProvider>
             <BanBanner />
+            <InviteWelcome />
             <GiftPopup />
             <NicknamePrompt />
             <PageFade>{children}</PageFade>

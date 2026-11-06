@@ -3,9 +3,14 @@
 import { tt, useLang } from "@/lib/i18n";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useTrickLog } from "@/lib/joker/trickLog";
+import { useEndReactions } from "@/lib/online/endReactions";
+import { loadInviteStats, inviteLink } from "@/lib/invite";
+import { rematchTable, tablePath } from "@/lib/online/client";
 import { useOnlineTable } from "@/lib/online/useOnlineTable";
+import { getSupabase } from "@/lib/supabase";
 import type { Rules } from "@/lib/joker/rules";
 import type { BuraState } from "@/lib/bura/engine";
 import type { BuraRules } from "@/lib/bura/online";
@@ -13,11 +18,10 @@ import type { GameState } from "@/lib/joker/engine";
 import type { PokerState } from "@/lib/poker/engine";
 import type { PokerRules } from "@/lib/poker/online";
 import { Avatar } from "./Avatar";
-import { CoinsEarned } from "./Coins";
 import { PlayerNamesProvider } from "./names";
 import { PageShell } from "./PageShell";
 import { QueueLobby } from "./QueueLobby";
-import { RatingResult } from "./RatingResult";
+import { OnlineResult } from "./OnlineResult";
 import { BuraTable } from "./BuraTable";
 import { PokerTable } from "./PokerTable";
 import { Table } from "./Table";
@@ -40,6 +44,21 @@ export function OnlineTable({ code }: { code: string }) {
   const router = useRouter();
   const { configured, loading, user } = useAuth();
   const t = useOnlineTable(code);
+  const tricks = useTrickLog(t.table?.game === "joker" ? (t.view as GameState | null) : null);
+
+  // the end of the game: quick reactions between the players and the link a shared result carries
+  const over = t.table?.status === "finished" || t.table?.status === "closed";
+  const reactionsHook = useEndReactions(over ? (t.table?.id ?? null) : null, user?.id ?? null);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!over || !supabase || !user) return;
+    let cancelled = false;
+    loadInviteStats(supabase).then((s) => !cancelled && s && setShareLink(inviteLink(s.code)));
+    return () => {
+      cancelled = true;
+    };
+  }, [over, user]);
 
   const game = t.table?.game ?? "joker";
   const back = () => router.push(`/${game}`);
@@ -171,20 +190,23 @@ export function OnlineTable({ code }: { code: string }) {
       : t.table.kind === "friendly"
         ? tt("დარწმუნებული ხართ? გასვლისას ახალ მაგიდაზე 2 საათით ვერ დაჯდებით და თქვენს ადგილს ბოტი დაიკავებს. დაბრუნება 7 წუთის განმავლობაში შეგიძლიათ.", "Are you sure? You cannot join a new table for 2 hours after leaving, and a bot takes your seat. You can return within 7 minutes.", "Вы уверены? После выхода 2 часа нельзя садиться за новый стол, а ваше место займёт бот. Вернуться можно в течение 7 минут.")
         : tt("დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს. დაბრუნება 7 წუთის განმავლობაში შეგიძლიათ.", "Are you sure? A bot will take your seat when you leave. You can return within 7 minutes.", "Вы уверены? После выхода ваше место займёт бот. Вернуться можно в течение 7 минут.");
-  const note =
-    t.table.kind === "ranked" ? (
-      <div className="flex flex-col items-center gap-3">
-        <RatingResult tableId={t.table.id} userId={user.id} />
-        <CoinsEarned tableId={t.table.id} userId={user.id} />
-      </div>
-    ) : t.table.kind === "friendly" ? (
-      <div className="flex flex-col items-center gap-3">
-        <span className="text-emerald-300">✓ {tt("თამაში ჩაიწერა ისტორიაში", "The game was saved to your history", "Игра записана в историю")}</span>
-        <CoinsEarned tableId={t.table.id} userId={user.id} />
-      </div>
-    ) : (
+  const rematch = over ? <RematchButton tableId={t.table.id} opened={!!t.table.rematch_code} /> : null;
+  const result =
+    t.table.kind === "private" ? (
       <span className="text-white/60">{tt("კერძო თამაში არ იწერება ისტორიაში", "Private games are not saved to the history", "Частные игры не записываются в историю")}</span>
+    ) : (
+      <OnlineResult tableId={t.table.id} userId={user.id} game={t.table.game} ranked={t.table.kind === "ranked"} />
     );
+  // the players' reactions, by the seat the table shows them in
+  const reactionsBySeat = Object.fromEntries(t.players.flatMap((p, k) => (p && reactionsHook.shown[p.user_id] ? [[k, reactionsHook.shown[p.user_id]]] : [])));
+  const end = { rematch, onReact: reactionsHook.send, reactions: reactionsBySeat, shareLink };
+  // (the Bura table has its own end screen: the rematch button goes into its note)
+  const note = (
+    <div className="flex flex-col items-center gap-3">
+      {result}
+      {rematch}
+    </div>
+  );
 
   const chat = (
     <TableChat
@@ -228,10 +250,41 @@ export function OnlineTable({ code }: { code: string }) {
         onPlay={(option) => void t.act({ type: "play", option })}
         onQuit={leaveToMenu}
         quitConfirm={quitConfirm}
-        endNote={note}
+        endNote={result}
+        end={end}
+        tricks={tricks}
       />
       {t.notice && <Notice text={t.notice} />}
     </PlayerNamesProvider>
+  );
+}
+
+/** At the end of a game with friends: play again at a new table with the same rules (the first to press opens it). */
+function RematchButton({ tableId, opened }: { tableId: string; opened: boolean }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const go = async () => {
+    const supabase = getSupabase();
+    if (!supabase || busy) return;
+    setBusy(true);
+    setError(null);
+    const { table, error: failed } = await rematchTable(supabase, tableId);
+    if (failed || !table) {
+      setError(failed);
+      setBusy(false);
+      return;
+    }
+    router.push(tablePath(table));
+  };
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <button type="button" disabled={busy} onClick={() => void go()} className="rounded-full bg-amber-300 px-5 py-2 text-sm font-extrabold text-black transition-colors hover:bg-amber-200 disabled:opacity-60">
+        {opened ? tt("შეუერთდი ახალ თამაშს", "Join the next game", "Присоединиться к новой игре") : tt("ისევ ვითამაშოთ", "Play again", "Сыграть ещё")}
+      </button>
+      {opened && <span className="text-xs text-white/55">{tt("მეგობარმა ახალი მაგიდა უკვე გახსნა", "A friend has opened a new table", "Друг уже открыл новый стол")}</span>}
+      {error && <span className="text-xs text-red-300">{error}</span>}
+    </div>
   );
 }
 

@@ -40,6 +40,18 @@ const NAV = [
     ),
   },
   {
+    href: "/rules",
+    ka: "წესები",
+    en: "Rules",
+    ru: "Правила",
+    icon: (
+      <svg viewBox="0 0 24 24" {...ICON}>
+        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16z" />
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      </svg>
+    ),
+  },
+  {
     href: "/shop",
     ka: "მაღაზია",
     en: "Shop",

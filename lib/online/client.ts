@@ -18,6 +18,8 @@ export interface TableRow {
   rules: Rules | BuraRules | PokerRules;
   /** When the table of random players filled up: everyone then has READY_SECONDS to accept. */
   ready_at: string | null;
+  /** At a finished private table: the code of the table where the same friends play again (set once someone asks). */
+  rematch_code?: string | null;
 }
 
 export interface SeatRow {
@@ -64,6 +66,7 @@ export function onlineMessage(message: string): string {
     );
   }
   if (m.includes("too late to return")) return tt("დაბრუნების დრო გავიდა", "The time to return is over", "Время возвращения вышло");
+  if (m.includes("no rematch")) return tt("ხელახლა თამაში ამ მაგიდაზე ვერ მოხერხდა", "A rematch is not possible at this table", "Реванш за этим столом невозможен");
   if (m.includes("the game is over")) return tt("თამაში უკვე დასრულდა", "The game is already over", "Игра уже закончилась");
   if (m.includes("table not found")) return tt("ასეთი კოდით მაგიდა ვერ მოიძებნა", "No table with this code", "Стола с таким кодом нет");
   if (m.includes("already started")) return tt("ამ მაგიდაზე თამაში უკვე დაიწყო", "The game at this table has already started", "Игра за этим столом уже началась");
@@ -113,6 +116,12 @@ export async function pingTable(supabase: SupabaseClient, tableId: string): Prom
 }
 
 /** Where a table lives in the site: /joker/table/ABC123 or /bura/table/ABC123. */
+/** At a finished private table: opens a new table with the same rules, or seats the player at the one a friend already opened. */
+export async function rematchTable(supabase: SupabaseClient, tableId: string): Promise<{ table: TableRow | null; error: string | null }> {
+  const { data, error } = await supabase.rpc("rematch", { p_table_id: tableId });
+  return { table: (data as TableRow | null) ?? null, error: error ? onlineMessage(error.message) : null };
+}
+
 export const tablePath = (t: Pick<TableRow, "game" | "code">) => `/${t.game}/table/${t.code}`;
 
 /** The running game the player is part of (e.g. after closing the page), if any. */

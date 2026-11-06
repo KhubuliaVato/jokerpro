@@ -11,6 +11,7 @@ import type { GameResult } from "@/lib/stats";
 import { getSupabase } from "@/lib/supabase";
 import { AVATAR_COLORS, AVATAR_ICONS, Avatar } from "./Avatar";
 import { PageShell } from "./PageShell";
+import { InviteCard } from "./InviteCard";
 import { PlayerSearch } from "./PlayerSearch";
 import { StatsSection } from "./StatsSection";
 import { BTN_GHOST, BTN_PRIMARY, HEADER_BTN, HEADER_MENU, INPUT, rise } from "./ui";
@@ -62,6 +63,8 @@ export function ProfilePage() {
               <PlayerSearch />
             </div>
           )}
+
+          <InviteCard />
 
           <StatsSection
             userId={user.id}

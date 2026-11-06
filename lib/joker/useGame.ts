@@ -86,6 +86,19 @@ export function useJokerGame() {
     setGame(createGame(rules));
   }, []);
   const quit = useCallback(() => setGame(null), []);
+  /** Developer tool: the bots play every remaining move at once, so the end of the game can be seen. */
+  const finishNow = useCallback(() => {
+    setGame((g) => {
+      if (!g) return g;
+      let s = g;
+      for (let guard = 0; guard < 5000 && s.phase !== "gameEnd"; guard++) {
+        if (s.phase === "trickEnd") s = finishTrick(s);
+        else if (s.phase === "handEnd") s = nextHand(s);
+        else s = autoMove(s, botsRef.current[s.turn - 1]?.style);
+      }
+      return s;
+    });
+  }, []);
 
   const bid = useCallback(
     (n: number) => {
@@ -127,5 +140,5 @@ export function useJokerGame() {
     return () => clearTimeout(timer);
   }, [game]);
 
-  return { game, secondsLeft, kicked, bots, start, quit, bid, pickTrump, play };
+  return { game, secondsLeft, kicked, bots, start, quit, finishNow, bid, pickTrump, play };
 }

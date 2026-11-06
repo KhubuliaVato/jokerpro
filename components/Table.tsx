@@ -1,7 +1,6 @@
 "use client";
 
 import { tt, useLang } from "@/lib/i18n";
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   isRed,
@@ -34,7 +33,8 @@ import { Nick } from "./Nick";
 import { CardView } from "./CardView";
 import { MusicPlayer } from "./MusicPlayer";
 import { usePlayerAvatars, usePlayerNames } from "./names";
-import { ScoreSheet } from "./ScoreSheet";
+import type { TrickLog } from "@/lib/joker/trickLog";
+import { GameOver } from "./GameOver";
 
 interface Props {
   game: GameState;
@@ -47,6 +47,10 @@ interface Props {
   endNote?: React.ReactNode;
   /** Replaces the "are you sure" text of the leave button. */
   quitConfirm?: string;
+  /** Online: what the end screen adds (rematch, quick reactions, share). */
+  end?: Pick<React.ComponentProps<typeof GameOver>, "rematch" | "onReact" | "reactions" | "shareLink">;
+  /** The tricks seen during the game, for the details at the end. */
+  tricks?: TrickLog[];
 }
 
 // Hand fan: the pivot's depth below a card (% of its height). The angle between neighbours follows from how far
@@ -462,16 +466,6 @@ function OpponentHand({ count, seat }: { count: number; seat: number }) {
   );
 }
 
-function Overlay({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-30 grid place-items-center bg-black/60 p-3">
-      <div className="panel max-h-[calc(100dvh-1.5rem)] w-full max-w-3xl overflow-y-auto p-4 sm:p-5">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 export function Table({
   game,
   secondsLeft,
@@ -481,6 +475,8 @@ export function Table({
   onQuit,
   endNote,
   quitConfirm,
+  end,
+  tricks,
 }: Props) {
   useLang(); // the table re-renders when the language is switched
   const names = usePlayerNames();
@@ -846,42 +842,9 @@ export function Table({
       </footer>
 
       {game.phase === "gameEnd" && (
-        <Overlay>
-          <h2 className="mb-2 text-center text-xl font-extrabold text-amber-200">
-            {tt("თამაში დასრულდა", "Game over", "Игра окончена")}
-          </h2>
-          <Standings sums={sums} />
-          {endNote && <div className="mb-3 text-center text-sm">{endNote}</div>}
-          <ScoreSheet game={game} />
-          <button className="btn btn-primary mt-3 w-full" onClick={onQuit}>
-            {tt("ახალი თამაში", "New game", "Новая игра")}
-          </button>
-          <Link href="/" className="btn mt-2 block w-full text-center">
-            {tt("მთავარი მენიუ", "Main menu", "Главное меню")}
-          </Link>
-        </Overlay>
+        <GameOver game={game} sums={sums} note={endNote} onNew={onQuit} tricks={tricks} {...end} />
       )}
     </main>
-  );
-}
-
-function Standings({ sums }: { sums: number[] }) {
-  const names = usePlayerNames();
-  const order = Array.from({ length: PLAYERS }, (_, p) => p).sort(
-    (a, b) => sums[b] - sums[a],
-  );
-  return (
-    <ol className="mb-3 flex flex-col gap-1 text-center">
-      {order.map((p, i) => (
-        <li
-          key={p}
-          className={i === 0 ? "text-lg font-bold text-amber-300" : ""}
-        >
-          {i + 1}. {names[p]} — {sums[p]}
-          {i === 0 && p === HUMAN && " 🎉"}
-        </li>
-      ))}
-    </ol>
   );
 }
 
