@@ -40,19 +40,9 @@ const NAV = [
     ),
   },
   {
-    href: "/rules",
-    ka: "წესები",
-    en: "Rules",
-    ru: "Правила",
-    icon: (
-      <svg viewBox="0 0 24 24" {...ICON}>
-        <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v16H6.5A2.5 2.5 0 0 0 4 21.5v-16z" />
-        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      </svg>
-    ),
-  },
-  {
     href: "/shop",
+    /** Only for signed-in players: a guest has no coins to spend. */
+    signedIn: true,
     ka: "მაღაზია",
     en: "Shop",
     ru: "Магазин",
@@ -75,7 +65,7 @@ export function SiteHeader() {
       <div className="flex min-w-0 items-center gap-4 lg:gap-5">
         <Logo hideWordOnPhones />
         <nav className="hidden items-center gap-1.5 md:flex">
-          {NAV.map((n) => {
+          {NAV.filter((n) => !n.signedIn || user).map((n) => {
             const active = path === n.href || path.startsWith(`${n.href}/`);
             return (
               <Link
@@ -98,7 +88,7 @@ export function SiteHeader() {
         </nav>
       </div>
 
-      <div className="flex items-center gap-2 min-[380px]:gap-2.5">
+      <div className="flex flex-none items-center gap-2 min-[380px]:gap-2.5">
         <CoinBalance />
         <ThemeSwitcher />
         <LanguageSwitcher />
@@ -107,9 +97,9 @@ export function SiteHeader() {
         ) : user ? (
           <Link
             href="/profile"
-            className={`group flex items-center gap-3 p-1.5 @[1100px]:pr-5 ${HEADER_BTN}`}
+            className={`group flex size-12 flex-none items-center justify-center gap-3 p-0 @[1100px]:w-auto @[1100px]:justify-start @[1100px]:pl-1.5 @[1100px]:pr-5 ${HEADER_BTN}`}
           >
-            <span className="rounded-full ring-2 ring-amber-300/60 transition-shadow duration-200 group-hover:ring-amber-300">
+            <span className="flex flex-none rounded-full ring-2 ring-amber-300/60 transition-shadow duration-200 group-hover:ring-amber-300">
               <Avatar size="sm" color={profile?.avatar_color} icon={profile?.avatar_icon} url={profile?.avatar_url} frame={profile?.equipped_frame} />
             </span>
             <span className="hidden max-w-32 truncate text-base font-bold @[1100px]:inline"><Nick name={profile?.nickname ?? t("პროფილი", "Profile", "Профиль")} style={profile?.equipped_name} /></span>
