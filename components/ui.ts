@@ -40,7 +40,7 @@ export const rise = (i: number): CSSProperties => ({
 
 /** The round buttons and pills of the site header: a soft gradient, an amber edge and a lift on hover. */
 export const HEADER_BTN =
-  "rounded-full border border-white/10 bg-gradient-to-b from-white/[0.09] to-white/[0.02] shadow-[0_8px_20px_-14px_rgb(0_0_0/0.8)] transition-[border-color,translate,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-amber-300/50 hover:shadow-[0_10px_26px_-12px_rgb(252_211_77/0.45)] focus-visible:border-amber-300";
+  "rounded-xl border border-white/[0.09] bg-gradient-to-b from-white/[0.07] to-white/[0.02] shadow-[0_6px_16px_-12px_rgb(0_0_0/0.9),inset_0_1px_0_rgb(255_255_255/0.06)] transition-[border-color,translate,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-amber-300/50 hover:shadow-[0_10px_26px_-12px_rgb(252_211_77/0.45)] focus-visible:border-amber-300";
 
 /** The drop-down panels of the header: dark in the colour of the chosen theme. */
 export const HEADER_MENU =

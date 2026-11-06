@@ -62,7 +62,7 @@ export function CoinBalance() {
       href="/profile"
       aria-label={`${t("მონეტები", "Coins", "Монеты")}: ${balance}`}
       title={t("მონეტები", "Coins", "Монеты")}
-      className={`flex h-12 items-center gap-1.5 px-3 text-base font-extrabold tabular-nums text-amber-200 ${HEADER_BTN}`}
+      className={`flex h-10 items-center gap-1.5 px-3 text-[0.95rem] font-extrabold tabular-nums text-amber-200 ${HEADER_BTN}`}
     >
       <CoinIcon />
       {balance}

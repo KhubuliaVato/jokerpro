@@ -79,7 +79,7 @@ export function LanguageSwitcher() {
         aria-label="Language"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className={`grid size-12 place-items-center ${HEADER_BTN}`}
+        className={`grid size-10 place-items-center ${HEADER_BTN}`}
       >
         <Flag lang={lang} className="size-7" />
       </button>

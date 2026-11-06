@@ -81,7 +81,7 @@ export function ThemeSwitcher() {
         aria-label={t("ფონის ფერი", "Background colour", "Цвет фона")}
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className={`relative grid size-11 place-items-center min-[400px]:size-12 ${HEADER_BTN}`}
+        className={`relative grid size-10 place-items-center ${HEADER_BTN}`}
       >
         <svg viewBox="0 0 24 24" className="size-6" fill="none" aria-hidden>
           <path

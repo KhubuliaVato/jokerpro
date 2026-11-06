@@ -5,12 +5,10 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useT } from "@/lib/i18n";
 import { Avatar } from "./Avatar";
-import { Nick } from "./Nick";
 import { CoinBalance } from "./Coins";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 import { ThemeSwitcher } from "./ThemeSwitcher";
 import { Logo } from "./Logo";
-import { HEADER_BTN } from "./ui";
 
 const ICON = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true, className: "size-5 flex-none" } as const;
 
@@ -74,10 +72,10 @@ export function SiteHeader() {
                 aria-current={active ? "page" : undefined}
                 aria-label={t(n.ka, n.en, n.ru)}
                 title={t(n.ka, n.en, n.ru)}
-                className={`group flex items-center gap-2 rounded-full border px-3 py-2.5 text-base font-bold transition-[color,background-color,border-color,translate,box-shadow] duration-200 hover:-translate-y-0.5 ${
+                className={`group relative flex h-10 items-center gap-2 rounded-xl border px-3 text-[0.95rem] font-bold transition-[color,background-color,border-color,box-shadow] duration-200 ${
                   active
-                    ? "border-amber-300/60 bg-amber-300/15 text-amber-200 shadow-[0_8px_24px_-12px_rgb(252_211_77/0.6)]"
-                    : "border-white/10 bg-white/[0.04] text-white/65 hover:border-amber-300/40 hover:bg-white/[0.08] hover:text-amber-200"
+                    ? "border-amber-300/30 bg-amber-300/[0.08] text-amber-200 after:absolute after:inset-x-3 after:-bottom-px after:h-px after:bg-gradient-to-r after:from-transparent after:via-amber-300 after:to-transparent"
+                    : "border-transparent text-white/60 hover:border-white/10 hover:bg-white/[0.05] hover:text-white"
                 }`}
               >
                 <span className="transition-transform duration-200 group-hover:scale-110">{n.icon}</span>
@@ -93,22 +91,21 @@ export function SiteHeader() {
         <ThemeSwitcher />
         <LanguageSwitcher />
         {loading ? (
-          <span className="h-12 w-40 animate-pulse rounded-full bg-white/10" />
+          <span className="size-11 animate-pulse rounded-full bg-white/10" />
         ) : user ? (
           <Link
             href="/profile"
-            className={`group flex size-12 flex-none items-center justify-center gap-3 p-0 @[1100px]:w-auto @[1100px]:justify-start @[1100px]:pl-1.5 @[1100px]:pr-5 ${HEADER_BTN}`}
+            className="group flex size-11 flex-none items-center justify-center rounded-full transition-[translate,filter] duration-200 hover:-translate-y-0.5 hover:brightness-110"
           >
             <span className="flex flex-none rounded-full ring-2 ring-amber-300/60 transition-shadow duration-200 group-hover:ring-amber-300">
               <Avatar size="sm" color={profile?.avatar_color} icon={profile?.avatar_icon} url={profile?.avatar_url} frame={profile?.equipped_frame} />
             </span>
-            <span className="hidden max-w-32 truncate text-base font-bold @[1100px]:inline"><Nick name={profile?.nickname ?? t("პროფილი", "Profile", "Профиль")} style={profile?.equipped_name} /></span>
           </Link>
         ) : (
           configured && (
             <Link
               href="/login"
-              className="rounded-full bg-amber-300 px-4 py-2.5 text-base font-extrabold text-black transition-[background-color,translate] duration-200 hover:-translate-y-0.5 hover:bg-amber-200 min-[380px]:px-6"
+              className="flex h-10 items-center rounded-xl bg-amber-300 px-4 text-[0.95rem] font-extrabold text-black shadow-[0_8px_20px_-12px_rgb(252_211_77/0.7)] transition-[background-color,translate] duration-200 hover:-translate-y-0.5 hover:bg-amber-200 min-[380px]:px-5"
             >
               {t("შესვლა", "Sign in", "Войти")}
             </Link>
