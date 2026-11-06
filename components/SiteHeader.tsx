@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useIsAdmin } from "@/lib/admin";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useT } from "@/lib/i18n";
 import { Avatar } from "./Avatar";
@@ -51,6 +52,20 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    href: "/admin",
+    /** Only for admins. */
+    adminOnly: true,
+    ka: "ადმინი",
+    en: "Admin",
+    ru: "Админ",
+    icon: (
+      <svg viewBox="0 0 24 24" {...ICON}>
+        <path d="M12 3l8 3v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3z" />
+        <path d="M9.5 12.5l2 2 3.5-4" />
+      </svg>
+    ),
+  },
 ];
 
 /** Top bar of the hub pages: the brand on the left, the language, and the player (or a sign-in link) on the right. */
@@ -58,12 +73,13 @@ export function SiteHeader() {
   const { loading, user, profile, configured } = useAuth();
   const t = useT();
   const path = usePathname();
+  const isAdmin = useIsAdmin();
   return (
     <header className="@container flex items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-4 lg:gap-5">
         <Logo hideWordOnPhones />
         <nav className="hidden items-center gap-1.5 md:flex">
-          {NAV.filter((n) => !n.signedIn || user).map((n) => {
+          {NAV.filter((n) => (!n.signedIn || user) && (!n.adminOnly || isAdmin)).map((n) => {
             const active = path === n.href || path.startsWith(`${n.href}/`);
             return (
               <Link
