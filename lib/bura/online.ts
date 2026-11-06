@@ -46,6 +46,9 @@ export function viewFor(state: BuraState, seat: number): BuraState {
   // what the others have collected is the secret that makes "var" a gamble
   const over = state.phase === "roundEnd" || state.phase === "gameEnd";
   view.piles = over ? teams(state.piles) : [state.piles[teamOf(seat)], 0];
+  // the cards the others threw down face down are the secret of the pile: shown only once the round is over
+  const piled = state.pileCards ?? [[], []];
+  view.pileCards = over ? teams(piled) : [piled[teamOf(seat)].filter((c) => !c.secret), []];
   view.known = [state.known[teamOf(seat)], 0];
   view.unknown = [state.unknown[teamOf(seat)], 0];
   view.call = state.call && { ...state.call, by: (state.call.by - seat + n) % n };

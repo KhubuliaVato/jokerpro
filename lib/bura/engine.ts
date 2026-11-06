@@ -50,6 +50,9 @@ export interface Play {
   hidden: boolean;
 }
 
+/** A card in a team's pile; `secret` ones were thrown down face down by the others, so the team never saw them. */
+export type PileCard = NormalCard & { secret?: boolean };
+
 export interface RoundResult {
   /** Winning team, or null for 60:60. */
   winner: number | null;
@@ -120,6 +123,8 @@ export interface BuraState {
   gave: NormalCard[][];
   /** Points and tricks per team in this round. */
   piles: number[];
+  /** The cards of each team's pile (the secret ones are shown only when the round is over). */
+  pileCards: PileCard[][];
   tricks: number[];
   /** Points in each team's pile that the team has seen, and how many cards in it it has not (the others' secret throws). */
   known: number[];
@@ -253,6 +258,7 @@ export function createGame(players: BuraPlayers, rng: Rng = Math.random, target 
       seen: [],
       gave: [],
       piles: [0, 0],
+      pileCards: [[], []],
       tricks: [0, 0],
       known: [0, 0],
       unknown: [0, 0],
@@ -285,6 +291,7 @@ function deal(s: BuraState, rng: Rng): BuraState {
   next.seen = [];
   next.gave = Array.from({ length: next.players }, () => []);
   next.piles = [0, 0];
+  next.pileCards = [[], []];
   next.tricks = [0, 0];
   next.known = [0, 0];
   next.unknown = [0, 0];
@@ -375,9 +382,13 @@ export function playCards(s: BuraState, ids: string[]): BuraState {
 /** Takes the cards of the finished trick into the winner's team pile. */
 function collect(next: BuraState, winner: number) {
   const team = teamOf(winner);
+  // (a game saved before the piles were listed has no list to add to)
+  next.pileCards ??= [[], []];
   for (const play of next.trick) {
     const points = sumPoints(play.cards);
     next.piles[team] += points;
+    const secret = play.hidden && teamOf(play.player) !== team;
+    next.pileCards[team].push(...play.cards.map((c) => (secret ? { ...c, secret: true } : c)));
     if (play.hidden && teamOf(play.player) !== team) next.unknown[team] += play.cards.length;
     else next.known[team] += points;
     if (!play.hidden) next.seen.push(...play.cards);

@@ -28,6 +28,8 @@ export interface SeatProfile {
 
 /** Seconds the round result of Bura stays up before the next round is dealt. */
 const ROUND_PAUSE = 6000;
+/** A round decided by "var" stays on the screen longer: both piles are shown. */
+const VAR_ROUND_PAUSE = 10000;
 
 /** A game of this table needs a decision from somebody (Joker: trump / bid / play; Bura: play). */
 const needsMove = (v: GameState | BuraState | PokerState) => ["trump", "bidding", "playing", "play", "call", "var", "betting"].includes(v.phase);
@@ -260,7 +262,7 @@ export function useOnlineTable(code: string) {
     const phase = row.view.phase;
     if (phase !== "trickEnd" && phase !== "handEnd" && phase !== "roundEnd") return;
     const pause =
-      phase === "trickEnd" ? ONLINE_TRICK_PAUSE : phase === "roundEnd" ? ROUND_PAUSE : table?.game === "poker" ? HAND_PAUSE : ONLINE_HAND_END_PAUSE;
+      phase === "trickEnd" ? ONLINE_TRICK_PAUSE : phase === "roundEnd" ? (table?.game === "bura" && (row.view as BuraState).result?.how === "var" ? VAR_ROUND_PAUSE : ROUND_PAUSE) : table?.game === "poker" ? HAND_PAUSE : ONLINE_HAND_END_PAUSE;
     const advance = () => void callJoker(supabase, { action: "advance", table_id: tableId, version: row.version }, server);
     // The server refuses to move on before its own minimum pause: ask again until the screen changes.
     const t = setTimeout(advance, jitter(pause) + (lead ? 0 : FALLBACK_MS));
@@ -294,17 +296,16 @@ export function useOnlineTable(code: string) {
     };
   }, [tableId, row, turnIsBot, server, lead]);
 
-  // Countdown shown on my own turn.
+  // Countdown of whoever is on turn (a bot has no deadline), and of me when it is my turn.
   const myDecision = !!row && needsMove(row.view) && row.view.turn === 0;
+  const counting = !!row && needsMove(row.view) && !!row.turn_deadline;
   useEffect(() => {
-    if (!myDecision) return;
+    if (!counting) return;
     const id = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(id);
-  }, [myDecision]);
-  const secondsLeft =
-    myDecision && row?.turn_deadline
-      ? Math.max(0, Math.ceil((Date.parse(row.turn_deadline) - now) / 1000))
-      : null;
+  }, [counting]);
+  const turnSeconds = counting && row?.turn_deadline ? Math.max(0, Math.ceil((Date.parse(row.turn_deadline) - now) / 1000)) : null;
+  const secondsLeft = myDecision ? turnSeconds : null;
 
   // Moves are shown at once (the server confirms a moment later, or the screen snaps back with a message).
   const act = useCallback(
@@ -402,6 +403,7 @@ export function useOnlineTable(code: string) {
     view,
     version,
     secondsLeft,
+    turnSeconds,
     readyLeft,
     returnLeft,
     returnToGame,

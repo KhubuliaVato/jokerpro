@@ -87,7 +87,7 @@ export function useBuraGame() {
     if (!game) return;
     let t: ReturnType<typeof setTimeout> | undefined;
     if (game.phase === "roundEnd") {
-      t = setTimeout(() => setGame((g) => (g && g.phase === "roundEnd" ? nextRound(g) : g)), ROUND_PAUSE);
+      t = setTimeout(() => setGame((g) => (g && g.phase === "roundEnd" ? nextRound(g) : g)), game.result?.how === "var" ? 2 * ROUND_PAUSE : ROUND_PAUSE);
     } else if (game.phase === "trickEnd") {
       t = setTimeout(() => setGame((g) => (g && g.phase === "trickEnd" ? finishTrick(g) : g)), TRICK_PAUSE);
     } else if ((game.phase === "play" || game.phase === "call" || game.phase === "var") && game.turn !== HUMAN) {

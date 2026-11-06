@@ -3,7 +3,7 @@
 import { tt, useLang } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { isRed, SUIT_SYMBOL, sortHand, type NormalCard } from "@/lib/joker/cards";
-import { callName, canCall, handSize, isLegal, legalPlays, MAX_PRICE, molotka, needOf, nextLevel, teamOf, type BuraAction, type BuraState } from "@/lib/bura/engine";
+import { callName, canCall, handSize, isLegal, legalPlays, MAX_PRICE, molotka, needOf, nextLevel, sumPoints, teamOf, VAR_POINTS, type BuraAction, type BuraState, type PileCard } from "@/lib/bura/engine";
 import { playCardSound, playDealSound } from "@/lib/sound";
 import { Nick } from "./Nick";
 import { Avatar } from "./Avatar";
@@ -15,6 +15,8 @@ import { BTN_GHOST, BTN_PRIMARY } from "./ui";
 interface Props {
   game: BuraState;
   secondsLeft: number | null;
+  /** Seconds the player on turn has left, whoever that is (online; null for a bot or an offline game). */
+  turnSeconds?: number | null;
   /** Seat 0 is you; the rest go clockwise. */
   names: string[];
   avatars: (SeatAvatar | null)[];
@@ -57,7 +59,7 @@ const AT = { bottom: [0, 10], top: [0, -10], left: [-23, 3.6], right: [23, 3.6] 
 const EDGE = { bottom: [0, 30], top: [0, -30], left: [-45, 0], right: [45, 0] } as const;
 const move = (from: readonly number[], to: readonly number[]) => ({ x: `${to[0] - from[0]}vw`, y: `${to[1] - from[1]}dvh` });
 
-export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, onNext, autoNext, onQuit, endNote, quitConfirm }: Props) {
+export function BuraTable({ game, secondsLeft, turnSeconds = null, names, avatars, onPlay, onAct, onNext, autoNext, onQuit, endNote, quitConfirm }: Props) {
   useLang(); // the table re-renders when the language is switched
   const [confirm, setConfirm] = useState(false);
   const teams = game.players === 4;
@@ -125,6 +127,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
               avatar={avatars[seat]}
               cards={game.hands[seat].length}
               active={turnSpot === spot(game, seat)}
+              seconds={turnSpot === spot(game, seat) ? turnSeconds : null}
               partner={teams && teamOf(seat) === 0}
             />
           ))}
@@ -207,7 +210,7 @@ export function BuraTable({ game, secondsLeft, names, avatars, onPlay, onAct, on
         )}
 
         {(game.phase === "call" || game.phase === "var") && (
-          <Decision game={game} names={names} secondsLeft={secondsLeft} onAct={onAct} />
+          <Decision game={game} names={names} secondsLeft={game.turn === 0 ? secondsLeft : turnSeconds} onAct={onAct} />
         )}
 
         {game.phase === "roundEnd" && <RoundBanner game={game} names={names} />}
@@ -246,6 +249,7 @@ function Opponent({
   avatar,
   cards,
   active,
+  seconds,
   partner,
 }: {
   where: "left" | "top" | "right";
@@ -253,6 +257,8 @@ function Opponent({
   avatar: SeatAvatar | null;
   cards: number;
   active: boolean;
+  /** What is left of this player's time to move. */
+  seconds: number | null;
   partner: boolean;
 }) {
   const place =
@@ -271,6 +277,9 @@ function Opponent({
           <Nick name={name} style={avatar?.nick} />
           {partner && <span className="ml-1 text-xs text-emerald-300">{tt("გუნდელი", "Partner", "Партнёр")}</span>}
         </span>
+        {active && seconds !== null && (
+          <span className={`rounded-full px-2 py-0.5 text-xs font-extrabold tabular-nums ${seconds <= 10 ? "animate-pulse bg-red-500/30 text-red-200" : "bg-black/35 text-white/75"}`}>{seconds}</span>
+        )}
       </div>
       <div className="flex">
         {Array.from({ length: cards }, (_, i) => (
@@ -398,7 +407,7 @@ function Decision({
 }) {
   const mine = game.turn === 0;
   const timer =
-    mine && secondsLeft !== null ? (
+    secondsLeft !== null ? (
       <span className={`tabular-nums ${secondsLeft <= 10 ? "font-bold text-red-300" : "text-white/50"}`}>{secondsLeft}</span>
     ) : null;
 
@@ -408,7 +417,8 @@ function Decision({
         {mine ? (
           <>
             <p className="text-lg font-bold">{tt("ხელი თქვენია. ვარ?", "The trick is yours. Var?", "Взятка ваша. Вар?")}</p>
-            <p className="max-w-64 text-sm text-white/60">{tt("თუ გუნდს 31 ქულა აქვს, რაუნდს იგებთ. თუ არა — აგებთ.", "If your team has 31 points you win the round. If not, you lose it.", "Если у команды 31 очко, вы выигрываете раунд. Если нет — проигрываете.")}</p>
+            <p className="max-w-72 text-sm text-white/60">{tt("თუ გუნდს 31 ქულა აქვს, რაუნდს იგებთ. თუ არა — აგებთ.", "If your team has 31 points you win the round. If not, you lose it.", "Если у команды 31 очко, вы выигрываете раунд. Если нет — проигрываете.")}</p>
+            <MyPile game={game} />
             <div className="flex items-center gap-3">
               <button className={`${BTN_PRIMARY} !px-7 !py-2`} onClick={() => onAct({ type: "var", say: true })}>
                 {tt("ვარ!", "Var!", "Вар!")}
@@ -420,7 +430,10 @@ function Decision({
             </div>
           </>
         ) : (
-          <p className="text-white/70">{tt(`${names[game.turn]} ფიქრობს: ვარ თუ გააგრძელოს?`, `${names[game.turn]} is thinking: var or continue?`, `${names[game.turn]} думает: вар или продолжать?`)}</p>
+          <p className="flex items-center gap-3 text-white/70">
+            {tt(`${names[game.turn]} ფიქრობს: ვარ თუ გააგრძელოს?`, `${names[game.turn]} is thinking: var or continue?`, `${names[game.turn]} думает: вар или продолжать?`)}
+            {timer}
+          </p>
         )}
       </div>
     );
@@ -453,7 +466,49 @@ function Decision({
           {timer}
         </div>
       ) : (
-        <p className="text-sm text-white/50">{tt(`${names[game.turn]} ფიქრობს…`, `${names[game.turn]} is thinking…`, `${names[game.turn]} думает…`)}</p>
+        <p className="flex items-center gap-3 text-sm text-white/50">
+          {tt(`${names[game.turn]} ფიქრობს…`, `${names[game.turn]} is thinking…`, `${names[game.turn]} думает…`)}
+          {timer}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** The cards of a pile, small, highest points first. */
+function PileCards({ cards }: { cards: PileCard[] }) {
+  const sorted = cards.slice().sort((a, b) => sumPoints([b]) - sumPoints([a]) || b.rank - a.rank);
+  if (sorted.length === 0) return <span className="text-xs text-white/40">{tt("ჯერ არცერთი", "None yet", "Пока нет")}</span>;
+  return (
+    <div className="flex flex-wrap justify-center gap-x-0.5 gap-y-1">
+      {sorted.map((c) => (
+        <CardView key={c.id} card={c} style={{ ...cw("clamp(1.9rem, 6.5vw, 2.6rem)"), opacity: c.secret ? 0.7 : undefined }} />
+      ))}
+    </div>
+  );
+}
+
+/** What your team has taken so far, and what is missing for 31: shown when you decide on "var". */
+function MyPile({ game }: { game: BuraState }) {
+  const cards = (game.pileCards?.[0] ?? []).filter((c) => !c.secret);
+  const known = game.known[0];
+  const hidden = game.unknown[0];
+  const missing = Math.max(0, VAR_POINTS - known);
+  return (
+    <div className="flex w-full max-w-80 flex-col items-center gap-2 rounded-2xl bg-black/25 p-3">
+      <p className="text-sm font-bold text-amber-200">
+        {tt("თქვენი წაყვანილი კარტები", "Cards your team has taken", "Ваши взятые карты")}: <span className="tabular-nums">{known}</span> {tt("ქულა", "pts", "очк.")}
+      </p>
+      <PileCards cards={cards} />
+      <p className={`text-xs font-bold ${missing === 0 ? "text-emerald-300" : "text-red-200"}`}>
+        {missing === 0
+          ? tt(`ხილული ქულებით ${VAR_POINTS} უკვე გაქვთ: ვარ უსაფრთხოა`, `You already have ${VAR_POINTS} in the cards you can see: var is safe`, `Уже ${VAR_POINTS} в видимых картах: вар безопасен`)
+          : tt(`${VAR_POINTS}-მდე ${missing} ქულა გაკლიათ`, `${missing} more points to reach ${VAR_POINTS}`, `До ${VAR_POINTS} не хватает ${missing} очк.`)}
+      </p>
+      {hidden > 0 && (
+        <p className="text-xs text-white/55">
+          {tt(`+ ${hidden} დაფარული კარტი, რომელიც მოწინააღმდეგემ დადო: მათში ქულაც შეიძლება იყოს`, `+ ${hidden} face-down card(s) from the opponent: they may hold points too`, `+ ${hidden} закрытых карт соперника: в них тоже могут быть очки`)}
+        </p>
       )}
     </div>
   );
@@ -492,11 +547,30 @@ function RoundBanner({ game, names }: { game: BuraState; names: string[] }) {
           : r && r.winner !== null
             ? `${r.piles[0]} : ${r.piles[1]}`
             : "";
+  const showPiles = !!r && (r.how === "var" || r.how === "points") && (game.pileCards?.[0]?.length ?? 0) + (game.pileCards?.[1]?.length ?? 0) > 0;
+  const sayerPts = r && r.how === "var" && r.by !== null ? r.piles[teamOf(r.by)] : null;
   return (
-    <div className="pointer-events-none absolute inset-x-0 top-[40%] z-30 flex justify-center px-4" style={{ animation: "bura-in 0.3s ease-out both", ["--fx" as string]: "0", ["--fy" as string]: "-1rem" }}>
-      <div className="flex min-w-60 flex-col items-center gap-1.5 rounded-2xl border border-white/15 bg-[#0c2a1c]/90 px-6 py-3 text-center shadow-xl backdrop-blur-sm">
+    <div className={`pointer-events-none absolute inset-x-0 z-30 flex justify-center px-4 ${showPiles ? "top-[14%]" : "top-[40%]"}`} style={{ animation: "bura-in 0.3s ease-out both", ["--fx" as string]: "0", ["--fy" as string]: "-1rem" }}>
+      <div className="flex min-w-60 max-w-[min(34rem,94vw)] flex-col items-center gap-1.5 rounded-2xl border border-white/15 bg-[#0c2a1c]/95 px-5 py-3 text-center shadow-xl backdrop-blur-sm">
         <b className={`text-xl ${r?.winner === null ? "text-white/80" : mine ? "text-amber-300" : "text-red-200"}`}>{title}</b>
         {why && <span className="text-sm text-white/75">{why}</span>}
+        {sayerPts !== null && r && (
+          <span className={`text-sm font-bold ${(r.winner === 0) === (r.by === 0) ? "text-emerald-300" : "text-red-200"}`}>
+            {tt(`${sayerPts} ქულა ${sayerPts >= VAR_POINTS ? "ჰქონდა: ეს საკმარისია" : `ჰქონდა: ${VAR_POINTS}-ს ვერ აღწევს`}`, `${sayerPts} points ${sayerPts >= VAR_POINTS ? "(enough)" : `(short of ${VAR_POINTS})`}`, `${sayerPts} очк. ${sayerPts >= VAR_POINTS ? "(хватает)" : `(меньше ${VAR_POINTS})`}`)}
+          </span>
+        )}
+        {showPiles && r && (
+          <div className="mt-1 flex w-full flex-col gap-2 border-t border-white/10 pt-2">
+            {[0, 1].map((team) => (
+              <div key={team} className="flex flex-col items-center gap-1">
+                <span className={`text-xs font-bold ${team === 0 ? "text-amber-200" : "text-white/65"}`}>
+                  {team === 0 ? (teams ? tt("ჩვენი გუნდი", "Our team", "Наша команда") : tt("თქვენ", "You", "Вы")) : teams ? tt("მეტოქეები", "Opponents", "Соперники") : (names[1] ?? "")}: <span className="tabular-nums">{r.piles[team]}</span> {tt("ქულა", "pts", "очк.")}
+                </span>
+                <PileCards cards={game.pileCards?.[team] ?? []} />
+              </div>
+            ))}
+          </div>
+        )}
         {r && r.winner !== null && (
           <span className="text-sm text-white/60">
             {mine ? "+" : ""}
@@ -507,7 +581,7 @@ function RoundBanner({ game, names }: { game: BuraState; names: string[] }) {
           {game.scores[0]} <span className="text-white/40">:</span> {game.scores[1]}
         </span>
         <span className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/10">
-          <span className="block h-full origin-left animate-[bura-fill_5s_linear_forwards] rounded-full bg-amber-300" />
+          <span className="block h-full origin-left animate-[bura-fill_5s_linear_forwards] rounded-full bg-amber-300" style={r?.how === "var" ? { animationDuration: "10s" } : undefined} />
         </span>
       </div>
     </div>
@@ -563,6 +637,18 @@ function RoundResult({
           <p className="text-2xl font-bold tabular-nums">
             {r.piles[0]} <span className="text-white/40">:</span> {r.piles[1]}
           </p>
+        )}
+        {r && (r.how === "var" || r.how === "points") && (
+          <div className="flex w-full flex-col gap-2">
+            {[0, 1].map((team) => (
+              <div key={team} className="flex flex-col items-center gap-1">
+                <span className={`text-xs font-bold ${team === 0 ? "text-amber-200" : "text-white/65"}`}>
+                  {team === 0 ? (teams ? tt("ჩვენი გუნდი", "Our team", "Наша команда") : tt("თქვენ", "You", "Вы")) : teams ? tt("მეტოქეები", "Opponents", "Соперники") : (names[1] ?? "")}: <span className="tabular-nums">{r.piles[team]}</span> {tt("ქულა", "pts", "очк.")}
+                </span>
+                <PileCards cards={game.pileCards?.[team] ?? []} />
+              </div>
+            ))}
+          </div>
         )}
         {r && r.winner !== null && (
           <p className="text-white/60">

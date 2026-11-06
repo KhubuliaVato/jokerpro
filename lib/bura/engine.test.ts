@@ -473,6 +473,18 @@ describe("var", () => {
   });
 });
 
+describe("piles", () => {
+  it("a team's pile lists its cards; what the others threw down face down is marked secret", () => {
+    const g = table([[c("S", 14), c("D", 7), c("C", 6)], [c("S", 9), c("D", 8), c("C", 7)]], { deck: [c("D", 12)] });
+    const done = finishTrick(playCards(playCards(g, ["S14"]), ["S9"]));
+    expect(done.piles).toEqual([11, 0]);
+    expect(done.pileCards[0].map((x) => x.id).sort()).toEqual(["S14", "S9"]);
+    expect(done.pileCards[0].find((x) => x.id === "S9")?.secret).toBe(true);
+    expect(done.pileCards[0].find((x) => x.id === "S14")?.secret).toBeUndefined();
+    expect(done.pileCards[1]).toEqual([]);
+  });
+});
+
 describe("calls", () => {
   const g0 = () => table([[c("S", 14), c("D", 7), c("C", 6)], [c("S", 9), c("D", 8), c("C", 7)]]);
 

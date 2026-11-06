@@ -224,6 +224,7 @@ export function OnlineTable({ code }: { code: string }) {
         <BuraTable
           game={t.view as BuraState}
           secondsLeft={t.secondsLeft}
+          turnSeconds={t.turnSeconds}
           names={names}
           avatars={avatars}
           onPlay={(ids) => void t.playCards(ids)}
