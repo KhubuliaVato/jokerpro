@@ -213,47 +213,39 @@ function IconCards() {
   );
 }
 
-/** Private table: a round table seen from above, four seats around it and a lock in the middle. */
-export function IconTable() {
-  const c = "#86efac";
-  const seats = [
-    [32, 5],
-    [59, 32],
-    [32, 59],
-    [5, 32],
-  ];
+/** The tile the line icons sit on: a soft rounded square in the accent colour. */
+function Tile({ c, children }: { c: string; children: React.ReactNode }) {
   return (
     <svg viewBox="0 0 64 64" className="size-20" fill="none" aria-hidden>
-      {seats.map(([x, y]) => (
-        <circle key={`${x}-${y}`} cx={x} cy={y} r="4.5" fill={c} opacity="0.55" />
-      ))}
-      <circle cx="32" cy="32" r="21" fill={c} fillOpacity="0.14" stroke={c} strokeWidth="2.5" />
-      <rect x="23.5" y="30" width="17" height="13" rx="3.5" fill={c} />
-      <path d="M27 30v-4.5a5 5 0 0 1 10 0V30" stroke={c} strokeWidth="3" strokeLinecap="round" />
-      <circle cx="32" cy="36" r="1.8" fill="#0d3a24" />
+      <rect x="3" y="3" width="58" height="58" rx="17" fill={c} fillOpacity="0.1" stroke={c} strokeOpacity="0.32" strokeWidth="1.5" />
+      <g stroke={c} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        {children}
+      </g>
     </svg>
   );
 }
 
-/** Practice against bots: a friendly robot head with a visor and a suit on its forehead. */
+/** Private table: a padlock. */
+export function IconTable() {
+  const c = "#86efac";
+  return (
+    <Tile c={c}>
+      <rect x="19" y="29" width="26" height="19" rx="5.5" fill={c} fillOpacity="0.18" />
+      <path d="M24.5 29v-4.5a7.5 7.5 0 0 1 15 0V29" />
+      <path d="M32 36.5v4.5" />
+    </Tile>
+  );
+}
+
+/** Practice against bots: a processor chip. */
 export function IconBot() {
   const c = "#c4b5fd";
   return (
-    <svg viewBox="0 0 64 64" className="size-20" fill="none" aria-hidden>
-      <path d="M32 14V7" stroke={c} strokeWidth="3" strokeLinecap="round" />
-      <circle cx="32" cy="6" r="3.5" fill={c} />
-      <rect x="4" y="30" width="6" height="12" rx="3" fill={c} opacity="0.6" />
-      <rect x="54" y="30" width="6" height="12" rx="3" fill={c} opacity="0.6" />
-      <rect x="10" y="14" width="44" height="40" rx="13" fill={c} fillOpacity="0.16" stroke={c} strokeWidth="2.8" />
-      <rect x="16" y="28" width="32" height="14" rx="7" fill="#1e1340" />
-      <circle cx="25" cy="35" r="3.6" fill={c} />
-      <circle cx="39" cy="35" r="3.6" fill={c} />
-      <path
-        d="M32 17.5c-2 2-3.5 3.2-3.5 5a1.8 1.8 0 0 0 3.2 1c-.1 1-.5 1.6-1.2 2h3c-.7-.4-1.1-1-1.2-2a1.8 1.8 0 0 0 3.2-1c0-1.8-1.5-3-3.5-5z"
-        fill={c}
-      />
-      <path d="M25 48h14" stroke={c} strokeWidth="3" strokeLinecap="round" />
-    </svg>
+    <Tile c={c}>
+      <rect x="20" y="20" width="24" height="24" rx="6" fill={c} fillOpacity="0.18" />
+      <rect x="27" y="27" width="10" height="10" rx="2.5" />
+      <path d="M27 13v7M37 13v7M27 44v7M37 44v7M13 27h7M13 37h7M44 27h7M44 37h7" />
+    </Tile>
   );
 }
 
