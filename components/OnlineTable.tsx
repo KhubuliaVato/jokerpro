@@ -8,7 +8,8 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useTrickLog } from "@/lib/joker/trickLog";
 import { useEndReactions } from "@/lib/online/endReactions";
 import { loadInviteStats, inviteLink } from "@/lib/invite";
-import { rematchTable, tablePath } from "@/lib/online/client";
+import { callJoker, rematchTable, tablePath } from "@/lib/online/client";
+import { isDeveloper } from "@/lib/dev";
 import { useOnlineTable } from "@/lib/online/useOnlineTable";
 import { getSupabase } from "@/lib/supabase";
 import type { Rules } from "@/lib/joker/rules";
@@ -190,6 +191,7 @@ export function OnlineTable({ code }: { code: string }) {
       : t.table.kind === "friendly"
         ? tt("დარწმუნებული ხართ? გასვლისას ახალ მაგიდაზე 2 საათით ვერ დაჯდებით და თქვენს ადგილს ბოტი დაიკავებს. დაბრუნება 7 წუთის განმავლობაში შეგიძლიათ.", "Are you sure? You cannot join a new table for 2 hours after leaving, and a bot takes your seat. You can return within 7 minutes.", "Вы уверены? После выхода 2 часа нельзя садиться за новый стол, а ваше место займёт бот. Вернуться можно в течение 7 минут.")
         : tt("დარწმუნებული ხართ? გასვლისას თქვენს ადგილს ბოტი დაიკავებს. დაბრუნება 7 წუთის განმავლობაში შეგიძლიათ.", "Are you sure? A bot will take your seat when you leave. You can return within 7 minutes.", "Вы уверены? После выхода ваше место займёт бот. Вернуться можно в течение 7 минут.");
+  const tableId = t.table.id;
   const rematch = over ? <RematchButton tableId={t.table.id} opened={!!t.table.rematch_code} /> : null;
   const result =
     t.table.kind === "private" ? (
@@ -243,6 +245,18 @@ export function OnlineTable({ code }: { code: string }) {
   return (
     <PlayerNamesProvider names={names} avatars={avatars}>
       {chat}
+      {isDeveloper(user) && t.table.status === "playing" && (
+        <button
+          type="button"
+          onClick={() => {
+            const supabase = getSupabase();
+            if (supabase) void callJoker(supabase, { action: "devFinish", table_id: tableId });
+          }}
+          className="fixed bottom-20 left-3 z-40 rounded-full border border-dashed border-fuchsia-300/60 bg-fuchsia-500/20 px-3 py-1.5 text-xs font-extrabold text-fuchsia-100 backdrop-blur hover:bg-fuchsia-500/35"
+        >
+          DEV · {tt("დასრულება", "finish", "завершить")}
+        </button>
+      )}
       <Table
         game={t.view as GameState}
         secondsLeft={t.secondsLeft}

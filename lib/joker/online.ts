@@ -110,6 +110,16 @@ export function advance(state: GameState): GameState {
   return state;
 }
 
+/**
+ * Developer tool: the bots play every remaining move of the game at once. The ordinary bot is used for all seats
+ * (the pro bot thinks for a moment on each move, which is far too slow for a whole game).
+ */
+export function playOut(state: GameState, tier: OnlineBotTier = "strong"): GameState {
+  let s = state;
+  for (let guard = 0; guard < 5000 && s.phase !== "gameEnd"; guard++) s = isActivePhase(s) ? botMove(s, tier) : advance(s);
+  return s;
+}
+
 /** Final standing of the player at real seat `seat`, rotated so the player is first. */
 export function resultFor(state: GameState, seat: number) {
   const scores = totals(state);

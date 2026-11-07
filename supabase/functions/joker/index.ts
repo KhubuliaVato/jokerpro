@@ -5,13 +5,14 @@
 // (table_views) which the clients receive live through Realtime.
 //
 // Plays Joker, Bura and Hold'em tables (table.game); everything below dispatches on it.
-// Actions (POST JSON, signed-in user): start, move, advance, tick, sync, return.
+// Actions (POST JSON, signed-in user): start, move, advance, tick, sync, return, and devFinish (developers only).
 // Built into one file with `npm run build:functions` (esbuild), because Deno needs explicit import paths.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { createGame, PLAYERS, type GameState } from "../../../lib/joker/engine";
 import {
   advance,
   applyAction,
+  playOut,
   botMove,
   isActivePhase,
   ONLINE_AFK_LIMIT,
@@ -30,6 +31,7 @@ import * as poker from "../../../lib/poker/online";
 // Private: the rating formulas live outside the public repository (see .gitignore).
 import { rateGame } from "../../../lib/secret/rating";
 import { rateBura } from "../../../lib/secret/buraRating";
+import { isDeveloperId } from "../../../lib/dev";
 import { leftProgress, quitPenalty, RETURN_WINDOW_MS, returnedPenalty } from "../../../lib/online/penalty";
 
 declare const Deno: {
@@ -377,6 +379,15 @@ async function handle(userId: string, body: Record<string, unknown>) {
         }
         me.bot = false;
         return { state: row.state, afk: { ...row.afk, [me.seat]: 0 }, revive: [me.seat] };
+      });
+
+    // Developer tool: the bots finish a running Joker game at once, so that its end (results, rating, coins) can be tested.
+    case "devFinish":
+      return withGame(tableId, userId, ({ table, row }) => {
+        if (!isDeveloperId(userId)) throw new UserError("developers only");
+        if (isPoker(table) || isBura(table)) throw new UserError("only Joker tables");
+        if (table.status !== "playing") throw new UserError("the game is not running");
+        return { state: playOut(row.state as GameState) };
       });
 
     // A timer ran out on someone's screen, or a seat was handed to a bot: do what is due.

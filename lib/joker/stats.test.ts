@@ -40,3 +40,14 @@ describe("game statistics", () => {
     });
   });
 });
+
+describe("playOut (developer tool)", () => {
+  it("plays a game to its end at once, from the middle of a hand", async () => {
+    const { playOut } = await import("./online");
+    let s = createGame({ ...DEFAULT_RULES, format: "nine" });
+    for (let i = 0; i < 12; i++) s = isActivePhase(s) ? botMove(s) : advance(s);
+    const end = playOut(s);
+    expect(end.phase).toBe("gameEnd");
+    expect(end.history).toHaveLength(16);
+  });
+});
