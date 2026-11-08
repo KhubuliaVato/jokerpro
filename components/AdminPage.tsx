@@ -35,7 +35,7 @@ const TABS = [
 type Tab = (typeof TABS)[number]["id"];
 
 const GAMES: Record<string, string> = { joker: "ჯოკერი", bura: "ბურა", poker: "პოკერი" };
-const KINDS: Record<string, string> = { card_back: "კარტი", theme: "ფონი", frame: "ჩარჩო", name_style: "სახელი", win_fx: "ეფექტი", reaction: "რეაქცია", throwable: "სასროლი", play_fx: "დადების ეფექტი", sound_pack: "ხმა" };
+const KINDS: Record<string, string> = { card_back: "კარტი", theme: "ფონი", frame: "ჩარჩო", name_style: "სახელი", win_fx: "ეფექტი", reaction: "რეაქცია", throwable: "სასროლი", play_fx: "დადების ეფექტი", sound_pack: "ხმა", joker_skin: "ჯოკერი" };
 const STATUS: Record<string, string> = { waiting: "ელოდება", playing: "თამაშობს", finished: "დასრულდა", closed: "დახურულია" };
 const ACTIONS: Record<string, string> = {
   coins: "მონეტები",

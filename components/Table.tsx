@@ -404,6 +404,7 @@ function TrickArea({ game }: { game: GameState }) {
                 card={p.card.joker && p.mode === "low" ? undefined : p.card}
                 size="sm"
                 skin={avatars?.[p.player]?.back}
+                jokerSkin={avatars?.[p.player]?.joker}
                 style={{ "--cw": "var(--tcw)" } as React.CSSProperties}
                 className={`shadow-[0_4px_10px_rgb(0_0_0/0.4)] ${game.trickWinner === p.player ? winClass(avatars?.[p.player]?.fx) : ""}`}
               />
@@ -484,6 +485,7 @@ export function Table({
   useLang(); // the table re-renders when the language is switched
   const names = usePlayerNames();
   const mySkin = usePlayerAvatars()?.[0]?.back;
+  const myJoker = usePlayerAvatars()?.[0]?.joker;
   // The pending joker choice only counts for the position it was made in.
   const moveKey = `${game.handIndex}:${game.played.length}`;
   const [pick, setPick] = useState<{ card: Card; key: string } | null>(null);
@@ -836,7 +838,7 @@ export function Table({
                     card.joker ? tt("ჯოკერი", "Joker", "Джокер") : card.id
                   }
                 >
-                  <CardView card={card} skin={mySkin} />
+                  <CardView card={card} skin={mySkin} jokerSkin={myJoker} />
                 </button>
               );
             })}
@@ -1469,6 +1471,7 @@ function LastTrick({
                 card={p.card.joker && p.mode === "low" ? undefined : p.card}
                 size="sm"
                 skin={avatars?.[p.player]?.back}
+                jokerSkin={avatars?.[p.player]?.joker}
                 className={p.player === trick.winner ? winClass(avatars?.[p.player]?.fx) : ""}
               />
               {p.card.joker && <JokerBadge mode={p.mode} suit={p.suit} small />}

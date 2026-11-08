@@ -12,9 +12,11 @@ export interface Worn {
   fx: string | null;
   play: string | null;
   snd: string | null;
+  /** The joker card's own look (a shop item). */
+  joker: string | null;
 }
 
-export const NOTHING_WORN: Worn = { back: null, frame: null, name: null, fx: null, play: null, snd: null };
+export const NOTHING_WORN: Worn = { back: null, frame: null, name: null, fx: null, play: null, snd: null, joker: null };
 
 /** Avatar frames; the look is in globals.css under `.avf-<id>`. */
 export const FRAMES = [
@@ -114,6 +116,17 @@ export const PLAY_FX = [
   { id: "p_fire", names: ["ცეცხლოვანი სვლა", "Blazing play", "Огненный ход"] as Names, accent: "#f97316" },
 ] as const;
 
+/** Looks of the joker card; the pictures are /skins/<id>.svg and the CSS is `.pc.joker[data-jskin]` in globals.css. */
+export const JOKER_SKINS = [
+  { id: "j_classic", names: ["კლასიკური ჯოკერი", "Classic jester", "Классический шут"] as Names, accent: "#dc2626" },
+  { id: "j_ice", names: ["ყინულის ჯოკერი", "Frost jester", "Ледяной шут"] as Names, accent: "#38bdf8" },
+  { id: "j_sakura", names: ["საკურას ჯოკერი", "Sakura jester", "Шут сакуры"] as Names, accent: "#ec4899" },
+  { id: "j_gilded", names: ["ოქროს ჯოკერი", "Gilded jester", "Золотой шут"] as Names, accent: "#fbbf24" },
+  { id: "j_carbon", names: ["კარბონის ჯოკერი", "Carbon jester", "Карбоновый шут"] as Names, accent: "#ef4444" },
+  { id: "j_night", names: ["მძინარე ჯოკერი", "Sleepy jester", "Сонный шут"] as Names, accent: "#818cf8" },
+  { id: "j_matrix", names: ["კოდის ჯოკერი", "Code jester", "Шут-код"] as Names, accent: "#00ff41" },
+] as const;
+
 /** Sounds of the cards (made with Web Audio in lib/sound.ts). */
 export const SOUND_PACKS = [
   { id: "s_wood", names: ["ხის დაკაკუნება", "Wood knock", "Деревянный стук"] as Names, accent: "#d6a46a" },
@@ -139,21 +152,21 @@ export function parseFx(body: string): FxMessage | null {
 
 /** Looks, names and accents of every cosmetic item by its id. */
 export function cosmetic(id: string | null | undefined): { id: string; name: string; accent: string } | undefined {
-  const all = [...FRAMES, ...NAME_STYLES, ...WIN_FX, ...REACTIONS, ...THROWABLES, ...PLAY_FX, ...SOUND_PACKS];
+  const all = [...FRAMES, ...NAME_STYLES, ...WIN_FX, ...REACTIONS, ...THROWABLES, ...PLAY_FX, ...SOUND_PACKS, ...JOKER_SKINS];
   const c = all.find((x) => x.id === id);
   if (c) return { id: c.id, name: name(c.names), accent: c.accent };
   return undefined;
 }
 
-const COLUMNS = { back: "equipped_back", frame: "equipped_frame", name: "equipped_name", fx: "equipped_fx", play: "equipped_play", snd: "equipped_sound" } as const;
+const COLUMNS = { back: "equipped_back", frame: "equipped_frame", name: "equipped_name", fx: "equipped_fx", play: "equipped_play", snd: "equipped_sound", joker: "equipped_joker" } as const;
 export type Slot = keyof typeof COLUMNS;
 
 /** What a player wears; nothing (rather than an error) for a database that has not got the newer columns. */
 export async function loadWorn(supabase: SupabaseClient, userId: string): Promise<Worn> {
-  const all = await supabase.from("profiles").select("equipped_back, equipped_frame, equipped_name, equipped_fx, equipped_play, equipped_sound").eq("id", userId).maybeSingle();
+  const all = await supabase.from("profiles").select("equipped_back, equipped_frame, equipped_name, equipped_fx, equipped_play, equipped_sound, equipped_joker").eq("id", userId).maybeSingle();
   if (!all.error && all.data) {
     const d = all.data as Record<string, string | null>;
-    return { back: d.equipped_back, frame: d.equipped_frame, name: d.equipped_name, fx: d.equipped_fx, play: d.equipped_play, snd: d.equipped_sound };
+    return { back: d.equipped_back, frame: d.equipped_frame, name: d.equipped_name, fx: d.equipped_fx, play: d.equipped_play, snd: d.equipped_sound, joker: d.equipped_joker ?? null };
   }
   const only = await supabase.from("profiles").select("equipped_back").eq("id", userId).maybeSingle();
   return { ...NOTHING_WORN, back: (only.data?.equipped_back as string | null | undefined) ?? null };
@@ -167,7 +180,7 @@ export async function wear(supabase: SupabaseClient, userId: string, slot: Slot,
 
 /** The slot an item kind is worn in; null for kinds that are not worn (themes, reactions, throwables). */
 export function slotOf(kind: string): Slot | null {
-  return kind === "card_back" ? "back" : kind === "frame" ? "frame" : kind === "name_style" ? "name" : kind === "win_fx" ? "fx" : kind === "play_fx" ? "play" : kind === "sound_pack" ? "snd" : null;
+  return kind === "card_back" ? "back" : kind === "frame" ? "frame" : kind === "name_style" ? "name" : kind === "win_fx" ? "fx" : kind === "play_fx" ? "play" : kind === "sound_pack" ? "snd" : kind === "joker_skin" ? "joker" : null;
 }
 
 /** Buys a new nickname (400 coins); returns an error message or null. */

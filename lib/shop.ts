@@ -29,7 +29,7 @@ export const cardBack = (id: string | null | undefined) => CARD_BACKS.find((b) =
 
 export interface StockItem {
   id: string;
-  kind: "card_back" | "theme" | "frame" | "name_style" | "win_fx" | "reaction" | "throwable" | "play_fx" | "sound_pack";
+  kind: "card_back" | "theme" | "frame" | "name_style" | "win_fx" | "reaction" | "throwable" | "play_fx" | "sound_pack" | "joker_skin";
   price: number;
   tier: "permanent" | "rotating";
   /** When a rotating item leaves the shop; null for a permanent one. */

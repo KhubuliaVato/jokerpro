@@ -25,6 +25,7 @@ export interface SeatProfile {
   equipped_name?: string | null;
   equipped_fx?: string | null;
   equipped_play?: string | null;
+  equipped_joker?: string | null;
 }
 
 /** Seconds the round result of Bura stays up before the next round is dealt. */
@@ -96,7 +97,7 @@ export function useOnlineTable(code: string) {
     if (missing.length > 0) {
       const withBack = await supabase
         .from("profiles")
-        .select("id, nickname, avatar_color, avatar_icon, avatar_url, equipped_back, equipped_frame, equipped_name, equipped_fx, equipped_play")
+        .select("id, nickname, avatar_color, avatar_icon, avatar_url, equipped_back, equipped_frame, equipped_name, equipped_fx, equipped_play, equipped_joker")
         .in("id", missing);
       // a database without the shop has no such column: the players are still shown
       const ps = withBack.error

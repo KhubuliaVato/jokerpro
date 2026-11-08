@@ -23,5 +23,6 @@ export function ItemArt({ id, nickname, avatar }: { id: string; nickname?: strin
   if (id.startsWith("r_") || id.startsWith("t_")) return <EmojiArt id={id} size="text-4xl" />;
   if (id.startsWith("p_")) return <PlayFxArt id={id} width="2.2rem" />;
   if (id.startsWith("s_")) return <SoundArt id={id} />;
+  if (id.startsWith("j_")) return <CardView card={{ joker: true, id: "J0" }} jokerSkin={id} style={{ "--cw": "3.4rem" } as React.CSSProperties} />;
   return <span className="text-4xl">🎁</span>;
 }

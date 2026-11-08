@@ -181,7 +181,7 @@ export function OnlineTable({ code }: { code: string }) {
   const names = t.players.map((p, k) => (p?.profile?.nickname ?? (k === 0 ? tt("თქვენ", "You", "Вы") : "…")) + (p?.bot && k !== 0 ? ` · ${tt("ბოტი", "bot", "бот")}` : ""));
   const avatars = t.players.map((p) =>
     p?.profile
-      ? { color: p.profile.avatar_color, icon: p.profile.avatar_icon, url: p.profile.avatar_url, back: p.profile.equipped_back, frame: p.profile.equipped_frame, nick: p.profile.equipped_name, fx: p.profile.equipped_fx, play: p.profile.equipped_play }
+      ? { color: p.profile.avatar_color, icon: p.profile.avatar_icon, url: p.profile.avatar_url, back: p.profile.equipped_back, frame: p.profile.equipped_frame, nick: p.profile.equipped_name, fx: p.profile.equipped_fx, play: p.profile.equipped_play, joker: p.profile.equipped_joker }
       : null,
   );
 

@@ -25,6 +25,7 @@ export interface Profile {
   equipped_name?: string | null;
   equipped_fx?: string | null;
   equipped_play?: string | null;
+  equipped_joker?: string | null;
   equipped_sound?: string | null;
   created_at: string;
 }

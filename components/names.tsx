@@ -21,6 +21,8 @@ export interface SeatAvatar {
   fx?: string | null;
   /** The effect of their cards landing on the table. */
   play?: string | null;
+  /** Their joker card's look. */
+  joker?: string | null;
 }
 
 const NamesContext = createContext<string[]>(PLAYER_NAMES);
@@ -55,6 +57,6 @@ export function useMe(): { name: string; avatar: SeatAvatar | null } {
   if (!profile) return { name: tt("თქვენ", "You", "Вы"), avatar: null };
   return {
     name: profile.nickname,
-    avatar: { color: profile.avatar_color, icon: profile.avatar_icon, url: profile.avatar_url, back: profile.equipped_back, frame: profile.equipped_frame, nick: profile.equipped_name, fx: profile.equipped_fx, play: profile.equipped_play },
+    avatar: { color: profile.avatar_color, icon: profile.avatar_icon, url: profile.avatar_url, back: profile.equipped_back, frame: profile.equipped_frame, nick: profile.equipped_name, fx: profile.equipped_fx, play: profile.equipped_play, joker: profile.equipped_joker },
   };
 }

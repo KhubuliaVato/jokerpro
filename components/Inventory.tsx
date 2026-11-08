@@ -19,7 +19,7 @@ import { Nick } from "./Nick";
 
 const KING = { joker: false, suit: "H", rank: 13, id: "H13" } as const;
 
-type Cat = "all" | "decks" | "frames" | "names" | "effects" | "themes" | "reactions" | "throws" | "plays" | "sounds";
+type Cat = "all" | "decks" | "frames" | "names" | "effects" | "themes" | "reactions" | "throws" | "plays" | "sounds" | "jokers";
 
 const subscribeTheme = (cb: () => void) => {
   window.addEventListener(THEME_CHANGED, cb);
@@ -78,10 +78,11 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
   const throws = ids("t_");
   const plays = ids("p_");
   const sounds = ids("s_");
+  const jokers = ids("j_");
   const frames = ids("f_");
   const names = ids("n_");
   const effects = ids("w_");
-  const total = decks.length + frames.length + names.length + effects.length + themes.length + reactions.length + throws.length + plays.length + sounds.length;
+  const total = decks.length + frames.length + names.length + effects.length + themes.length + reactions.length + throws.length + plays.length + sounds.length + jokers.length;
 
   const wornFrame = mine.worn.frame;
   const wornName = mine.worn.name;
@@ -171,6 +172,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
   const cats: { id: Cat; label: string; n: number }[] = [
     { id: "all", label: t("ყველა", "All", "Все"), n: total + 1 },
     { id: "decks", label: t("კარტები", "Cards", "Карты"), n: decks.length + 1 },
+    ...(jokers.length > 0 ? [{ id: "jokers" as Cat, label: t("ჯოკერი", "Joker", "Джокер"), n: jokers.length }] : []),
     ...(themes.length > 0 ? [{ id: "themes" as Cat, label: t("ფონები", "Backgrounds", "Фоны"), n: themes.length }] : []),
     ...(frames.length > 0 ? [{ id: "frames" as Cat, label: t("ჩარჩოები", "Frames", "Рамки"), n: frames.length }] : []),
     ...(names.length > 0 ? [{ id: "names" as Cat, label: t("სახელები", "Names", "Имена"), n: names.length }] : []),
@@ -322,6 +324,17 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
           t("სასროლი ნივთები", "Throwables", "Бросаемые предметы"),
           throws.map((id) => tile(id, <EmojiArt id={id} />, cosmetic(id)?.name ?? id, id, false, useNote)),
           throws.length,
+        )}
+
+      {jokers.length > 0 &&
+        section(
+          "jokers",
+          t("ჯოკერის სახე", "Joker look", "Облик джокера"),
+          <>
+            {slotTile("joker", null, <CardView card={{ joker: true, id: "J0" }} style={{ "--cw": "3rem" } as React.CSSProperties} />, t("სტანდარტული", "Standard", "Стандартный"))}
+            {jokers.map((id) => slotTile("joker", id, <CardView card={{ joker: true, id: "J0" }} jokerSkin={id} style={{ "--cw": "3rem" } as React.CSSProperties} />, cosmetic(id)?.name ?? id))}
+          </>,
+          jokers.length,
         )}
 
       {plays.length > 0 &&

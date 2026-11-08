@@ -50,11 +50,12 @@ interface Wallet {
 
 type Kind = StockItem["kind"];
 
-type SectionId = "decks" | "themes" | "frames" | "names" | "reactions" | "throws" | "effects" | "plays" | "sounds";
+type SectionId = "decks" | "themes" | "frames" | "names" | "reactions" | "throws" | "effects" | "plays" | "sounds" | "jokers";
 
 /** The category boxes that always stand in the two side columns; each opens the full list of its kind. */
 const SECTIONS: Record<SectionId, { kind: Kind; label: [string, string, string]; hint: [string, string, string]; glow: string }> = {
   decks: { kind: "card_back", label: ["კარტები", "Cards", "Карты"], hint: ["ზურგიც და სახეც", "Back and face", "Рубашка и лицо"], glow: "#e11d4855" },
+  jokers: { kind: "joker_skin", label: ["ჯოკერი", "Joker", "Джокер"], hint: ["მთავარი კარტის საკუთარი სახე", "The main card's own look", "Свой облик главной карты"], glow: "#f43f5e55" },
   themes: { kind: "theme", label: ["ფონები", "Backgrounds", "Фоны"], hint: ["ფერადი და მოძრავი", "Plain and moving", "Цветные и движущиеся"], glow: "#38bdf855" },
   reactions: { kind: "reaction", label: ["რეაქციები", "Reactions", "Реакции"], hint: ["დიდი ანიმაცია მთელ მაგიდას", "A big animation for the whole table", "Большая анимация для всего стола"], glow: "#34d39955" },
   throws: { kind: "throwable", label: ["სასროლი ნივთები", "Throwables", "Бросаемые предметы"], hint: ["ესროლე მოწინააღმდეგეს", "Throw it at a rival", "Бросьте в соперника"], glow: "#fb718555" },
@@ -64,9 +65,10 @@ const SECTIONS: Record<SectionId, { kind: Kind; label: [string, string, string];
   plays: { kind: "play_fx", label: ["კარტის დადების ეფექტი", "Card-play effects", "Эффекты хода"], hint: ["როცა კარტს დებთ", "When you play a card", "Когда вы ходите"], glow: "#a78bfa55" },
   sounds: { kind: "sound_pack", label: ["კარტის ხმა", "Card sounds", "Звуки карт"], hint: ["ხმა თქვენთვის", "Heard by you", "Слышите только вы"], glow: "#67e8f955" },
 };
-const TAB_IDS: SectionId[] = ["decks", "themes", "frames", "names", "effects", "plays", "sounds", "reactions", "throws"];
+const TAB_IDS: SectionId[] = ["decks", "jokers", "themes", "frames", "names", "effects", "plays", "sounds", "reactions", "throws"];
 
 const KING = { joker: false, suit: "H", rank: 13, id: "H13" } as const;
+const JOKER = { joker: true, id: "J0" } as const;
 
 /**
  * The shop, laid out like a game store: what is always on sale stands in the two side columns, and the middle
@@ -346,6 +348,12 @@ export function ShopPage() {
         return (
           <div className="grid h-[8.06rem] w-full place-items-center rounded-2xl bg-black/25 ring-1 ring-white/10">
             <EmojiArt id={item.id} size="text-6xl" />
+          </div>
+        );
+      case "joker_skin":
+        return (
+          <div className="grid h-[8.06rem] w-full place-items-center rounded-2xl bg-black/25 ring-1 ring-white/10">
+            <CardView card={JOKER} jokerSkin={item.id} style={{ "--cw": "5.4rem" } as React.CSSProperties} />
           </div>
         );
       case "play_fx":

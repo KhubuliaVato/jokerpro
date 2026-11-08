@@ -29,7 +29,7 @@ export function PlayFxArt({ id, width = "2.2rem" }: { id: string; width?: string
   return (
     <div className="relative grid h-[6.6rem] w-[8.4rem] place-items-center overflow-hidden rounded-xl">
       <style>{"@keyframes deal-in-art{from{opacity:0;transform:translateY(-18px) scale(.8)}to{opacity:1;transform:none}}"}</style>
-      <div key={round} className={`relative ${id ? `fxp-${id}` : ""}`} style={{ animation: "deal-in-art 0.34s cubic-bezier(0.2, 0.9, 0.3, 1) both", "--fxp-s": 1.65 } as React.CSSProperties}>
+      <div key={round} className={`relative ${id ? `fxp-${id}` : ""}`} style={{ animation: "deal-in-art 0.34s cubic-bezier(0.2, 0.9, 0.3, 1) both", "--fxp-s": 1.08 } as React.CSSProperties}>
         <CardView card={KING} style={{ "--cw": width } as React.CSSProperties} />
       </div>
     </div>
