@@ -1,5 +1,6 @@
 "use client";
 
+import { setSoundPack } from "@/lib/sound";
 import { tt } from "@/lib/lang";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
@@ -23,6 +24,8 @@ export interface Profile {
   equipped_frame?: string | null;
   equipped_name?: string | null;
   equipped_fx?: string | null;
+  equipped_play?: string | null;
+  equipped_sound?: string | null;
   created_at: string;
 }
 
@@ -92,6 +95,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const userId = user?.id ?? null;
   // A stored profile only counts while it belongs to the signed-in user.
   const profile = userId && profileRow?.id === userId ? profileRow : null;
+  const soundPack = profile?.equipped_sound ?? null;
+  useEffect(() => {
+    setSoundPack(soundPack);
+  }, [soundPack]);
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase || !userId) return;

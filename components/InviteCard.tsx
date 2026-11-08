@@ -65,7 +65,7 @@ export function InviteCard() {
           value={link}
           onFocus={(e) => e.currentTarget.select()}
           aria-label={t("თქვენი ბმული", "Your link", "Ваша ссылка")}
-          className="min-w-0 flex-1 rounded-full border border-white/15 bg-black/25 px-4 py-2.5 text-sm text-white/80 outline-none"
+          className="w-full min-w-0 flex-1 basis-full sm:basis-0 rounded-full border border-white/15 bg-black/25 px-4 py-2.5 text-sm text-white/80 outline-none"
         />
         <button type="button" onClick={() => void copy()} className="rounded-full border border-white/25 px-4 py-2.5 text-sm font-extrabold transition-colors hover:border-amber-300 hover:text-amber-300">
           {copied ? t("დაკოპირდა ✓", "Copied ✓", "Скопировано ✓") : t("კოპირება", "Copy", "Копировать")}

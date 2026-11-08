@@ -8,7 +8,6 @@ import { loadBalance } from "@/lib/coins";
 import {
   buyNickname,
   cosmetic,
-  EMOTE_PACKS,
   loadWorn,
   NICKNAME_PRICE,
   slotOf,
@@ -17,8 +16,12 @@ import {
 } from "@/lib/cosmetics";
 import { useT } from "@/lib/i18n";
 import {
+  buyBundle,
   buyItem,
+  BUNDLE_INFO,
   cardBack,
+  loadBundles,
+  type Bundle,
   COINS_CHANGED,
   loadInventory,
   loadStock,
@@ -32,6 +35,8 @@ import { BackPreview } from "./BackPreview";
 import { CardView } from "./CardView";
 import { CoinIcon } from "./Coins";
 import { DeckViewer } from "./DeckViewer";
+import { EmojiArt, PlayFxArt, SoundArt } from "./FxArt";
+import { ItemArt } from "./ItemArt";
 import { Nick } from "./Nick";
 import { PageShell } from "./PageShell";
 import { rise } from "./ui";
@@ -44,19 +49,21 @@ interface Wallet {
 
 type Kind = StockItem["kind"];
 
-type SectionId = "decks" | "themes" | "frames" | "names" | "emotes" | "effects";
+type SectionId = "decks" | "themes" | "frames" | "names" | "reactions" | "throws" | "effects" | "plays" | "sounds";
 
 /** The category boxes that always stand in the two side columns; each opens the full list of its kind. */
 const SECTIONS: Record<SectionId, { kind: Kind; label: [string, string, string]; hint: [string, string, string]; glow: string }> = {
   decks: { kind: "card_back", label: ["კარტები", "Cards", "Карты"], hint: ["ზურგიც და სახეც", "Back and face", "Рубашка и лицо"], glow: "#e11d4855" },
   themes: { kind: "theme", label: ["ფონები", "Backgrounds", "Фоны"], hint: ["ფერადი და მოძრავი", "Plain and moving", "Цветные и движущиеся"], glow: "#38bdf855" },
-  emotes: { kind: "emote_pack", label: ["ემოციები და ფრაზები", "Emotes and phrases", "Эмоции и фразы"], hint: ["სწრაფი რეაქცია მაგიდასთან", "Quick reactions at the table", "Быстрые реакции за столом"], glow: "#34d39955" },
+  reactions: { kind: "reaction", label: ["რეაქციები", "Reactions", "Реакции"], hint: ["დიდი ანიმაცია მთელ მაგიდას", "A big animation for the whole table", "Большая анимация для всего стола"], glow: "#34d39955" },
+  throws: { kind: "throwable", label: ["სასროლი ნივთები", "Throwables", "Бросаемые предметы"], hint: ["ესროლე მოწინააღმდეგეს", "Throw it at a rival", "Бросьте в соперника"], glow: "#fb718555" },
   frames: { kind: "frame", label: ["ჩარჩოები", "Frames", "Рамки"], hint: ["ავატარის ჩარჩო", "A frame for your avatar", "Рамка для аватара"], glow: "#fbbf2455" },
   names: { kind: "name_style", label: ["სახელის სტილი", "Name styles", "Стили имени"], hint: ["თქვენი სახელი გამოირჩევა", "Make your name stand out", "Ваше имя заметят"], glow: "#a78bfa55" },
   effects: { kind: "win_fx", label: ["მოგების ეფექტები", "Win effects", "Эффекты победы"], hint: ["როცა ხელს იღებთ", "When you take a trick", "Когда берёте взятку"], glow: "#f9731655" },
+  plays: { kind: "play_fx", label: ["კარტის დადების ეფექტი", "Card-play effects", "Эффекты хода"], hint: ["როცა კარტს დებთ", "When you play a card", "Когда вы ходите"], glow: "#a78bfa55" },
+  sounds: { kind: "sound_pack", label: ["კარტის ხმა", "Card sounds", "Звуки карт"], hint: ["ხმა თქვენთვის", "Heard by you", "Слышите только вы"], glow: "#67e8f955" },
 };
-const LEFT_IDS: SectionId[] = ["decks", "themes", "emotes"];
-const RIGHT_IDS: SectionId[] = ["frames", "names", "effects"];
+const TAB_IDS: SectionId[] = ["decks", "themes", "frames", "names", "effects", "plays", "sounds", "reactions", "throws"];
 
 const KING = { joker: false, suit: "H", rank: 13, id: "H13" } as const;
 
@@ -75,7 +82,10 @@ export function ShopPage() {
   const [theme, setTheme] = useState<string>("wine");
   const [view, setView] = useState<string | null>(null);
   const [nickOpen, setNickOpen] = useState(false);
-  const [section, setSection] = useState<SectionId | null>(null);
+  const [section, setSection] = useState<SectionId | "packs" | null>(null);
+  // the home page shows one pack, a different one each visit; all of them are under the Packs tab
+  const [packSeed] = useState(() => Math.random());
+  const [bundles, setBundles] = useState<Bundle[]>([]);
 
   const userId = user?.id ?? null;
 
@@ -91,6 +101,7 @@ export function ShopPage() {
     if (!supabase) return;
     let cancelled = false;
     loadStock(supabase).then((s) => !cancelled && setStock(s));
+    loadBundles(supabase).then((b) => !cancelled && setBundles(b));
     return () => {
       cancelled = true;
     };
@@ -137,6 +148,64 @@ export function ShopPage() {
     setBusy(null);
   };
 
+  /** Puts on everything of a pack that can be worn: the cards, the background, the frame, the name and the effects. */
+  const equipPack = async (b: Bundle) => {
+    const supabase = getSupabase();
+    if (!supabase || !userId) return;
+    const kindOf = Object.fromEntries((stock ?? []).map((i) => [i.id, i.kind]));
+    const jobs: Promise<string | null>[] = [];
+    for (const id of b.items) {
+      if (kindOf[id] === "theme") {
+        applyTheme(id);
+        continue;
+      }
+      const slot = slotOf(kindOf[id]);
+      if (slot) jobs.push(wear(supabase, userId, slot, id));
+    }
+    const errors = (await Promise.all(jobs)).filter((e): e is string => !!e);
+    window.dispatchEvent(new Event(PROFILE_CHANGED));
+    await loadWallet();
+    return errors[0] ?? null;
+  };
+
+  const packWorn = (b: Bundle) => {
+    const kindOf = Object.fromEntries((stock ?? []).map((i) => [i.id, i.kind]));
+    return b.items.every((id) => {
+      if (kindOf[id] === "theme") return theme === id;
+      const slot = slotOf(kindOf[id]);
+      return slot ? wallet?.worn[slot] === id : true;
+    });
+  };
+
+  const buyPack = async (b: Bundle) => {
+    const supabase = getSupabase();
+    if (!supabase || busy) return;
+    setBusy(b.id);
+    setMessage(null);
+    const { error } = await buyBundle(supabase, b.id);
+    if (error) {
+      setMessage({ id: b.id, text: error, ok: false });
+    } else {
+      window.dispatchEvent(new Event(COINS_CHANGED));
+      const failed = await equipPack(b);
+      setMessage({
+        id: b.id,
+        text: failed ?? t("პაკი შეძენილია და დაყენებულია.", "Pack bought and equipped!", "Набор куплен и надет!"),
+        ok: !failed,
+      });
+    }
+    await loadWallet();
+    setBusy(null);
+  };
+
+  const wearPack = async (b: Bundle) => {
+    if (busy) return;
+    setBusy(b.id);
+    const failed = await equipPack(b);
+    setMessage(failed ? { id: b.id, text: failed, ok: false } : null);
+    setBusy(null);
+  };
+
   const putOn = async (item: StockItem) => {
     const supabase = getSupabase();
     const slot = slotOf(item.kind);
@@ -149,6 +218,7 @@ export function ShopPage() {
     setBusy(null);
   };
 
+  const pack = bundles.length > 0 ? bundles[Math.floor(packSeed * bundles.length)] : null;
   const weekly = (stock ?? []).filter((i) => i.tier === "rotating");
   const endsAt = weekly[0]?.ends_at ?? null;
 
@@ -174,8 +244,8 @@ export function ShopPage() {
     const short = wallet ? item.price - wallet.balance : item.price;
     const dim = size === "large" ? "w-full px-4 py-2.5 text-base" : size === "card" ? "w-full px-4 py-2 text-sm" : "w-full px-2 py-1.5 text-xs";
     if (owned) {
-      // an emote pack is not worn: owning it is the whole point
-      if (item.kind === "emote_pack") {
+      // reactions and throwables are not worn: owning them is the whole point
+      if (item.kind === "reaction" || item.kind === "throwable") {
         return <div className={`rounded-full border border-emerald-400/40 bg-emerald-400/10 text-center font-extrabold text-emerald-300 ${dim}`}>✓ {t("ნაყიდია", "Owned", "Куплено")}</div>;
       }
       return (
@@ -206,7 +276,7 @@ export function ShopPage() {
       >
         <CoinIcon className="size-4" />
         {item.price}
-        {short > 0 && size !== "compact" && <span className="text-xs font-bold">· {t(`კიდევ ${short}`, `${short} more`, `ещё ${short}`)}</span>}
+        {short > 0 && size !== "compact" && <span className="hidden text-xs font-bold sm:inline">· {t(`კიდევ ${short}`, `${short} more`, `ещё ${short}`)}</span>}
       </button>
     );
   };
@@ -256,8 +326,25 @@ export function ShopPage() {
             <CardView card={KING} className={`fxw-${item.id}`} style={{ "--cw": "4.2rem" } as React.CSSProperties} />
           </div>
         );
-      case "emote_pack":
-        return <EmotePreview id={item.id} />;
+      case "reaction":
+      case "throwable":
+        return (
+          <div className="grid h-[8.06rem] w-full place-items-center rounded-2xl bg-black/25 ring-1 ring-white/10">
+            <EmojiArt id={item.id} size="text-6xl" />
+          </div>
+        );
+      case "play_fx":
+        return (
+          <div className="grid h-[8.06rem] w-full place-items-center rounded-2xl bg-black/25 ring-1 ring-white/10">
+            <PlayFxArt id={item.id} />
+          </div>
+        );
+      case "sound_pack":
+        return (
+          <div className="grid h-[8.06rem] w-full place-items-center rounded-2xl bg-black/25 ring-1 ring-white/10">
+            <SoundArt id={item.id} />
+          </div>
+        );
     }
   };
 
@@ -278,61 +365,145 @@ export function ShopPage() {
     );
   };
 
-  const boxFor = (id: SectionId) => {
-    const x = SECTIONS[id];
-    const items = (stock ?? []).filter((i) => i.kind === x.kind);
-    if (items.length === 0) return null;
-    const ownedItems = items.filter((i) => wallet?.owned.includes(i.id));
-    const mine = ownedItems.length;
-    // one item as a sample: the one worn, else one bought, else the first on sale
-    const sample = ownedItems.find(isWorn) ?? ownedItems[0] ?? items[0];
-    return (
-      <li key={id}>
-        <button
-          type="button"
-          onClick={() => setSection(id)}
-          className="group flex w-full flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-5 text-center transition-colors duration-200 hover:border-amber-300/50 hover:bg-white/[0.07]"
-        >
-          <div className="pointer-events-none grid min-h-32 w-full place-items-center">
-            {sample.kind === "card_back" ? <BackPreview skin={sample.id} accent={cardBack(sample.id)?.accent} width="4.6rem" /> : previewOf(sample)}
-          </div>
-          <h2 className="text-xl font-extrabold leading-tight">{t(x.label[0], x.label[1], x.label[2])}</h2>
-          <span className="text-xs font-bold text-white/45">
-            {items.length} {t("ნივთი", "items", "предм.")}
-            {userId && mine > 0 && <span className="text-amber-200"> · ✓ {mine}</span>}
-          </span>
-        </button>
-      </li>
-    );
-  };
-
-  const servicesBox = (
-    <li key="services">
-      <button
-        type="button"
-        onClick={() => setNickOpen(true)}
-        className="group flex w-full flex-col items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-5 text-center transition-colors duration-200 hover:border-amber-300/50 hover:bg-white/[0.07]"
-      >
-        <h2 className="text-xl font-extrabold leading-tight">{t("ახალი მეტსახელი", "A new nickname", "Новый никнейм")}</h2>
-        <span className="flex items-center gap-1.5 text-xs font-bold text-white/45">
-          <CoinIcon className="size-3.5" /> {NICKNAME_PRICE}
-        </span>
-      </button>
-    </li>
-  );
-
   const viewed = view ? (stock ?? []).find((i) => i.id === view) : undefined;
   const viewedLook = viewed ? cardBack(viewed.id) : undefined;
 
+  const packCard = (b: Bundle) => {
+                const info = BUNDLE_INFO[b.id];
+  const prices = Object.fromEntries((stock ?? []).map((i) => [i.id, i.price]));
+  const total = b.items.reduce((sum, id) => sum + (prices[id] ?? 0), 0);
+  const missing = b.items.filter((id) => !wallet?.owned.includes(id));
+  const missingTotal = missing.reduce((sum, id) => sum + (prices[id] ?? 0), 0);
+  const cost = total > 0 ? Math.round((b.price * missingTotal) / total) : b.price;
+  const done = !!wallet && missing.length === 0;
+  const short = wallet ? cost - wallet.balance : cost;
+  const note = message?.id === b.id ? message : null;
+  const accent = info?.accent ?? "#fbbf24";
+  return (
+    <section
+      key={b.id}
+      className="relative flex flex-col gap-5 overflow-hidden rounded-[2rem] border p-5 sm:p-7"
+      style={{ borderColor: `${accent}88`, background: `linear-gradient(135deg, ${info?.bg[0] ?? "#333"}, ${info?.bg[1] ?? "#111"})`, boxShadow: `0 24px 70px -34px ${accent}` }}
+    >
+      {/* the pack's own background, the one it sells, moving behind the card */}
+      {info && <div aria-hidden className={`theme-fx fx-${info.theme}`} />}
+      <div className="relative flex flex-wrap items-center gap-5 sm:gap-8">
+        {(() => {
+          // the pack's cards, big: tap to turn them in 3D
+          const deckId = b.items.find((id) => cardBack(id));
+          if (!deckId) return null;
+          return (
+            <button
+              type="button"
+              onClick={() => setView(deckId)}
+              aria-label={`${cardBack(deckId)?.name ?? ""} 3D`}
+              className="group relative flex-none self-center rounded-3xl p-2 outline-none transition-transform duration-300 hover:-rotate-2 hover:scale-105 focus-visible:ring-2 focus-visible:ring-amber-300"
+              style={{ filter: `drop-shadow(0 18px 30px ${accent}55)` }}
+            >
+              <BackPreview skin={deckId} accent={cardBack(deckId)?.accent} width="9.5rem" />
+              <span className="absolute bottom-3 right-3 rounded-full bg-black/65 px-2.5 py-0.5 text-xs font-extrabold text-white/90 ring-1 ring-white/25">3D</span>
+            </button>
+          );
+        })()}
+
+        <div className="flex min-w-[14rem] max-w-xl flex-1 flex-col gap-1.5">
+          <span className="text-xs font-extrabold uppercase tracking-[0.2em]" style={{ color: accent }}>{t("პაკი", "Pack", "Набор")}</span>
+          <h2 className="text-3xl font-extrabold leading-tight sm:text-4xl">{info?.name() ?? b.id}</h2>
+          <p className="text-base text-white/60">{info?.blurb()}</p>
+        </div>
+        <div className="flex w-full min-w-[13rem] flex-col items-stretch gap-2 sm:ml-auto sm:w-auto">
+          <div className="flex items-center justify-end gap-2">
+            {total > b.price && <s className="text-sm font-bold text-white/40">{total}</s>}
+            {!done && (
+              <span className="flex items-center gap-1.5 text-2xl font-extrabold text-amber-200">
+                <CoinIcon className="size-6" />
+                {cost}
+              </span>
+            )}
+            {total > b.price && <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 text-xs font-extrabold text-emerald-300">−{Math.round((1 - b.price / total) * 100)}%</span>}
+          </div>
+          {done ? (
+            packWorn(b) ? (
+              <div className="rounded-full border border-amber-300/50 bg-amber-300/15 py-2.5 text-center font-extrabold text-amber-200">✓ {t("დაყენებულია", "Equipped", "Надето")}</div>
+            ) : (
+              <button
+                type="button"
+                disabled={!!busy}
+                onClick={() => void wearPack(b)}
+                className="rounded-full bg-amber-300 py-2.5 font-extrabold text-black transition-colors hover:bg-amber-200 disabled:opacity-50"
+              >
+                {t("ყველაფრის დაყენება", "Equip everything", "Надеть всё")}
+              </button>
+            )
+          ) : !userId ? (
+            <Link href="/login" className="rounded-full border border-white/20 py-2.5 text-center font-extrabold text-white/80 hover:border-amber-300 hover:text-amber-300">
+              {t("შესვლა", "Sign in", "Войти")}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled={!!busy || short > 0}
+              onClick={() => void buyPack(b)}
+              className="rounded-full bg-amber-300 py-2.5 font-extrabold text-black transition-colors hover:bg-amber-200 disabled:bg-white/10 disabled:text-white/45"
+            >
+              {short > 0 ? t(`კიდევ ${short} მონეტა`, `${short} more coins`, `ещё ${short} монет`) : t("ყიდვა და დაყენება", "Buy and equip", "Купить и надеть")}
+            </button>
+          )}
+          {note && <span className={`text-right text-xs font-bold ${note.ok ? "text-emerald-300" : "text-red-300"}`}>{note.text}</span>}
+        </div>
+      </div>
+      <ul className="relative grid grid-cols-3 gap-x-1 gap-y-3 sm:grid-cols-4 sm:gap-2 lg:grid-cols-7">
+        {b.items.filter((id) => !cardBack(id)).map((id) => {
+          const th = themeById(id);
+          const label = th ? t(th.name[0], th.name[1], th.name[2]) : (cardBack(id)?.name ?? cosmetic(id)?.name ?? id);
+          return (
+            <li
+              key={id}
+              title={label}
+              className="group relative flex flex-col items-center gap-2 rounded-3xl px-1.5 pb-2.5 pt-3 transition-transform duration-300 hover:-translate-y-1.5 hover:scale-[1.06]"
+            >
+              {/* a soft glow in the item's own colour, and the picture lifted off it like the big cards */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-x-2 top-2 h-20 rounded-full opacity-60 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
+                style={{ background: cosmetic(id)?.accent ?? themeById(id)?.color ?? accent }}
+              />
+              <div
+                className="relative flex h-[7.2rem] w-full items-center justify-center"
+                style={{ filter: `drop-shadow(0 10px 14px ${(cosmetic(id)?.accent ?? themeById(id)?.color ?? accent)}66)` }}
+              >
+                <div className="shrink-0 origin-center scale-[0.74] transition-transform duration-300 group-hover:scale-[0.8]">
+                  <ItemArt id={id} nickname={profile?.nickname} avatar={profile ? { color: profile.avatar_color, icon: profile.avatar_icon, url: profile.avatar_url } : undefined} />
+                </div>
+              </div>
+              <span className="relative line-clamp-2 max-w-full rounded-2xl bg-black/40 px-2.5 py-0.5 text-center text-[0.68rem] font-extrabold leading-tight text-white/85 ring-1 ring-white/15">{label}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+  };
+
+  const tabBtn = (key: string, active: boolean, onClick: () => void, label: string, count?: number) => (
+    <button
+      key={key}
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex flex-none items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-extrabold transition-colors ${
+        active ? "border-amber-300 bg-amber-300 text-black" : "border-white/12 bg-white/[0.04] text-white/75 hover:border-white/35 hover:text-white"
+      }`}
+    >
+      {label}
+      {count !== undefined && <span className={`rounded-full px-1.5 text-[0.7rem] ${active ? "bg-black/15" : "bg-white/10"}`}>{count}</span>}
+    </button>
+  );
+
   return (
     <PageShell width="max-w-7xl" glow="#fbbf24">
-      <section className="flex flex-wrap items-end justify-between gap-4" style={rise(1)}>
-        <div className="flex flex-col gap-2">
-          <h1 className="text-[clamp(1.8rem,9vw,2.4rem)] font-extrabold tracking-tight sm:text-5xl">{t("მაღაზია", "Shop", "Магазин")}</h1>
-          <p className="max-w-xl text-base text-white/55">
-            {t("მუდმივი ნივთები გვერდებზეა, ცენტრში კი კვირის ექსკლუზივები.", "Always-available items on the sides, the week's exclusives in the middle.", "Постоянные предметы по бокам, эксклюзивы недели в центре.")}
-          </p>
-        </div>
+      <section className="flex flex-wrap items-center justify-between gap-4" style={rise(1)}>
+        <h1 className="text-[clamp(1.8rem,9vw,2.4rem)] font-extrabold tracking-tight sm:text-5xl">{t("მაღაზია", "Shop", "Магазин")}</h1>
         {wallet && (
           <b className="flex w-fit items-center gap-2 rounded-full border border-amber-300/40 bg-amber-300/10 px-4 py-2 text-lg tabular-nums text-amber-200">
             <CoinIcon /> {wallet.balance}
@@ -348,27 +519,44 @@ export function ShopPage() {
         <p className="text-white/55">{t("მაღაზია ჯერ ცარიელია.", "The shop is empty for now.", "Магазин пока пуст.")}</p>
       ) : (
         <>
-          {section !== null && (
+          {/* one row of tabs instead of a wall of boxes */}
+          <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0" aria-label={t("კატეგორიები", "Categories", "Категории")} style={rise(2)}>
+            {tabBtn("home", section === null, () => setSection(null), t("მთავარი", "Home", "Главная"))}
+            {bundles.length > 0 && tabBtn("packs", section === "packs", () => setSection("packs"), t("პაკები", "Packs", "Наборы"), bundles.length)}
+            {TAB_IDS.filter((id) => (stock ?? []).some((i) => i.kind === SECTIONS[id].kind)).map((id) =>
+              tabBtn(id, section === id, () => setSection(id), t(SECTIONS[id].label[0], SECTIONS[id].label[1], SECTIONS[id].label[2])),
+            )}
             <button
               type="button"
-              onClick={() => setSection(null)}
-              className="flex w-fit items-center gap-2 rounded-full border border-white/15 px-4 py-2 text-base font-bold text-white/75 transition-colors hover:border-amber-300 hover:text-amber-300"
-              style={rise(2)}
+              onClick={() => setNickOpen(true)}
+              className="flex flex-none items-center gap-2 whitespace-nowrap rounded-full border border-dashed border-white/25 px-4 py-2 text-sm font-extrabold text-white/70 transition-colors hover:border-amber-300 hover:text-amber-300"
             >
-              ← {t("მაღაზია", "Shop", "Магазин")}
+              {t("ახალი მეტსახელი", "New nickname", "Новый никнейм")}
+              <span className="flex items-center gap-1 text-white/45">
+                <CoinIcon className="size-3.5" />
+                {NICKNAME_PRICE}
+              </span>
             </button>
-          )}
+          </nav>
 
           {section === null ? (
-            <div className="grid items-start gap-8 pb-10 lg:grid-cols-[17rem_minmax(0,1fr)_17rem]" style={rise(2)}>
-              {/* the week's exclusives come first on a phone, and in the middle on a wide screen */}
-              <section className="order-first flex flex-col gap-4 lg:order-none lg:col-start-2 lg:row-start-1">
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-300/30 bg-gradient-to-r from-amber-300/15 to-transparent px-4 py-3">
-                  <h2 className="flex items-center gap-2 text-xl font-extrabold sm:text-2xl">
-                    {t("კვირის ექსკლუზივი", "Weekly exclusives", "Эксклюзивы недели")}
-                  </h2>
+            <div className="flex flex-col gap-10 pb-10" style={rise(3)}>
+              {pack && (
+                <div className="flex flex-col gap-3">
+                  {packCard(pack)}
+                  {bundles.length > 1 && (
+                    <button type="button" onClick={() => setSection("packs")} className="w-fit px-1 text-sm font-extrabold text-amber-300 underline underline-offset-4 hover:text-amber-200">
+                      {t(`ყველა პაკი (${bundles.length})`, `All packs (${bundles.length})`, `Все наборы (${bundles.length})`)} →
+                    </button>
+                  )}
+                </div>
+              )}
+
+              <section className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-2xl font-extrabold">{t("კვირის ექსკლუზივი", "Weekly exclusives", "Эксклюзивы недели")}</h2>
                   {endsAt && (
-                    <span className="rounded-full bg-black/30 px-3 py-1 text-sm font-bold text-amber-200">
+                    <span className="rounded-full bg-amber-300/10 px-3 py-1 text-sm font-bold text-amber-200">
                       {t("განახლებამდე", "Refreshes in", "Обновление через")} {daysLeft(endsAt, now)}
                     </span>
                   )}
@@ -376,25 +564,23 @@ export function ShopPage() {
                 {weekly.length === 0 ? (
                   <p className="text-white/50">{t("ამ კვირაში ექსკლუზივი ჯერ არ არის.", "No exclusives this week yet.", "На этой неделе эксклюзивов пока нет.")}</p>
                 ) : (
-                  <ul className="grid grid-cols-2 gap-4 xl:grid-cols-3">{weekly.map(card)}</ul>
+                  <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">{weekly.map(card)}</ul>
                 )}
               </section>
-
-              <ul className="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">{LEFT_IDS.map(boxFor)}</ul>
-              <ul className="flex flex-col gap-4 lg:col-start-3 lg:row-start-1">
-                {RIGHT_IDS.map(boxFor)}
-                {servicesBox}
-              </ul>
+            </div>
+          ) : section === "packs" ? (
+            <div className="flex flex-col gap-8 pb-10" style={rise(3)}>
+              {bundles.map(packCard)}
             </div>
           ) : (
             <section className="flex flex-col gap-4 pb-10" style={rise(3)}>
-              <h2 className="text-2xl font-extrabold">{t(SECTIONS[section].label[0], SECTIONS[section].label[1], SECTIONS[section].label[2])}</h2>
-              {section === "themes" && <p className="-mt-2 text-white/50">{t("ღვინისფერი და მწვანე უფასოა.", "Wine and green are free.", "Бордовый и зелёный бесплатны.")}</p>}
-              {section === "emotes" && (
-                <p className="-mt-2 text-white/50">
-                  {t("ძირითადი ნაკრები უფასოა. ემოციებს ჩათიდან გააგზავნით (😀).", "The basic pack is free. Send emotes from the chat (😀).", "Базовый набор бесплатен. Эмоции отправляются из чата (😀).")}
+              {section === "themes" && <p className="text-white/50">{t("ღვინისფერი და მწვანე უფასოა.", "Wine and green are free.", "Бордовый и зелёный бесплатны.")}</p>}
+              {(section === "reactions" || section === "throws") && (
+                <p className="text-white/50">
+                  {t("ჩათიდან (😀) გააგზავნეთ: რეაქციას ყველა ხედავს, სასროლს კი მოწინააღმდეგეზე ესვრით.", "Send from the chat (😀): everybody sees a reaction, a throwable flies at a rival.", "Отправляйте из чата (😀): реакцию видят все, а предмет летит в соперника.")}
                 </p>
               )}
+              {section === "sounds" && <p className="text-white/50">{t("▶ დააჭირეთ და მოუსმინეთ. ხმას მხოლოდ თქვენ გაიგონებთ.", "Press ▶ to listen. Only you hear it.", "Нажмите ▶, чтобы послушать. Слышите только вы.")}</p>}
               <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{(stock ?? []).filter((i) => i.kind === SECTIONS[section].kind).map(card)}</ul>
             </section>
           )}
@@ -429,25 +615,6 @@ export function ShopPage() {
   );
 }
 
-/** The emotes and phrases of a pack, as the featured card shows them. */
-function EmotePreview({ id }: { id: string }) {
-  const t = useT();
-  const pack = EMOTE_PACKS.find((p) => `e_${p.id}` === id);
-  return (
-    <div className="flex h-[8.06rem] w-full flex-wrap content-center items-center justify-center gap-1.5 rounded-2xl bg-black/25 p-2 ring-1 ring-white/10">
-      {pack?.emotes.map((e, i) => (
-        <span key={i} className="text-2xl leading-none">
-          {e}
-        </span>
-      ))}
-      {pack?.phrases.slice(0, 3).map((ph, i) => (
-        <span key={`p${i}`} className="rounded-lg bg-white/10 px-1.5 py-0.5 text-[0.65rem] font-bold leading-tight">
-          {t(ph[0], ph[1], ph[2])}
-        </span>
-      ))}
-    </div>
-  );
-}
 
 /** A new nickname for coins: the name is checked for being free before the coins are asked. */
 function NicknameService({ balance, signedIn, onDone }: { balance: number | null; signedIn: boolean; onDone: () => Promise<void> }) {

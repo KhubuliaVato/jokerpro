@@ -184,6 +184,7 @@ export function MainMenu() {
             resume={resumeFor("bura")}
             botsHref="/bura/bots"
             botsText={botsText}
+            ribbon={t("ტესტის რეჟიმში", "In testing", "В тестировании")}
             online={online ? { href: "/bura", text: onlineText } : undefined}
           />
 
@@ -215,6 +216,7 @@ export function MainMenu() {
             resume={resumeFor("poker")}
             botsHref="/poker/bots"
             botsText={botsText}
+            ribbon={t("ტესტის რეჟიმში", "In testing", "В тестировании")}
             online={online ? { href: loginFor("/poker/private"), text: onlineText } : undefined}
           />
 

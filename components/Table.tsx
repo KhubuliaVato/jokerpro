@@ -1,5 +1,6 @@
 "use client";
 
+import { tapSeat } from "./TableChat";
 import { tt, useLang } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -177,7 +178,9 @@ function PlayerTag({
 
   return (
     <div
-      className={`rounded-2xl border bg-black/35 backdrop-blur-sm transition-shadow ${
+      data-seat={seat}
+      onClick={seat === HUMAN ? undefined : (e) => tapSeat(e, seat)}
+      className={`${seat === HUMAN ? "" : "cursor-pointer "}rounded-2xl border bg-black/35 backdrop-blur-sm transition-shadow ${
         active
           ? "border-amber-300 shadow-[0_0_16px_rgb(232_196_106/0.55)]"
           : "border-white/15"
@@ -386,7 +389,7 @@ function TrickArea({ game }: { game: GameState }) {
             }
           >
             <div
-              className="relative"
+              className={`relative ${avatars?.[p.player]?.play ? `fxp-${avatars[p.player]?.play}` : ""}`}
               style={
                 {
                   "--fx": `calc(var(--tcw) * ${from.x})`,
@@ -653,7 +656,7 @@ export function Table({
             ).map(([label, value, total]) => (
               <div
                 key={label}
-                className="flex flex-col items-center rounded-lg bg-white/[0.06] py-0.5 leading-tight sm:flex-row sm:justify-center sm:gap-1.5 sm:py-0.5"
+                className="flex flex-col items-center rounded-lg bg-white/[0.06] py-0.5 leading-tight sm:flex-row sm:justify-center sm:gap-1.5 sm:py-0.5 tight:!flex-col tight:!gap-0"
               >
                 <span className="text-[0.58rem] font-semibold uppercase tracking-wide text-white/50">
                   {label}
@@ -759,7 +762,7 @@ export function Table({
           </div>
         </div>
         {/* the pickers float over the whole stage, not just its middle column */}
-        <div className="relative col-span-3 col-start-1 row-start-2 self-stretch">
+        <div className="pointer-events-none relative col-span-3 col-start-1 row-start-2 self-stretch">
           {myTurn && game.phase === "trump" && (
             <TrumpPicker secondsLeft={secondsLeft} onPick={onTrump} />
           )}

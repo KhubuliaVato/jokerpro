@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { PROFILE_CHANGED } from "@/lib/auth/AuthProvider";
-import { cosmetic, EMOTE_PACKS, loadWorn, wear, type Slot, type Worn } from "@/lib/cosmetics";
+import { cosmetic, loadWorn, wear, type Slot, type Worn } from "@/lib/cosmetics";
 import { useT } from "@/lib/i18n";
 import { INVENTORY_CHANGED } from "@/lib/gifts";
 import { cardBack, loadInventory } from "@/lib/shop";
@@ -12,6 +12,7 @@ import { applyTheme, DEFAULT_THEME, savedTheme, THEME_CHANGED, themeById, THEMES
 import { Avatar } from "./Avatar";
 import { BackPreview } from "./BackPreview";
 import { CardView } from "./CardView";
+import { EmojiArt, PlayFxArt, SoundArt } from "./FxArt";
 import { GiftDialog } from "./GiftDialog";
 import { Nick } from "./Nick";
 
@@ -21,10 +22,10 @@ type Rarity = "common" | "rare" | "epic" | "legendary";
 
 /** How hard an item is to earn: the four price tiers of the shop. */
 const RARITY: Record<Rarity, string[]> = {
-  common: ["blue", "purple", "graphite", "f_laurel", "f_gold", "n_gold", "e_cheer", "e_tilt", "e_talk"],
-  rare: ["crimson", "emerald", "suits", "f_neon", "n_frost", "n_neon"],
-  epic: ["neon", "sakura", "damask", "frost", "gilded", "aurora", "northern", "embers", "f_frost", "f_flame", "n_fire", "w_sparks", "w_confetti", "w_gold"],
-  legendary: ["obsidian", "carbon", "midnight", "f_royal", "n_rainbow", "w_fire"],
+  common: ["blue", "purple", "graphite", "dusk", "bronze", "f_laurel", "f_gold", "n_gold", "r_bravo", "r_hearts", "t_rose", "t_tomato", "t_egg", "s_wood", "s_soft"],
+  rare: ["crimson", "emerald", "suits", "waves", "f_neon", "f_hex", "f_octa", "n_frost", "n_neon", "n_terminal", "n_chrome", "p_matrix", "s_matrix", "r_pill", "p_night", "s_night", "r_moon", "p_shatter", "s_ice", "r_cold", "p_carbon", "s_carbon", "r_flag", "p_sakura", "s_sakura", "r_petals", "w_snow", "w_hearts", "r_fire", "r_mic", "t_snowball", "t_pie", "t_bouquet", "p_spark", "s_arcade"],
+  epic: ["snow", "stars", "neon", "sakura", "damask", "frost", "gilded", "aurora", "northern", "embers", "f_frost", "f_flame", "f_squircle", "f_star", "n_fire", "n_glitch", "n_ghost", "matrixbg", "f_matrix", "n_matrix", "w_matrix", "lullaby", "f_moon", "n_night", "w_night", "glacier", "f_ice", "n_glacier", "w_ice", "carbonbg", "f_carbon", "n_carbon", "w_carbon", "blossom", "f_sakura", "n_sakura", "w_sakura", "w_coins", "w_lightning", "w_sparks", "w_confetti", "w_gold", "r_fireworks", "p_frost", "p_wave", "s_crystal"],
+  legendary: ["matrix", "obsidian", "carbon", "midnight", "f_royal", "f_seal", "n_rainbow", "n_sparkle", "w_fire", "r_crown", "p_fire", "w_rainbow"],
 };
 const rarityOf = (id: string): Rarity => (Object.keys(RARITY) as Rarity[]).find((r) => RARITY[r].includes(id)) ?? "common";
 
@@ -35,7 +36,7 @@ const LOOK: Record<Rarity, { color: string; label: [string, string, string] }> =
   legendary: { color: "#fbbf24", label: ["ლეგენდარული", "Legendary", "Легендарный"] },
 };
 
-type Cat = "all" | "decks" | "frames" | "names" | "effects" | "themes" | "emotes";
+type Cat = "all" | "decks" | "frames" | "names" | "effects" | "themes" | "reactions" | "throws" | "plays" | "sounds";
 
 const subscribeTheme = (cb: () => void) => {
   window.addEventListener(THEME_CHANGED, cb);
@@ -90,11 +91,14 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
   const ids = (prefix: string) => mine.owned.filter((id) => id.startsWith(prefix));
   const decks = mine.owned.filter((id) => cardBack(id));
   const themes = THEMES.filter((th) => !th.free && mine.owned.includes(th.id));
-  const packs = EMOTE_PACKS.filter((p) => p.id === "basic" || mine.owned.includes(`e_${p.id}`));
+  const reactions = ids("r_");
+  const throws = ids("t_");
+  const plays = ids("p_");
+  const sounds = ids("s_");
   const frames = ids("f_");
   const names = ids("n_");
   const effects = ids("w_");
-  const total = decks.length + frames.length + names.length + effects.length + themes.length + ids("e_").length;
+  const total = decks.length + frames.length + names.length + effects.length + themes.length + reactions.length + throws.length + plays.length + sounds.length;
 
   const wornFrame = mine.worn.frame;
   const wornName = mine.worn.name;
@@ -113,7 +117,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
       >
         <span className="absolute inset-x-6 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
         {isWorn && <span className="absolute right-2 top-2 grid size-6 place-items-center rounded-full bg-amber-300 text-sm font-black text-black">✓</span>}
-        <div className="relative grid h-24 w-full place-items-center rounded-2xl bg-black/20">
+        <div className="relative grid h-[7rem] w-full place-items-center rounded-2xl bg-black/20">
           <div className="pointer-events-none absolute size-24 rounded-full blur-2xl" style={{ background: `${color}33` }} />
           <div className="relative">{art}</div>
         </div>
@@ -135,6 +139,8 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
     );
   };
 
+  const useNote = <span className="h-8 text-xs font-bold text-white/40">{t("ჩათიდან გამოიყენება", "Used from the chat", "Из чата")}</span>;
+
   const wearButton = (slot: Slot, id: string | null) => {
     const isWorn = mine.worn[slot] === id;
     if (!owner) return isWorn ? <span className="rounded-full bg-amber-300/15 px-3 py-1 text-xs font-extrabold text-amber-200">{t("დაყენებულია", "Equipped", "Надето")}</span> : <span className="h-8" />;
@@ -154,6 +160,10 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
     tile(id ?? `no-${slot}`, art, label, id, mine.worn[slot] === id, wearButton(slot, id));
 
   const avatarArt = (frame?: string) => <Avatar size="lg" color={avatar?.color} icon={avatar?.icon} url={avatar?.url} frame={frame} />;
+  // shaped frames are bigger than the round avatar: in a tile they are drawn smaller, so they stay clear of the name and the badge
+  const tileAvatar = (frame?: string) => (
+    <div className="origin-center scale-[0.72]">{avatarArt(frame)}</div>
+  );
   const fxArt = (id: string) => <CardView card={KING} className={`fxw-${id}`} style={{ "--cw": "3.4rem" } as React.CSSProperties} />;
 
   const section = (id: Cat, title: string, children: React.ReactNode, count: number) =>
@@ -182,7 +192,10 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
     ...(frames.length > 0 ? [{ id: "frames" as Cat, label: t("ჩარჩოები", "Frames", "Рамки"), n: frames.length }] : []),
     ...(names.length > 0 ? [{ id: "names" as Cat, label: t("სახელები", "Names", "Имена"), n: names.length }] : []),
     ...(effects.length > 0 ? [{ id: "effects" as Cat, label: t("ეფექტები", "Effects", "Эффекты"), n: effects.length }] : []),
-    { id: "emotes", label: t("ემოციები", "Emotes", "Эмоции"), n: packs.length },
+    ...(reactions.length > 0 ? [{ id: "reactions" as Cat, label: t("რეაქციები", "Reactions", "Реакции"), n: reactions.length }] : []),
+    ...(throws.length > 0 ? [{ id: "throws" as Cat, label: t("სასროლები", "Throwables", "Бросаемые"), n: throws.length }] : []),
+    ...(plays.length > 0 ? [{ id: "plays" as Cat, label: t("დადების ეფექტი", "Play effects", "Эффекты хода"), n: plays.length }] : []),
+    ...(sounds.length > 0 ? [{ id: "sounds" as Cat, label: t("ხმები", "Sounds", "Звуки"), n: sounds.length }] : []),
   ];
 
   return (
@@ -284,8 +297,8 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
           "frames",
           t("ჩარჩოები", "Frames", "Рамки"),
           <>
-            {slotTile("frame", null, avatarArt(), t("ჩარჩოს გარეშე", "No frame", "Без рамки"))}
-            {frames.map((id) => slotTile("frame", id, avatarArt(id), cosmetic(id)?.name ?? id))}
+            {slotTile("frame", null, tileAvatar(), t("ჩარჩოს გარეშე", "No frame", "Без рамки"))}
+            {frames.map((id) => slotTile("frame", id, tileAvatar(id), cosmetic(id)?.name ?? id))}
           </>,
           frames.length,
         )}
@@ -312,21 +325,43 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
           effects.length,
         )}
 
-      {section(
-        "emotes",
-        t("ემოციები და ფრაზები", "Emotes and phrases", "Эмоции и фразы"),
-        packs.map((p) =>
-          tile(
-            p.id,
-            <span className="flex max-w-36 flex-wrap items-center justify-center gap-1 text-2xl">{(p.emotes.length > 0 ? p.emotes : ["💬"]).slice(0, 6).join(" ")}</span>,
-            t(p.names[0], p.names[1], p.names[2]),
-            p.id === "basic" ? null : `e_${p.id}`,
-            false,
-            <span className="h-8 text-xs font-bold text-white/40">{p.id === "basic" ? t("უფასო", "Free", "Бесплатно") : ""}</span>,
-          ),
-        ),
-        packs.length,
-      )}
+      {reactions.length > 0 &&
+        section(
+          "reactions",
+          t("რეაქციები", "Reactions", "Реакции"),
+          reactions.map((id) => tile(id, <EmojiArt id={id} />, cosmetic(id)?.name ?? id, id, false, useNote)),
+          reactions.length,
+        )}
+
+      {throws.length > 0 &&
+        section(
+          "throws",
+          t("სასროლი ნივთები", "Throwables", "Бросаемые предметы"),
+          throws.map((id) => tile(id, <EmojiArt id={id} />, cosmetic(id)?.name ?? id, id, false, useNote)),
+          throws.length,
+        )}
+
+      {plays.length > 0 &&
+        section(
+          "plays",
+          t("კარტის დადების ეფექტი", "Card-play effects", "Эффекты хода"),
+          <>
+            {slotTile("play", null, <span className="text-4xl text-white/30">∅</span>, t("ეფექტის გარეშე", "No effect", "Без эффекта"))}
+            {plays.map((id) => slotTile("play", id, <PlayFxArt id={id} width="2.2rem" />, cosmetic(id)?.name ?? id))}
+          </>,
+          plays.length,
+        )}
+
+      {sounds.length > 0 &&
+        section(
+          "sounds",
+          t("კარტის ხმა", "Card sounds", "Звуки карт"),
+          <>
+            {slotTile("snd", null, <span className="text-4xl text-white/30">♪</span>, t("სტანდარტული", "Standard", "Стандартный"))}
+            {sounds.map((id) => slotTile("snd", id, <SoundArt id={id} />, cosmetic(id)?.name ?? id))}
+          </>,
+          sounds.length,
+        )}
 
       </div>
 

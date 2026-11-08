@@ -74,10 +74,12 @@ export interface GameCardProps {
   botsText: string;
   /** Absent when online play is not available (no database). */
   online?: { href: string; text: string };
+  /** A ribbon in the corner of the card, for a game that is still being tried out. */
+  ribbon?: string;
 }
 
 /** One game of the main menu: a card fan, chips, the player's numbers, and two ways in (vs bots, online). */
-export function GameCard({ title, href, cards, front, accent, badges, line, waiting, waitingText, resume, botsHref, botsText, online }: GameCardProps) {
+export function GameCard({ title, href, cards, front, accent, badges, line, waiting, waitingText, resume, botsHref, botsText, online, ribbon }: GameCardProps) {
   return (
     <div
       className="group relative flex min-w-0 flex-col rounded-[2rem] border border-[var(--accent-soft)] bg-gradient-to-b from-white/[0.09] to-white/[0.02] p-4 shadow-[0_18px_40px_-24px_rgb(0_0_0/0.7)] transition-[translate,border-color,box-shadow] duration-300 ease-out hover:-translate-y-2 hover:border-[var(--accent)] hover:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.6)] focus-within:border-amber-300 sm:p-7 lg:min-h-[min(30rem,56dvh)]"
@@ -90,6 +92,12 @@ export function GameCard({ title, href, cards, front, accent, badges, line, wait
           style={{ background: `${accent}59` }}
         />
       </div>
+      {ribbon && (
+        <span className="absolute -top-3 right-5 z-10 inline-flex items-center gap-2 rounded-full border border-amber-300/60 bg-[#2a1f0a] px-3 py-1 text-[0.7rem] font-extrabold uppercase tracking-[0.12em] text-amber-200 shadow-[0_0_18px_-4px_rgb(252_211_77/0.6)] backdrop-blur-sm sm:right-8">
+          <span className="size-1.5 animate-pulse rounded-full bg-amber-300" />
+          {ribbon}
+        </span>
+      )}
       <Link href={href} className="flex flex-1 items-center gap-4 outline-none sm:flex-col sm:items-stretch sm:gap-0" aria-label={title}>
         <div className="relative w-28 flex-none sm:grid sm:w-auto sm:flex-1 sm:place-items-center sm:py-6">
           <Fan cards={cards} front={front} />

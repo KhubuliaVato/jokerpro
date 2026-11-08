@@ -1,5 +1,6 @@
 "use client";
 
+import { tapSeat } from "./TableChat";
 import { tt, useLang } from "@/lib/i18n";
 import { useEffect, useRef, useState } from "react";
 import { isRed, SUIT_SYMBOL, sortHand, type NormalCard } from "@/lib/joker/cards";
@@ -122,6 +123,7 @@ export function BuraTable({ game, secondsLeft, turnSeconds = null, names, avatar
           .map((seat) => (
             <Opponent
               key={seat}
+              seat={seat}
               where={spot(game, seat) as "left" | "top" | "right"}
               name={names[seat] ?? "…"}
               avatar={avatars[seat]}
@@ -180,7 +182,7 @@ export function BuraTable({ game, secondsLeft, turnSeconds = null, names, avatar
                 }
               >
                 {entries.flatMap((p) => p.cards.map((c) => ({ c, hidden: p.hidden }))).map(({ c, hidden }, k) => (
-                  <div key={c.id} style={{ marginLeft: k === 0 ? 0 : `calc(var(--cw) * -0.45)` }}>
+                  <div key={c.id} className={avatars[player]?.play ? `relative fxp-${avatars[player]?.play}` : undefined} style={{ marginLeft: k === 0 ? 0 : `calc(var(--cw) * -0.45)` }}>
                     {/* a card thrown down face down shows its back to everybody but its owner (who sees it dimmed) */}
                     <CardView
                       skin={avatars[player]?.back}
@@ -244,6 +246,7 @@ function ScoreChip({ label, short, value, target, mine }: { label: string; short
 }
 
 function Opponent({
+  seat,
   where,
   name,
   avatar,
@@ -252,6 +255,7 @@ function Opponent({
   seconds,
   partner,
 }: {
+  seat: number;
   where: "left" | "top" | "right";
   name: string;
   avatar: SeatAvatar | null;
@@ -268,7 +272,7 @@ function Opponent({
         ? "left-3 top-1/2 -translate-y-1/2 flex-col"
         : "right-3 top-1/2 -translate-y-1/2 flex-col";
   return (
-    <div className={`absolute z-10 flex items-center gap-1.5 ${place}`}>
+    <div data-seat={seat} onClick={(e) => tapSeat(e, seat)} className={`cursor-pointer absolute z-10 flex items-center gap-1.5 ${place}`}>
       <div className="flex items-center gap-2">
         <span className={`rounded-full transition-shadow ${active ? "shadow-[0_0_0_3px_rgb(252_211_77),0_0_18px_rgb(252_211_77/.6)]" : ""}`}>
           <Avatar size="sm" color={avatar?.color} icon={avatar?.icon} url={avatar?.url} frame={avatar?.frame} />

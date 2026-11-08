@@ -8,6 +8,16 @@ export const THEMES = [
   { id: "northern", color: "#0d4457", free: false, fx: true, name: ["ჩრდილოეთის ციალი", "Northern lights", "Северное сияние"] },
   { id: "suits", color: "#0f4a37", free: false, fx: true, name: ["კარტის ნიშნები", "Card suits", "Масти"] },
   { id: "embers", color: "#5a1a10", free: false, fx: true, name: ["ნაკვერჩხალი", "Embers", "Угли"] },
+  { id: "dusk", color: "#9a4358", free: false, name: ["ბინდი", "Dusk", "Сумерки"] },
+  { id: "bronze", color: "#7a5a1c", free: false, name: ["ბრინჯაო", "Bronze", "Бронза"] },
+  { id: "snow", color: "#2b4a70", free: false, fx: true, name: ["თოვლი", "Snow", "Снег"] },
+  { id: "stars", color: "#1d1b4b", free: false, fx: true, name: ["ვარსკვლავიანი ღამე", "Starry night", "Звёздная ночь"] },
+  { id: "blossom", color: "#b4537c", free: false, fx: true, name: ["საკურას ბაღი", "Sakura garden", "Сад сакуры"] },
+  { id: "carbonbg", color: "#2d323b", free: false, fx: true, name: ["კარბონის ბოჭკო", "Carbon fibre", "Карбон"] },
+  { id: "glacier", color: "#2f7f9c", free: false, fx: true, name: ["მყინვარის მღვიმე", "Glacier cave", "Ледяная пещера"] },
+  { id: "lullaby", color: "#33307a", free: false, fx: true, name: ["მთვარიანი ღამე", "Moonlit night", "Лунная ночь"] },
+  { id: "matrixbg", color: "#06401c", free: false, fx: true, name: ["ციფრული წვიმა", "Digital rain", "Цифровой дождь"] },
+  { id: "waves", color: "#0e6a83", free: false, fx: true, name: ["ტალღები", "Waves", "Волны"] },
 ] as const;
 
 export const DEFAULT_THEME = "wine";

@@ -52,3 +52,6 @@ dev.log
 /supabase/functions/joker/dist/
 /supabase/functions/poker/dist/
 /.next-build/
+
+# local test accounts (passwords)
+/.test-accounts.txt
