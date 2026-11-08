@@ -35,6 +35,7 @@ function Surface({ gloss }: { gloss: number }) {
  */
 export function Card3D({
   skin,
+  jokerSkin,
   card,
   width,
   edge = "#d9d2bd",
@@ -43,6 +44,8 @@ export function Card3D({
   flipped = false,
 }: {
   skin?: string | null;
+  /** The look of the joker, when the front is the joker. */
+  jokerSkin?: string | null;
   /** The face that is shown on the front; the back is always the deck's back. */
   card: Card;
   width: string;
@@ -70,7 +73,7 @@ export function Card3D({
         />
       ))}
       <div className={face} style={{ transform: `translateZ(${thickness / 2}px)` }}>
-        <CardView card={card} skin={skin} style={cw} />
+        <CardView card={card} skin={skin} jokerSkin={jokerSkin} style={cw} />
         <Surface gloss={gloss} />
       </div>
       <div className={face} style={{ transform: `rotateY(180deg) translateZ(${thickness / 2}px)` }}>

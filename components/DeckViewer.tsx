@@ -8,6 +8,7 @@ import { Card3D } from "./Card3D";
 import { CardView } from "./CardView";
 
 const SHOWN: Card = { joker: false, suit: "H", rank: 13, id: "H13" };
+const JOKER: Card = { joker: true, id: "J0" };
 const ROW: Card[] = [
   { joker: false, suit: "S", rank: 14, id: "S14" },
   { joker: false, suit: "D", rank: 12, id: "D12" },
@@ -22,12 +23,15 @@ const ROW: Card[] = [
  */
 export function DeckViewer({
   skin,
+  jokerSkin,
   name,
   accent,
   actions,
   onClose,
 }: {
   skin: string | null;
+  /** Shows the joker with this look instead of a deck (`skin` is then the card back on its other side). */
+  jokerSkin?: string;
   name: string;
   accent?: string;
   actions?: React.ReactNode;
@@ -127,7 +131,7 @@ export function DeckViewer({
               transition: smooth && !spinning ? "transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1)" : "none",
             }}
           >
-            <Card3D skin={skin} card={SHOWN} width="min(13rem, 52vw)" thickness={9} edge={edge} gloss={Math.sin((angle.y * Math.PI) / 180)} />
+            <Card3D skin={skin} jokerSkin={jokerSkin} card={jokerSkin ? JOKER : SHOWN} width={jokerSkin ? "min(16rem, 62vw)" : "min(13rem, 52vw)"} thickness={9} edge={edge} gloss={Math.sin((angle.y * Math.PI) / 180)} />
           </div>
           <div className="pointer-events-none absolute bottom-1 h-5 w-40 rounded-[50%] bg-black/50 blur-lg" />
         </div>
@@ -143,11 +147,13 @@ export function DeckViewer({
           </button>
         </div>
 
+        {!jokerSkin && (
         <div className="flex justify-center -space-x-3">
           {ROW.map((c, i) => (
             <CardView key={c.id} card={c} skin={skin} style={{ "--cw": "3.4rem", rotate: `${(i - 2) * 4}deg` } as React.CSSProperties} />
           ))}
         </div>
+        )}
 
         {actions && <div className="w-full max-w-xs">{actions}</div>}
       </div>

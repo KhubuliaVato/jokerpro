@@ -2241,11 +2241,158 @@ body {
   to { opacity: 1; transform: none; }
 }
 
-/* ---- joker skins (shop items j_*): the joker card drawn as a moving picture ---- */
-.pc.joker[data-jskin="j_classic"] { background: #111 url("/skins/j_classic.svg") center / 100% 100% no-repeat; }
-.pc.joker[data-jskin="j_ice"] { background: #111 url("/skins/j_ice.svg") center / 100% 100% no-repeat; }
-.pc.joker[data-jskin="j_sakura"] { background: #111 url("/skins/j_sakura.svg") center / 100% 100% no-repeat; }
-.pc.joker[data-jskin="j_gilded"] { background: #111 url("/skins/j_gilded.svg") center / 100% 100% no-repeat; }
-.pc.joker[data-jskin="j_carbon"] { background: #111 url("/skins/j_carbon.svg") center / 100% 100% no-repeat; }
-.pc.joker[data-jskin="j_night"] { background: #111 url("/skins/j_night.svg") center / 100% 100% no-repeat; }
-.pc.joker[data-jskin="j_matrix"] { background: #111 url("/skins/j_matrix.svg") center / 100% 100% no-repeat; }
+/* ---- joker skins on sale (JOKER_SKINS_ON in lib/cosmetics.ts): a painted card with a light moving layer over it ---- */
+.pc.joker[data-jskin="j_sakura"] { background: #efe2d3 url("/skins/j_sakura.webp") center / 100% 100% no-repeat; }
+.pc.joker[data-jskin="j_matrix"] { background: #000 url("/skins/j_matrix.webp") center / 100% 100% no-repeat; }
+.pc.joker[data-jskin="j_ice"] { background: #06121f url("/skins/j_ice.webp") center / 100% 100% no-repeat; }
+.pc.joker[data-jskin="j_carbon"] { background: #0a0a0c url("/skins/j_carbon.webp") center / 100% 100% no-repeat; }
+.pc.joker[data-jskin="j_night"] { background: #030814 url("/skins/j_night.webp") center / 100% 100% no-repeat; }
+
+/* the moving layer is two card heights tall and slides one card height, so it loops without a seam */
+.pc.joker[data-jskin="j_sakura"]::before,
+.pc.joker[data-jskin="j_ice"]::before,
+.pc.joker[data-jskin="j_matrix"]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -100%;
+  height: 200%;
+  pointer-events: none;
+  background-repeat: repeat-y;
+  background-size: 100% 50%;
+}
+.pc.joker[data-jskin="j_sakura"]::before {
+  background-image:
+    radial-gradient(ellipse 3.4% 1.7% at 12% 9%, #f9a8d4 62%, transparent 72%),
+    radial-gradient(ellipse 2.6% 1.4% at 34% 27%, #fecdd3 62%, transparent 72%),
+    radial-gradient(ellipse 3.6% 1.8% at 58% 14%, #f472b6 62%, transparent 72%),
+    radial-gradient(ellipse 2.8% 1.5% at 81% 31%, #fbcfe8 62%, transparent 72%),
+    radial-gradient(ellipse 3.2% 1.7% at 22% 52%, #fda4af 62%, transparent 72%),
+    radial-gradient(ellipse 2.6% 1.4% at 69% 58%, #f9a8d4 62%, transparent 72%),
+    radial-gradient(ellipse 3.4% 1.7% at 90% 73%, #fecdd3 62%, transparent 72%),
+    radial-gradient(ellipse 2.8% 1.5% at 44% 82%, #f472b6 62%, transparent 72%),
+    radial-gradient(ellipse 3%   1.6% at 8% 91%, #fbcfe8 62%, transparent 72%);
+  opacity: 0.85;
+  animation: jk-fall 11s linear infinite, jk-sway 3.6s ease-in-out infinite alternate;
+}
+.pc.joker[data-jskin="j_matrix"]::before {
+  background-image:
+    linear-gradient(to bottom, transparent, rgb(0 255 65 / 0.55) 82%, #d9ffe3 90%, transparent 91%),
+    linear-gradient(to bottom, transparent, rgb(0 255 65 / 0.4) 85%, transparent 86%),
+    linear-gradient(to bottom, transparent, rgb(0 255 65 / 0.5) 80%, #b6ffc8 88%, transparent 89%),
+    linear-gradient(to bottom, transparent, rgb(0 255 65 / 0.35) 85%, transparent 86%),
+    linear-gradient(to bottom, transparent, rgb(0 255 65 / 0.5) 82%, #d9ffe3 90%, transparent 91%),
+    linear-gradient(to bottom, transparent, rgb(0 255 65 / 0.4) 84%, transparent 85%);
+  background-position: 9% 0, 27% 22%, 46% 8%, 64% 35%, 83% 14%, 94% 40%;
+  background-size: 1.6% 46%, 1.2% 38%, 1.6% 50%, 1.2% 42%, 1.6% 44%, 1.2% 36%;
+  opacity: 0.62;
+  animation: jk-fall 4.6s linear infinite;
+}
+/* a thin bright line that scans down the code, and a soft pulse of the glow */
+.pc.joker[data-jskin="j_matrix"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, rgb(120 255 160 / 0.22) 50%, transparent) 0 0 / 100% 16% no-repeat;
+  animation: jk-scan 3.8s ease-in-out infinite;
+}
+.pc.joker[data-jskin="j_matrix"] { animation: jk-pulse 3.2s ease-in-out infinite; }
+.pc.joker[data-jskin="j_sakura"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 38%, rgb(255 255 255 / 0.28) 50%, transparent 62%) -160% 0 / 260% 100% no-repeat;
+  animation: jk-glint 6s ease-in-out infinite;
+}
+/* ice: snow drifts down the frozen card, a cold light glints across it */
+.pc.joker[data-jskin="j_ice"]::before {
+  background-image:
+    radial-gradient(ellipse 1.1% 0.8% at 10% 6%, #fff 55%, transparent 70%),
+    radial-gradient(ellipse 0.8% 0.6% at 28% 17%, #cfe9ff 55%, transparent 70%),
+    radial-gradient(ellipse 1.3% 0.9% at 47% 9%, #fff 55%, transparent 70%),
+    radial-gradient(ellipse 0.8% 0.6% at 66% 21%, #e0f2fe 55%, transparent 70%),
+    radial-gradient(ellipse 1.1% 0.8% at 86% 12%, #fff 55%, transparent 70%),
+    radial-gradient(ellipse 0.9% 0.7% at 18% 38%, #e0f2fe 55%, transparent 70%),
+    radial-gradient(ellipse 1.2% 0.9% at 38% 47%, #fff 55%, transparent 70%),
+    radial-gradient(ellipse 0.8% 0.6% at 58% 41%, #cfe9ff 55%, transparent 70%),
+    radial-gradient(ellipse 1.1% 0.8% at 78% 52%, #fff 55%, transparent 70%),
+    radial-gradient(ellipse 0.9% 0.7% at 92% 44%, #e0f2fe 55%, transparent 70%),
+    radial-gradient(ellipse 1.2% 0.9% at 7% 68%, #fff 55%, transparent 70%),
+    radial-gradient(ellipse 0.8% 0.6% at 30% 76%, #cfe9ff 55%, transparent 70%),
+    radial-gradient(ellipse 1.1% 0.8% at 52% 70%, #fff 55%, transparent 70%),
+    radial-gradient(ellipse 0.9% 0.7% at 72% 82%, #e0f2fe 55%, transparent 70%),
+    radial-gradient(ellipse 1.2% 0.9% at 90% 74%, #fff 55%, transparent 70%),
+    radial-gradient(ellipse 0.8% 0.6% at 42% 93%, #cfe9ff 55%, transparent 70%),
+    radial-gradient(ellipse 1.1% 0.8% at 14% 92%, #fff 55%, transparent 70%);
+  opacity: 0.75;
+  animation: jk-fall 13s linear infinite, jk-sway 5s ease-in-out infinite alternate;
+}
+.pc.joker[data-jskin="j_ice"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 40%, rgb(190 235 255 / 0.34) 50%, transparent 60%) -160% 0 / 260% 100% no-repeat;
+  animation: jk-glint 5.5s ease-in-out infinite;
+}
+/* carbon: a red light and a white glint run over the weave and the polished metal */
+.pc.joker[data-jskin="j_carbon"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 30%, rgb(239 68 68 / 0.30) 46%, transparent 56%) -160% 0 / 260% 100% no-repeat;
+  animation: jk-glint 7s ease-in-out infinite;
+}
+.pc.joker[data-jskin="j_carbon"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 44%, rgb(255 255 255 / 0.26) 50%, transparent 56%) -160% 0 / 260% 100% no-repeat;
+  animation: jk-glint 7s ease-in-out 0.6s infinite;
+}
+/* midnight: the stars twinkle and the moon breathes */
+.pc.joker[data-jskin="j_night"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle 1.1% at 31% 16%, #fff 30%, transparent 70%),
+    radial-gradient(circle 0.9% at 56% 8%, #cfe3ff 30%, transparent 70%),
+    radial-gradient(circle 1% at 80% 22%, #fff 30%, transparent 70%),
+    radial-gradient(circle 0.8% at 12% 33%, #cfe3ff 30%, transparent 70%),
+    radial-gradient(circle 1.1% at 91% 41%, #fff 30%, transparent 70%),
+    radial-gradient(circle 0.9% at 18% 56%, #cfe3ff 30%, transparent 70%),
+    radial-gradient(circle 1% at 86% 64%, #fff 30%, transparent 70%),
+    radial-gradient(circle 0.8% at 40% 88%, #cfe3ff 30%, transparent 70%),
+    radial-gradient(circle 1% at 60% 94%, #fff 30%, transparent 70%);
+  animation: jk-twinkle 2.6s ease-in-out infinite alternate;
+}
+.pc.joker[data-jskin="j_night"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 42%, rgb(170 200 255 / 0.30), transparent 48%);
+  animation: jk-breathe 5.2s ease-in-out infinite;
+}
+@keyframes jk-fall { to { transform: translateY(50%); } }
+@keyframes jk-sway { from { translate: -1.5% 0; } to { translate: 2% 0; } }
+@keyframes jk-scan { 0% { background-position: 0 -20%; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { background-position: 0 120%; opacity: 0; } }
+@keyframes jk-pulse { 50% { filter: brightness(1.14) saturate(1.1); } }
+@keyframes jk-twinkle { from { opacity: 0.15; } to { opacity: 1; } }
+@keyframes jk-breathe { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@keyframes jk-glint { 0%, 55% { background-position: -160% 0; } 100% { background-position: 160% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .pc.joker[data-jskin],
+  .pc.joker[data-jskin]::before,
+  .pc.joker[data-jskin]::after { animation: none !important; }
+}
+:root[data-motion="off"] .pc.joker[data-jskin],
+:root[data-motion="off"] .pc.joker[data-jskin]::before,
+:root[data-motion="off"] .pc.joker[data-jskin]::after { animation: none !important; }

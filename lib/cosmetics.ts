@@ -117,6 +117,12 @@ export const PLAY_FX = [
 ] as const;
 
 /** Looks of the joker card; the pictures are /skins/<id>.svg and the CSS is `.pc.joker[data-jskin]` in globals.css. */
+/** The joker skins that are on sale and shown; the others are kept in the database but not drawn. */
+export const JOKER_SKINS_ON = ["j_sakura", "j_matrix", "j_ice", "j_carbon", "j_night"];
+
+/** The card back of the pack a joker skin belongs to: shown on its other side in 3D. */
+export const JOKER_BACKS: Record<string, string> = { j_sakura: "sakura", j_matrix: "matrix", j_ice: "frost", j_carbon: "carbon", j_night: "midnight" };
+
 export const JOKER_SKINS = [
   { id: "j_classic", names: ["კლასიკური ჯოკერი", "Classic jester", "Классический шут"] as Names, accent: "#dc2626" },
   { id: "j_ice", names: ["ყინულის ჯოკერი", "Frost jester", "Ледяной шут"] as Names, accent: "#38bdf8" },

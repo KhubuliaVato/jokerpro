@@ -9,6 +9,8 @@ import { loadBalance } from "@/lib/coins";
 import {
   buyNickname,
   cosmetic,
+  JOKER_BACKS,
+  JOKER_SKINS_ON,
   loadWorn,
   NICKNAME_PRICE,
   slotOf,
@@ -65,7 +67,10 @@ const SECTIONS: Record<SectionId, { kind: Kind; label: [string, string, string];
   plays: { kind: "play_fx", label: ["კარტის დადების ეფექტი", "Card-play effects", "Эффекты хода"], hint: ["როცა კარტს დებთ", "When you play a card", "Когда вы ходите"], glow: "#a78bfa55" },
   sounds: { kind: "sound_pack", label: ["კარტის ხმა", "Card sounds", "Звуки карт"], hint: ["ხმა თქვენთვის", "Heard by you", "Слышите только вы"], glow: "#67e8f955" },
 };
-const TAB_IDS: SectionId[] = ["decks", "jokers", "themes", "frames", "names", "effects", "plays", "sounds", "reactions", "throws"];
+/** Only the joker skins in JOKER_SKINS_ON are on sale (the others, and what players own of them, stay in the database). */
+const SHOW_JOKER_SKINS = true;
+
+const TAB_IDS: SectionId[] = ["decks", ...(SHOW_JOKER_SKINS ? (["jokers"] as const) : []), "themes", "frames", "names", "effects", "plays", "sounds", "reactions", "throws"];
 
 const KING = { joker: false, suit: "H", rank: 13, id: "H13" } as const;
 const JOKER = { joker: true, id: "J0" } as const;
@@ -112,7 +117,7 @@ export function ShopPage() {
     const supabase = getSupabase();
     if (!supabase) return;
     let cancelled = false;
-    loadStock(supabase).then((s) => !cancelled && setStock(s));
+    loadStock(supabase).then((s) => !cancelled && setStock(s.filter((i) => i.kind !== "joker_skin" || JOKER_SKINS_ON.includes(i.id))));
     loadBundles(supabase).then((b) => !cancelled && setBundles(b));
     return () => {
       cancelled = true;
@@ -236,7 +241,7 @@ export function ShopPage() {
     const dir = sort.endsWith("down") ? -1 : 1;
     return [...items].sort((a, b) => (sort.startsWith("rarity") ? dir * (r(a) - r(b)) || a.price - b.price : dir * (a.price - b.price) || r(a) - r(b)));
   };
-  const weekly = (stock ?? []).filter((i) => i.tier === "rotating");
+  const weekly = (stock ?? []).filter((i) => i.tier === "rotating" && (SHOW_JOKER_SKINS || i.kind !== "joker_skin"));
   const endsAt = weekly[0]?.ends_at ?? null;
 
   const labelOf = (item: StockItem): string => {
@@ -350,12 +355,24 @@ export function ShopPage() {
             <EmojiArt id={item.id} size="text-6xl" />
           </div>
         );
-      case "joker_skin":
+      case "joker_skin": {
+        // a big box: the card is shown large, and tapping it turns it in 3D
+        const accent = cosmetic(item.id)?.accent ?? "#ffffff";
         return (
-          <div className="grid h-[8.06rem] w-full place-items-center rounded-2xl bg-black/25 ring-1 ring-white/10">
-            <CardView card={JOKER} jokerSkin={item.id} style={{ "--cw": "5.4rem" } as React.CSSProperties} />
-          </div>
+          <button
+            type="button"
+            onClick={() => setView(item.id)}
+            aria-label={`${labelOf(item)} 3D`}
+            className="group relative grid h-[17rem] w-full place-items-center overflow-hidden rounded-2xl bg-black/30 outline-none ring-1 ring-white/10 focus-visible:ring-2 focus-visible:ring-amber-300"
+          >
+            <div className="pointer-events-none absolute size-48 rounded-full blur-3xl" style={{ background: `${accent}44` }} />
+            <div className="relative transition-transform duration-300 group-hover:-rotate-2 group-hover:scale-105" style={{ filter: `drop-shadow(0 16px 24px ${accent}55)` }}>
+              <CardView card={JOKER} jokerSkin={item.id} style={{ "--cw": "10rem" } as React.CSSProperties} />
+            </div>
+            <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/65 px-2.5 py-0.5 text-xs font-extrabold text-white/90 ring-1 ring-white/25">3D</span>
+          </button>
         );
+      }
       case "play_fx":
         return (
           <div className="grid h-[8.06rem] w-full place-items-center rounded-2xl bg-black/25 ring-1 ring-white/10">
@@ -395,6 +412,7 @@ export function ShopPage() {
 
   const viewed = view ? (stock ?? []).find((i) => i.id === view) : undefined;
   const viewedLook = viewed ? cardBack(viewed.id) : undefined;
+  const viewedJoker = viewed?.kind === "joker_skin" ? cosmetic(viewed.id) : undefined;
 
   const packCard = (b: Bundle) => {
                 const info = BUNDLE_INFO[b.id];
@@ -658,10 +676,14 @@ export function ShopPage() {
                 </p>
               )}
               {section === "sounds" && <p className="text-white/50">{t("▶ დააჭირეთ და მოუსმინეთ. ხმას მხოლოდ თქვენ გაიგონებთ.", "Press ▶ to listen. Only you hear it.", "Нажмите ▶, чтобы послушать. Слышите только вы.")}</p>}
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{sorted((stock ?? []).filter((i) => i.kind === SECTIONS[section].kind)).map(card)}</ul>
+              <ul className={section === "jokers" ? "grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3" : "grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"}>{sorted((stock ?? []).filter((i) => i.kind === SECTIONS[section].kind)).map(card)}</ul>
             </section>
           )}
         </>
+      )}
+
+      {viewed && viewedJoker && (
+        <DeckViewer skin={JOKER_BACKS[viewed.id] ?? null} jokerSkin={viewed.id} name={viewedJoker.name} accent={viewedJoker.accent} actions={actionFor(viewed, "large")} onClose={() => setView(null)} />
       )}
 
       {viewed && viewedLook && (
