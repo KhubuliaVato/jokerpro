@@ -124,10 +124,8 @@ export const JOKER_SKINS_ON = ["j_sakura", "j_matrix", "j_ice", "j_carbon", "j_n
 export const JOKER_BACKS: Record<string, string> = { j_sakura: "sakura", j_matrix: "matrix", j_ice: "frost", j_carbon: "carbon", j_night: "midnight" };
 
 export const JOKER_SKINS = [
-  { id: "j_classic", names: ["კლასიკური ჯოკერი", "Classic jester", "Классический шут"] as Names, accent: "#dc2626" },
   { id: "j_ice", names: ["ყინულის ჯოკერი", "Frost jester", "Ледяной шут"] as Names, accent: "#38bdf8" },
   { id: "j_sakura", names: ["საკურას ჯოკერი", "Sakura jester", "Шут сакуры"] as Names, accent: "#ec4899" },
-  { id: "j_gilded", names: ["ოქროს ჯოკერი", "Gilded jester", "Золотой шут"] as Names, accent: "#fbbf24" },
   { id: "j_carbon", names: ["კარბონის ჯოკერი", "Carbon jester", "Карбоновый шут"] as Names, accent: "#ef4444" },
   { id: "j_night", names: ["მძინარე ჯოკერი", "Sleepy jester", "Сонный шут"] as Names, accent: "#818cf8" },
   { id: "j_matrix", names: ["კოდის ჯოკერი", "Code jester", "Шут-код"] as Names, accent: "#00ff41" },
