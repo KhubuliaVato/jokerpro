@@ -10,6 +10,7 @@ import { loadLeaderboard, loadPosition, type LeaderRow } from "@/lib/ratings";
 import { getSupabase } from "@/lib/supabase";
 import { Nick } from "./Nick";
 import { Avatar } from "./Avatar";
+import { CityBoard } from "./CityBoard";
 import { PageShell } from "./PageShell";
 import { RankEmblem } from "./RankEmblem";
 import { INPUT, rise } from "./ui";
@@ -34,6 +35,7 @@ export function LeaderboardPage() {
   const { user, configured } = useAuth();
   const t = useT();
   const [gameId, setGameId] = useState(GAMES[0].id);
+  const [showCities, setShowCities] = useState(false);
   const [board, setBoard] = useState<{ gameId: string; rows: LeaderRow[]; error: string | null } | null>(null);
   const [query, setQuery] = useState("");
   const [mine, setMine] = useState<{ userId: string; gameId: string; position: number | null } | null>(null);
@@ -68,7 +70,7 @@ export function LeaderboardPage() {
   const found = searching ? rows.filter((r) => r.nickname.toLowerCase().includes(query.trim().toLowerCase())) : [];
   const podium = rows.slice(0, 3);
   const rest = rows.slice(3);
-  const accent = ACCENT[gameId] ?? "#fbbf24";
+  const accent = showCities ? "#38bdf8" : (ACCENT[gameId] ?? "#fbbf24");
   const myRow = rows.find((r) => r.user_id === userId) ?? null;
   const myPosition = mine && mine.userId === userId && mine.gameId === gameId ? mine.position : null;
 
@@ -80,18 +82,29 @@ export function LeaderboardPage() {
           {GAMES.map((g) => (
             <button
               key={g.id}
-              onClick={() => setGameId(g.id)}
+              onClick={() => {
+                setGameId(g.id);
+                setShowCities(false);
+              }}
               className={`flex items-center gap-2 rounded-full px-5 py-2 text-base font-bold transition-colors ${
-                g.id === gameId ? "text-black" : "border border-white/15 text-white/60 hover:text-white"
+                !showCities && g.id === gameId ? "text-black" : "border border-white/15 text-white/60 hover:text-white"
               }`}
-              style={g.id === gameId ? { background: ACCENT[g.id] ?? "#fbbf24" } : undefined}
+              style={!showCities && g.id === gameId ? { background: ACCENT[g.id] ?? "#fbbf24" } : undefined}
             >
               <span>{g.icon}</span>
               {g.name}
             </button>
           ))}
+          <button
+            onClick={() => setShowCities(true)}
+            className={`flex items-center gap-2 rounded-full px-5 py-2 text-base font-bold transition-colors ${showCities ? "text-black" : "border border-white/15 text-white/60 hover:text-white"}`}
+            style={showCities ? { background: "#38bdf8" } : undefined}
+          >
+            <span>🏙</span>
+            {t("ქალაქები", "Cities", "Города")}
+          </button>
         </div>
-        {configured && rows.length > 3 && (
+        {configured && !showCities && rows.length > 3 && (
           <input
             type="search"
             value={query}
@@ -102,7 +115,9 @@ export function LeaderboardPage() {
         )}
       </section>
 
-      {!configured ? (
+      {showCities && configured ? (
+        <CityBoard />
+      ) : !configured ? (
         <p className="text-white/55">{t("ლიდერბორდი ჯერ არ არის ჩართული.", "The leaderboard is not enabled yet.", "Рейтинг пока не включён.")}</p>
       ) : !current ? (
         <div className="h-64 animate-pulse rounded-3xl bg-white/[0.06]" />

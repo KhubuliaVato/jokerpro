@@ -173,6 +173,17 @@ export interface AdminShopItem {
   owners: number;
 }
 
+export interface AdminErrorRow {
+  source: "client" | "server";
+  message: string;
+  n: number;
+  last: string;
+  first: string;
+  url: string | null;
+  detail: Record<string, unknown>;
+  users: number;
+}
+
 export interface AdminLogRow {
   id: number;
   action: string;

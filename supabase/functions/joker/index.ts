@@ -91,15 +91,20 @@ interface Table {
   bot_tier: OnlineBotTier;
 }
 
-async function loadTable(tableId: string, userId: string) {
+async function loadTableOnly(tableId: string) {
   const [{ data: table }, { data: seats }] = await Promise.all([
     admin.from("game_tables").select("id, status, game, rules, kind, bot_tier").eq("id", tableId).maybeSingle(),
     admin.from("table_seats").select("seat, user_id, bot, accepted, left_at, left_version, returned").eq("table_id", tableId).order("seat"),
   ]);
   if (!table) throw new UserError("table not found");
-  const mine = (seats as Seat[] | null)?.find((s) => s.user_id === userId);
+  return { table: table as Table, seats: seats as Seat[] };
+}
+
+async function loadTable(tableId: string, userId: string) {
+  const { table, seats } = await loadTableOnly(tableId);
+  const mine = seats.find((s) => s.user_id === userId);
   if (!mine) throw new UserError("you are not seated at this table");
-  return { table: table as Table, seats: seats as Seat[], me: mine };
+  return { table, seats, me: mine };
 }
 
 const botSeat = (seats: Seat[]) => (seat: number) => seats.find((s) => s.seat === seat)?.bot ?? true;
@@ -280,18 +285,46 @@ async function finish(table: Table, seats: Seat[], state: AnyState, endVersion: 
   await admin.from("game_tables").update({ status: "finished" }).eq("id", table.id);
 }
 
+interface StepOut {
+  state: AnyState;
+  afk?: Record<string, number>;
+  /** Seats whose player timed out too often: a bot owns them from now on. */
+  kick?: number[];
+  /** Seats whose player took them back from the bot. */
+  revive?: number[];
+}
+
+/** What is due at a running table: a bot's move, or a player who ran out of time (null when nothing is). */
+function dueStep(table: Table, seats: Seat[], row: GameRow): StepOut | null {
+  const s = row.state;
+  if (!active(table, s)) return null;
+  const isBot = botSeat(seats);
+  if (isBot(s.turn)) {
+    // A bot's move at a Hold'em table waits a moment after the last one, however many players ask.
+    if (isPoker(table)) {
+      if (Date.now() - Date.parse(row.updated_at) < 600) return null;
+      return { state: botOnce(table, s) };
+    }
+    return { state: settleFor(table, s, isBot) };
+  }
+  const late = row.turn_deadline && Date.now() > Date.parse(row.turn_deadline) + DEADLINE_GRACE_MS;
+  if (!late) return null;
+  // The player ran out of time: a bot moves for them; after two in a row the seat is theirs no more.
+  const missed = (row.afk[s.turn] ?? 0) + 1;
+  const afk = { ...row.afk, [s.turn]: missed };
+  const kick: number[] = [];
+  if (missed >= ONLINE_AFK_LIMIT) {
+    kick.push(s.turn);
+    seats.find((x) => x.seat === s.turn)!.bot = true;
+  }
+  return { state: settleFor(table, botOnce(table, s), botSeat(seats)), afk, kick };
+}
+
 /** Runs `step` on the latest game state, retrying when another request changed it first. */
 async function withGame(
   tableId: string,
   userId: string,
-  step: (ctx: { table: Table; seats: Seat[]; me: Seat; row: GameRow }) => {
-    state: AnyState;
-    afk?: Record<string, number>;
-    /** Seats whose player timed out too often: a bot owns them from now on. */
-    kick?: number[];
-    /** Seats whose player took them back from the bot. */
-    revive?: number[];
-  } | null,
+  step: (ctx: { table: Table; seats: Seat[]; me: Seat; row: GameRow }) => StepOut | null,
 ) {
   for (let attempt = 0; attempt < 6; attempt++) {
     const ctx = await loadTable(tableId, userId);
@@ -393,39 +426,105 @@ async function handle(userId: string, body: Record<string, unknown>) {
     // A timer ran out on someone's screen, or a seat was handed to a bot: do what is due.
     case "tick":
     case "sync":
-      return withGame(tableId, userId, ({ table, seats, row }) => {
-        const s = row.state;
-        if (!active(table, s)) return null;
-        const isBot = botSeat(seats);
-        if (isBot(s.turn)) {
-          // A bot's move at a Hold'em table waits a moment after the last one, however many players ask.
-          if (isPoker(table)) {
-            if (Date.now() - Date.parse(row.updated_at) < 600) return null;
-            return { state: botOnce(table, s) };
-          }
-          return { state: settleFor(table, s, isBot) };
-        }
-        const late = row.turn_deadline && Date.now() > Date.parse(row.turn_deadline) + DEADLINE_GRACE_MS;
-        if (!late) return null;
-        // The player ran out of time: a bot moves for them; after two in a row the seat is theirs no more.
-        const missed = (row.afk[s.turn] ?? 0) + 1;
-        const afk = { ...row.afk, [s.turn]: missed };
-        const kick: number[] = [];
-        if (missed >= ONLINE_AFK_LIMIT) {
-          kick.push(s.turn);
-          seats.find((x) => x.seat === s.turn)!.bot = true;
-        }
-        return { state: settleFor(table, botOnce(table, s), botSeat(seats)), afk, kick };
-      });
+      return withGame(tableId, userId, ({ table, seats, row }) => dueStep(table, seats, row));
 
     default:
       throw new UserError("unknown action");
   }
 }
 
+// ---- the server clock ----
+
+/** A table that has stood still this long is left to the clock: the players' browsers had their chance. */
+const SWEEP_IDLE_MS = 10_000;
+/** The most tables one sweep looks at. */
+const SWEEP_LIMIT = 40;
+
+/** Does what is due at one table: heals a stuck state, ends a pause, moves a bot or a player who ran out of time. */
+async function sweepTable(tableId: string): Promise<string> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { table, seats } = await loadTableOnly(tableId);
+    if (table.status !== "playing") return "not playing";
+    const { data } = await admin.from("table_games").select("*").eq("table_id", tableId).maybeSingle();
+    if (!data) return "no game";
+    const row = data as GameRow;
+    if (Date.now() - Date.parse(row.updated_at) < SWEEP_IDLE_MS) return "recent";
+
+    let out: StepOut | null = null;
+    if (isBura(table)) {
+      const healed = bura.heal(row.state as BuraState);
+      if (healed !== row.state) out = { state: settleFor(table, healed, botSeat(seats)) };
+    }
+    if (!out && isPause(table, row.state)) out = { state: settleFor(table, advanceFor(table, row.state), botSeat(seats)) };
+    if (!out) out = dueStep(table, seats, row);
+    if (!out) return "nothing due";
+
+    if (await save(table, seats, row, out.state, out.afk ?? row.afk)) {
+      for (const seat of out.kick ?? []) {
+        const user = seats.find((s) => s.seat === seat)?.user_id;
+        if (user) await admin.rpc("abandon_seat", { p_table: tableId, p_user: user });
+      }
+      return "moved";
+    }
+  }
+  return "busy";
+}
+
+/** One round of the clock: closes the tables nobody plays, then looks at the ones that have stood still. */
+async function sweep() {
+  await admin.rpc("close_abandoned_tables");
+  const { data } = await admin
+    .from("table_games")
+    .select("table_id, updated_at")
+    .lt("updated_at", new Date(Date.now() - SWEEP_IDLE_MS).toISOString())
+    .order("updated_at")
+    .limit(SWEEP_LIMIT);
+  const result: Record<string, number> = {};
+  for (const g of data ?? []) {
+    try {
+      const r = await sweepTable(g.table_id as string);
+      result[r] = (result[r] ?? 0) + 1;
+    } catch (e) {
+      result.failed = (result.failed ?? 0) + 1;
+      await logServerError(`sweep ${g.table_id}: ${e instanceof Error ? e.message : String(e)}`, { table: g.table_id });
+    }
+  }
+  return { ok: true, looked: data?.length ?? 0, ...result };
+}
+
+/** The clock proves itself with the key kept in `server_settings` (the cron job reads it from there). */
+async function isClock(req: Request): Promise<boolean> {
+  const given = req.headers.get("x-sweep-key");
+  if (!given) return false;
+  const { data } = await admin.from("server_settings").select("value").eq("key", "sweep_key").maybeSingle();
+  const key = data?.value as string | undefined;
+  if (!key || key.length !== given.length) return false;
+  let diff = 0;
+  for (let i = 0; i < key.length; i++) diff |= key.charCodeAt(i) ^ given.charCodeAt(i);
+  return diff === 0;
+}
+
+// ---- errors ----
+
+/** What the engine says when a player asks for something the rules refuse: the player's mistake, not an error. */
+const RULE_REFUSALS = [
+  "not your turn", "illegal", "not choosing trump", "not bidding", "not playing", "nothing to decide", "no call to answer",
+  "cannot call now", "no var to decide", "nothing above shashi", "no finished trick", "round is not finished", "hand is not finished",
+  "not a betting phase", "cannot", "not enough", "stack",
+];
+
+async function logServerError(message: string, detail: Record<string, unknown> = {}) {
+  try {
+    await admin.from("error_log").insert({ source: "server", message: message.slice(0, 500), detail });
+  } catch {
+    // the log must never break a game
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   try {
+    if (await isClock(req)) return json(await sweep());
     const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "") ?? "";
     const { data } = await admin.auth.getUser(token);
     if (!data.user) return json({ error: "not signed in" }, 401);
@@ -434,7 +533,11 @@ Deno.serve(async (req) => {
   } catch (e) {
     if (e instanceof UserError) return json({ error: e.message }, 400);
     const message = e instanceof Error ? e.message : String(e);
-    // Rule violations thrown by the engine ("not your turn", "illegal play") are the player's mistake.
+    // Rule violations thrown by the engine ("not your turn", "illegal play") are the player's mistake;
+    // anything else (a TypeError, "nothing to play") is ours: it goes to the error log.
+    if (!(e instanceof Error) || e.name !== "Error" || !RULE_REFUSALS.some((r) => message.toLowerCase().includes(r))) {
+      await logServerError(`${e instanceof Error ? e.name : "throw"}: ${message}`);
+    }
     return json({ error: message }, 400);
   }
 });

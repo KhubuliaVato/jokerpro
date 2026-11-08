@@ -3,6 +3,7 @@ import { botAct, STRONG_STYLE } from "./bot";
 import { act, finishTrick, heal, nextRound, teamOf, type BuraAction, type BuraState, type Play } from "./engine";
 
 export { ONLINE_AFK_LIMIT, ONLINE_TURN_SECONDS } from "../joker/online";
+export { heal } from "./engine";
 
 /** What an online Bura table stores in its rules. */
 export interface BuraRules {

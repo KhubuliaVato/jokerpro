@@ -7,6 +7,7 @@ import {
   admin,
   useIsAdmin,
   useRemote,
+  type AdminErrorRow,
   type AdminLogRow,
   type AdminMessage,
   type AdminShopItem,
@@ -30,6 +31,7 @@ const TABS = [
   { id: "tables", label: "მაგიდები" },
   { id: "shop", label: "მაღაზია" },
   { id: "chat", label: "ჩათი" },
+  { id: "errors", label: "შეცდომები" },
   { id: "log", label: "ჟურნალი" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
@@ -49,6 +51,7 @@ const ACTIONS: Record<string, string> = {
   "admin-": "ადმინობა მოეხსნა",
   "table-close": "მაგიდა დაიხურა",
   "message-delete": "შეტყობინება წაიშალა",
+  "errors-clear": "შეცდომები გასუფთავდა",
   price: "ფასი შეიცვალა",
   tier: "ტიპი შეიცვალა",
 };
@@ -130,6 +133,7 @@ export function AdminPage() {
         {tab === "tables" && <TablesTab />}
         {tab === "shop" && <ShopTab />}
         {tab === "chat" && <ChatTab />}
+        {tab === "errors" && <ErrorsTab />}
         {tab === "log" && <LogTab />}
       </div>
     </PageShell>
@@ -672,6 +676,58 @@ function ChatTab() {
             </li>
           ))}
           {data.length === 0 && <li className="text-white/45">შეტყობინებები არ არის</li>}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ErrorsTab() {
+  const { data, error, loading, reload } = useRemote(() => admin<AdminErrorRow[]>("admin_errors", { p_limit: 80 }), "errors");
+  const clear = async () => {
+    if (!window.confirm("ყველა შეცდომის ჩანაწერი წავშალოთ?")) return;
+    try {
+      await admin("admin_clear_errors");
+      reload();
+    } catch {
+      // the list shows the failure on the next load
+    }
+  };
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-white/55">ბოლო 14 დღის შეცდომები ბრაუზერებიდან და თამაშის სერვერიდან, ერთნაირი ერთად დაჯგუფებული. ახალი ზევითაა.</p>
+        <span className="flex gap-2">
+          <button className={SMALL} onClick={reload} disabled={loading}>
+            განახლება
+          </button>
+          <button className={SMALL} onClick={() => void clear()}>
+            გასუფთავება
+          </button>
+        </span>
+      </div>
+      <Failed error={error} />
+      {!data ? (
+        error ? null : <Loading />
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {data.map((e, i) => (
+            <li key={i} className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <span className={`rounded-full px-2 py-0.5 text-[0.65rem] font-extrabold ${e.source === "server" ? "bg-red-500/25 text-red-200" : "bg-sky-400/20 text-sky-200"}`}>{e.source === "server" ? "სერვერი" : "ბრაუზერი"}</span>
+                  <b className="tabular-nums text-amber-200">×{e.n}</b>
+                  <span className="text-xs text-white/45">{e.users} მოთამაშე</span>
+                </span>
+                <span className="text-xs text-white/40">
+                  ბოლოს {ago(e.last)} · {e.url ?? ""}
+                </span>
+              </div>
+              <p className="break-words font-mono text-[0.8rem] text-white/85">{e.message}</p>
+              {typeof e.detail?.stack === "string" && <p className="line-clamp-2 break-all font-mono text-[0.7rem] text-white/40">{e.detail.stack}</p>}
+            </li>
+          ))}
+          {data.length === 0 && <li className="text-white/45">შეცდომები არ არის 🎉</li>}
         </ul>
       )}
     </div>

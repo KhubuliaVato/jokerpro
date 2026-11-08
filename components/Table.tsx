@@ -389,7 +389,7 @@ function TrickArea({ game }: { game: GameState }) {
             }
           >
             <div
-              className={`relative ${avatars?.[p.player]?.play ? `fxp-${avatars[p.player]?.play}` : ""}`}
+              className="relative"
               style={
                 {
                   "--fx": `calc(var(--tcw) * ${from.x})`,
@@ -399,15 +399,18 @@ function TrickArea({ game }: { game: GameState }) {
                 } as React.CSSProperties
               }
             >
-              <CardView
-                // A joker given away ("გატანება") lies face down.
-                card={p.card.joker && p.mode === "low" ? undefined : p.card}
-                size="sm"
-                skin={avatars?.[p.player]?.back}
-                jokerSkin={avatars?.[p.player]?.joker}
-                style={{ "--cw": "var(--tcw)" } as React.CSSProperties}
-                className={`shadow-[0_4px_10px_rgb(0_0_0/0.4)] ${game.trickWinner === p.player ? winClass(avatars?.[p.player]?.fx) : ""}`}
-              />
+              {/* the play effect is cut at the card's edge, so it wraps the card alone: the joker's tag hangs below it */}
+              <div className={`relative ${avatars?.[p.player]?.play ? `fxp-${avatars[p.player]?.play}` : ""}`}>
+                <CardView
+                  // A joker given away ("გატანება") lies face down.
+                  card={p.card.joker && p.mode === "low" ? undefined : p.card}
+                  size="sm"
+                  skin={avatars?.[p.player]?.back}
+                  jokerSkin={avatars?.[p.player]?.joker}
+                  style={{ "--cw": "var(--tcw)" } as React.CSSProperties}
+                  className={`shadow-[0_4px_10px_rgb(0_0_0/0.4)] ${game.trickWinner === p.player ? winClass(avatars?.[p.player]?.fx) : ""}`}
+                />
+              </div>
               {p.card.joker && <JokerBadge mode={p.mode} suit={p.suit} />}
             </div>
           </div>

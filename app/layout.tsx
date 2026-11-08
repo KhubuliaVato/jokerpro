@@ -3,6 +3,8 @@ import { Noto_Sans_Georgian } from "next/font/google";
 import Script from "next/script";
 import { preconnect } from "react-dom";
 import { BanBanner } from "@/components/BanBanner";
+import { ErrorReporter } from "@/components/ErrorReporter";
+import { FriendsDock } from "@/components/FriendsDock";
 import { GiftPopup } from "@/components/GiftPopup";
 import { InviteWelcome } from "@/components/InviteWelcome";
 import { NicknamePrompt } from "@/components/NicknamePrompt";
@@ -44,11 +46,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         </Script>
         <LangProvider>
           <AuthProvider>
+            <ErrorReporter />
             <BanBanner />
             <InviteWelcome />
             <GiftPopup />
             <NicknamePrompt />
             <PageFade>{children}</PageFade>
+            <FriendsDock />
           </AuthProvider>
         </LangProvider>
       </body>

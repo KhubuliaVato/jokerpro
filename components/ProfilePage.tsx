@@ -15,6 +15,7 @@ import { PageShell } from "./PageShell";
 import { InviteCard } from "./InviteCard";
 import { PlayerSearch } from "./PlayerSearch";
 import { StatsSection } from "./StatsSection";
+import { CityPicker } from "./CityBoard";
 import { BTN_GHOST, BTN_PRIMARY, HEADER_BTN, HEADER_MENU, INPUT, rise } from "./ui";
 
 export function ProfilePage() {
@@ -395,6 +396,11 @@ function EditProfile({ onDone }: { onDone: () => void }) {
             </Link>
           </p>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-sm text-white/45">{t("ქალაქი, რომლისთვისაც თამაშობთ (ქალაქების ლიდერბორდი)", "The city you play for (city leaderboard)", "Город, за который вы играете (рейтинг городов)")}</span>
+        <CityPicker />
       </div>
 
       <div className="flex flex-col gap-3">
