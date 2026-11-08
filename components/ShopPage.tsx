@@ -1,5 +1,6 @@
 "use client";
 
+import { RARITIES, rarityOf, RARITY_LOOK } from "@/lib/rarity";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { PROFILE_CHANGED, useAuth } from "@/lib/auth/AuthProvider";
@@ -85,6 +86,15 @@ export function ShopPage() {
   const [section, setSection] = useState<SectionId | "packs" | null>(null);
   // the home page shows one pack, a different one each visit; all of them are under the Packs tab
   const [packSeed] = useState(() => Math.random());
+  // how the items of a category are ordered
+  const [sort, setSort] = useState<"rarity-up" | "rarity-down" | "price-up" | "price-down">("rarity-down");
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortOptions: { id: typeof sort; label: string }[] = [
+    { id: "rarity-up", label: t("ტაიერი: დაბლიდან მაღლა", "Tier: low to high", "Уровень: по возрастанию") },
+    { id: "rarity-down", label: t("ტაიერი: მაღლიდან დაბლა", "Tier: high to low", "Уровень: по убыванию") },
+    { id: "price-up", label: t("ფასი: იაფიდან ძვირისკენ", "Price: low to high", "Цена: по возрастанию") },
+    { id: "price-down", label: t("ფასი: ძვირიდან იაფისკენ", "Price: high to low", "Цена: по убыванию") },
+  ];
   const [bundles, setBundles] = useState<Bundle[]>([]);
 
   const userId = user?.id ?? null;
@@ -219,6 +229,11 @@ export function ShopPage() {
   };
 
   const pack = bundles.length > 0 ? bundles[Math.floor(packSeed * bundles.length)] : null;
+  const sorted = (items: StockItem[]) => {
+    const r = (i: StockItem) => RARITIES.indexOf(rarityOf(i.id));
+    const dir = sort.endsWith("down") ? -1 : 1;
+    return [...items].sort((a, b) => (sort.startsWith("rarity") ? dir * (r(a) - r(b)) || a.price - b.price : dir * (a.price - b.price) || r(a) - r(b)));
+  };
   const weekly = (stock ?? []).filter((i) => i.tier === "rotating");
   const endsAt = weekly[0]?.ends_at ?? null;
 
@@ -355,10 +370,15 @@ export function ShopPage() {
     return (
       <li
         key={item.id}
-        className={`flex flex-col items-center gap-3 rounded-2xl border bg-white/[0.04] p-4 text-center transition-colors duration-200 ${worn ? "border-amber-300/70" : "border-white/10 hover:border-amber-300/50"}`}
+        className={`tier-${rarityOf(item.id)} flex flex-col items-center gap-3 rounded-2xl border bg-white/[0.04] p-4 text-center transition-colors duration-200 ${worn ? "ring-2 ring-amber-300/80" : ""}`}
       >
         {previewOf(item)}
-        <b className="text-base font-extrabold leading-tight">{labelOf(item)}</b>
+        <div className="flex flex-col items-center">
+          <b className="text-base font-extrabold leading-tight">{labelOf(item)}</b>
+          <span className="text-[0.65rem] font-extrabold uppercase tracking-wider" style={{ color: RARITY_LOOK[rarityOf(item.id)].color === "#a21caf" ? "#d946ef" : RARITY_LOOK[rarityOf(item.id)].color }}>
+            {t(...RARITY_LOOK[rarityOf(item.id)].label)}
+          </span>
+        </div>
         {actionFor(item)}
         {note && <span className={`text-xs font-bold ${note.ok ? "text-emerald-300" : "text-red-300"}`}>{note.text}</span>}
       </li>
@@ -460,7 +480,7 @@ export function ShopPage() {
             <li
               key={id}
               title={label}
-              className="group relative flex flex-col items-center gap-2 rounded-3xl px-1.5 pb-2.5 pt-3 transition-transform duration-300 hover:-translate-y-1.5 hover:scale-[1.06]"
+              className={`tier-${rarityOf(id)} group relative flex flex-col items-center gap-2 rounded-3xl border px-1.5 pb-2.5 pt-3 transition-transform duration-300 hover:-translate-y-1.5 hover:scale-[1.06]`}
             >
               {/* a soft glow in the item's own colour, and the picture lifted off it like the big cards */}
               <span
@@ -520,7 +540,7 @@ export function ShopPage() {
       ) : (
         <>
           {/* one row of tabs instead of a wall of boxes */}
-          <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0" aria-label={t("კატეგორიები", "Categories", "Категории")} style={rise(2)}>
+          <nav className="relative z-20 -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0" aria-label={t("კატეგორიები", "Categories", "Категории")} style={rise(2)}>
             {tabBtn("home", section === null, () => setSection(null), t("მთავარი", "Home", "Главная"))}
             {bundles.length > 0 && tabBtn("packs", section === "packs", () => setSection("packs"), t("პაკები", "Packs", "Наборы"), bundles.length)}
             {TAB_IDS.filter((id) => (stock ?? []).some((i) => i.kind === SECTIONS[id].kind)).map((id) =>
@@ -537,6 +557,55 @@ export function ShopPage() {
                 {NICKNAME_PRICE}
               </span>
             </button>
+            {section !== null && section !== "packs" && (
+              <div className="relative flex-none self-center sm:ml-auto">
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={sortOpen}
+                  onClick={() => setSortOpen((o) => !o)}
+                  className={`flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-extrabold transition-colors ${
+                    sortOpen ? "border-amber-300/70 bg-amber-300/15 text-amber-200" : "border-white/12 bg-white/[0.04] text-white/80 hover:border-white/35 hover:text-white"
+                  }`}
+                >
+                  <span className="text-white/45">{t("დალაგება", "Sort", "Сортировка")}</span>
+                  {sortOptions.find((o) => o.id === sort)?.label}
+                  <svg viewBox="0 0 12 12" className={`size-3 transition-transform duration-200 ${sortOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M2.5 4.5 6 8l3.5-3.5" />
+                  </svg>
+                </button>
+                {sortOpen && (
+                  <>
+                    <button type="button" aria-label={t("დახურვა", "Close", "Закрыть")} tabIndex={-1} onClick={() => setSortOpen(false)} className="fixed inset-0 z-30 cursor-default" />
+                    <ul
+                      role="listbox"
+                      className="absolute right-0 top-full z-40 mt-2 flex w-[18.5rem] max-w-[calc(100vw-2rem)] origin-top-right flex-col gap-1 rounded-3xl border border-white/15 bg-[#0d0a1f]/95 p-2 shadow-[0_24px_60px_-16px_rgb(0_0_0/0.8)] backdrop-blur-xl"
+                      style={{ animation: "sort-pop 0.16s ease-out both" }}
+                    >
+                      {sortOptions.map((o) => (
+                        <li key={o.id} role="option" aria-selected={o.id === sort}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSort(o.id);
+                              setSortOpen(false);
+                            }}
+                            className={`flex w-full items-center justify-between gap-3 rounded-2xl px-3.5 py-2.5 text-left text-sm font-extrabold transition-colors ${
+                              o.id === sort ? "bg-amber-300 text-black" : "text-white/80 hover:bg-white/10 hover:text-white"
+                            }`}
+                          >
+                            {o.label}
+                            <svg viewBox="0 0 12 12" className={`size-3 flex-none ${o.id === sort ? "" : "opacity-0"}`} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <path d="M2 6.5 4.8 9 10 3" />
+                            </svg>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            )}
           </nav>
 
           {section === null ? (
@@ -581,7 +650,7 @@ export function ShopPage() {
                 </p>
               )}
               {section === "sounds" && <p className="text-white/50">{t("▶ დააჭირეთ და მოუსმინეთ. ხმას მხოლოდ თქვენ გაიგონებთ.", "Press ▶ to listen. Only you hear it.", "Нажмите ▶, чтобы послушать. Слышите только вы.")}</p>}
-              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{(stock ?? []).filter((i) => i.kind === SECTIONS[section].kind).map(card)}</ul>
+              <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">{sorted((stock ?? []).filter((i) => i.kind === SECTIONS[section].kind)).map(card)}</ul>
             </section>
           )}
         </>

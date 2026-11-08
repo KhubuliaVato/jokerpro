@@ -1,5 +1,6 @@
 "use client";
 
+import { rarityOf, RARITY_LOOK } from "@/lib/rarity";
 import Link from "next/link";
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { PROFILE_CHANGED } from "@/lib/auth/AuthProvider";
@@ -17,24 +18,6 @@ import { GiftDialog } from "./GiftDialog";
 import { Nick } from "./Nick";
 
 const KING = { joker: false, suit: "H", rank: 13, id: "H13" } as const;
-
-type Rarity = "common" | "rare" | "epic" | "legendary";
-
-/** How hard an item is to earn: the four price tiers of the shop. */
-const RARITY: Record<Rarity, string[]> = {
-  common: ["blue", "purple", "graphite", "dusk", "bronze", "f_laurel", "f_gold", "n_gold", "r_bravo", "r_hearts", "t_rose", "t_tomato", "t_egg", "s_wood", "s_soft"],
-  rare: ["crimson", "emerald", "suits", "waves", "f_neon", "f_hex", "f_octa", "n_frost", "n_neon", "n_terminal", "n_chrome", "p_matrix", "s_matrix", "r_pill", "p_night", "s_night", "r_moon", "p_shatter", "s_ice", "r_cold", "p_carbon", "s_carbon", "r_flag", "p_sakura", "s_sakura", "r_petals", "w_snow", "w_hearts", "r_fire", "r_mic", "t_snowball", "t_pie", "t_bouquet", "p_spark", "s_arcade"],
-  epic: ["snow", "stars", "neon", "sakura", "damask", "frost", "gilded", "aurora", "northern", "embers", "f_frost", "f_flame", "f_squircle", "f_star", "n_fire", "n_glitch", "n_ghost", "matrixbg", "f_matrix", "n_matrix", "w_matrix", "lullaby", "f_moon", "n_night", "w_night", "glacier", "f_ice", "n_glacier", "w_ice", "carbonbg", "f_carbon", "n_carbon", "w_carbon", "blossom", "f_sakura", "n_sakura", "w_sakura", "w_coins", "w_lightning", "w_sparks", "w_confetti", "w_gold", "r_fireworks", "p_frost", "p_wave", "s_crystal"],
-  legendary: ["matrix", "obsidian", "carbon", "midnight", "f_royal", "f_seal", "n_rainbow", "n_sparkle", "w_fire", "r_crown", "p_fire", "w_rainbow"],
-};
-const rarityOf = (id: string): Rarity => (Object.keys(RARITY) as Rarity[]).find((r) => RARITY[r].includes(id)) ?? "common";
-
-const LOOK: Record<Rarity, { color: string; label: [string, string, string] }> = {
-  common: { color: "#94a3b8", label: ["ჩვეულებრივი", "Common", "Обычный"] },
-  rare: { color: "#38bdf8", label: ["იშვიათი", "Rare", "Редкий"] },
-  epic: { color: "#a78bfa", label: ["ეპიკური", "Epic", "Эпический"] },
-  legendary: { color: "#fbbf24", label: ["ლეგენდარული", "Legendary", "Легендарный"] },
-};
 
 type Cat = "all" | "decks" | "frames" | "names" | "effects" | "themes" | "reactions" | "throws" | "plays" | "sounds";
 
@@ -107,12 +90,12 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
   const wornTheme = themeById(theme);
 
   const tile = (key: string, art: React.ReactNode, label: string, id: string | null, isWorn: boolean, action: React.ReactNode) => {
-    const r = id ? LOOK[rarityOf(id)] : null;
+    const r = id ? RARITY_LOOK[rarityOf(id)] : null;
     const color = r?.color ?? "#64748b";
     return (
       <li
         key={key}
-        className={`group relative flex flex-col items-center gap-2 overflow-hidden rounded-3xl border p-3 pt-3 text-center transition-[translate,box-shadow,border-color] duration-300 hover:-translate-y-1 ${isWorn ? "border-amber-300/70 shadow-[0_0_0_1px_rgb(252_211_77/0.35),0_20px_40px_-22px_rgb(252_211_77/0.5)]" : "border-white/10 hover:border-white/25"}`}
+        className={`group relative flex flex-col items-center gap-2 overflow-hidden rounded-3xl border p-3 pt-3 text-center transition-[translate,box-shadow,border-color] duration-300 hover:-translate-y-1 ${id ? `tier-${rarityOf(id)}` : "border-white/10"} ${isWorn ? "ring-2 ring-amber-300/80" : ""}`}
         style={{ background: `linear-gradient(180deg, ${color}1f, rgb(255 255 255 / 0.02) 55%)` }}
       >
         <span className="absolute inset-x-6 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${color}, transparent)` }} />
@@ -123,7 +106,7 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
         </div>
         <div className="flex min-h-11 flex-col items-center justify-center">
           <b className="text-base font-extrabold leading-tight">{label}</b>
-          {r && <span className="text-[0.65rem] font-extrabold uppercase tracking-wider" style={{ color }}>{t(...LOOK[rarityOf(id!)].label)}</span>}
+          {r && <span className="text-[0.65rem] font-extrabold uppercase tracking-wider" style={{ color }}>{t(...RARITY_LOOK[rarityOf(id!)].label)}</span>}
         </div>
         {action}
         {owner && id && (

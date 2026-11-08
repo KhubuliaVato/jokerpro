@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useIsAdmin } from "@/lib/admin";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useT } from "@/lib/i18n";
@@ -127,7 +128,71 @@ export function SiteHeader() {
             </Link>
           )
         )}
+        <MobileMenu items={NAV.filter((n) => (!n.signedIn || user) && (!n.adminOnly || isAdmin))} />
       </div>
     </header>
+  );
+}
+
+/** On a phone the links do not fit in the bar: a burger at the far right opens them as a list. */
+function MobileMenu({ items }: { items: typeof NAV }) {
+  const t = useT();
+  const path = usePathname();
+  // remembers on which page it was opened, so that going to another page closes it by itself
+  const [openOn, setOpenOn] = useState<string | null>(null);
+  const open = openOn === path;
+
+  useEffect(() => {
+    if (!open) return;
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpenOn(null);
+    document.addEventListener("keydown", esc);
+    return () => document.removeEventListener("keydown", esc);
+  }, [open]);
+
+  return (
+    <div className="relative md:hidden">
+      <button
+        type="button"
+        aria-label={t("მენიუ", "Menu", "Меню")}
+        aria-expanded={open}
+        onClick={() => setOpenOn(open ? null : path)}
+        className={`grid size-11 flex-none place-items-center rounded-full border transition-colors duration-200 ${
+          open ? "border-amber-300/60 bg-amber-300/15 text-amber-200" : "border-white/12 bg-white/[0.05] text-white/80 active:bg-white/10"
+        }`}
+      >
+        <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+          <path d="M4 7h16" className="origin-center transition-transform duration-300" style={open ? { transform: "translateY(5px) rotate(45deg)" } : undefined} />
+          <path d="M4 12h16" className="transition-opacity duration-200" style={{ opacity: open ? 0 : 1 }} />
+          <path d="M4 17h16" className="origin-center transition-transform duration-300" style={open ? { transform: "translateY(-5px) rotate(-45deg)" } : undefined} />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <button type="button" aria-label={t("დახურვა", "Close", "Закрыть")} tabIndex={-1} onClick={() => setOpenOn(null)} className="fixed inset-0 z-40 cursor-default bg-black/40 backdrop-blur-[2px]" />
+          <nav
+            aria-label={t("მენიუ", "Menu", "Меню")}
+            className="absolute right-0 top-full z-50 mt-3 flex w-[min(19rem,calc(100vw-2rem))] origin-top-right flex-col gap-1 rounded-3xl border border-white/15 bg-[#0d0a1f]/95 p-2 shadow-[0_28px_70px_-18px_rgb(0_0_0/0.85)] backdrop-blur-xl"
+            style={{ animation: "sort-pop 0.18s ease-out both" }}
+          >
+            {items.map((n) => {
+              const active = path === n.href || path.startsWith(`${n.href}/`);
+              return (
+                <Link
+                  key={n.href}
+                  href={n.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex h-14 items-center gap-3.5 rounded-2xl px-4 text-base font-extrabold transition-colors ${
+                    active ? "bg-amber-300 text-black" : "text-white/85 active:bg-white/10"
+                  }`}
+                >
+                  {n.icon}
+                  {t(n.ka, n.en, n.ru)}
+                </Link>
+              );
+            })}
+          </nav>
+        </>
+      )}
+    </div>
   );
 }

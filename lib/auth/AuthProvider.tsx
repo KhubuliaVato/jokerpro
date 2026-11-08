@@ -144,7 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { data: { nickname: name } },
+      // the link in the confirmation email brings the player back to the sign-in page of this very site
+      options: { data: { nickname: name }, emailRedirectTo: `${window.location.origin}/login` },
     });
     if (error) return { error: authMessage(error.message), needsConfirm: false };
     return { error: null, needsConfirm: !data.session };

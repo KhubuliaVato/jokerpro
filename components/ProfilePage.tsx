@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useT } from "@/lib/i18n";
 import { resizeToSquare } from "@/lib/image";
+import { motionOff, setMotionOff } from "@/lib/motion";
 import { loadResults } from "@/lib/results";
 import type { GameResult } from "@/lib/stats";
 import { getSupabase } from "@/lib/supabase";
@@ -111,6 +112,7 @@ export function ProfilePage() {
 function ProfileMenu({ onEdit, onSearch, onSignOut, onDelete }: { onEdit: () => void; onSearch: () => void; onSignOut: () => void; onDelete: () => void }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const [still, setStill] = useState(false);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -135,7 +137,10 @@ function ProfileMenu({ onEdit, onSearch, onSignOut, onDelete }: { onEdit: () => 
         type="button"
         aria-label={t("პარამეტრები", "Settings", "Настройки")}
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setStill(motionOff());
+          setOpen((o) => !o);
+        }}
         className={`grid size-11 place-items-center text-white/75 ${HEADER_BTN}`}
       >
         <svg {...icon}>
@@ -152,6 +157,22 @@ function ProfileMenu({ onEdit, onSearch, onSignOut, onDelete }: { onEdit: () => 
           <button type="button" className={item} onClick={() => { setOpen(false); onSearch(); }}>
             <svg {...icon}><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
             {t("მოთამაშის ძებნა", "Find a player", "Найти игрока")}
+          </button>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!still}
+            className={item}
+            onClick={() => {
+              setMotionOff(!still);
+              setStill(!still);
+            }}
+          >
+            <svg {...icon}><path d="M3 12c2.5-6 5-6 7.5 0s5 6 7.5 0 2-3 3-3" /></svg>
+            <span className="flex-1">{t("ანიმაციები", "Animations", "Анимации")}</span>
+            <span className={`relative h-5 w-9 flex-none rounded-full transition-colors ${still ? "bg-white/20" : "bg-amber-300"}`}>
+              <span className={`absolute top-0.5 size-4 rounded-full bg-white shadow transition-[left] duration-200 ${still ? "left-0.5" : "left-[1.2rem]"}`} />
+            </span>
           </button>
           <button type="button" className={`${item} text-red-300 hover:!bg-red-400/10`} onClick={() => { setOpen(false); onSignOut(); }}>
             <svg {...icon}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></svg>

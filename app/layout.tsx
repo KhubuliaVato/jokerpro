@@ -40,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body>
         {/* paint the saved background colour before the first frame */}
         <Script id="theme-init" strategy="beforeInteractive">
-          {`try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t}catch(e){}`}
+          {`try{var t=localStorage.getItem("theme");if(t)document.documentElement.dataset.theme=t;if(localStorage.getItem("motion")==="off")document.documentElement.dataset.motion="off"}catch(e){}`}
         </Script>
         <LangProvider>
           <AuthProvider>

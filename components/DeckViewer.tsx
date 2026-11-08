@@ -1,5 +1,6 @@
 "use client";
 
+import { motionOff } from "@/lib/motion";
 import { useEffect, useRef, useState } from "react";
 import type { Card } from "@/lib/joker/cards";
 import { useT } from "@/lib/i18n";
@@ -53,7 +54,7 @@ export function DeckViewer({
       if (auto.current) setAngle((a) => ({ x: a.x, y: a.y + dt * 0.03 }));
       raf = requestAnimationFrame(spin);
     };
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) raf = requestAnimationFrame(spin);
+    if (!motionOff()) raf = requestAnimationFrame(spin);
     return () => cancelAnimationFrame(raf);
   }, []);
 

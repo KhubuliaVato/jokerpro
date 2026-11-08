@@ -1,5 +1,6 @@
 "use client";
 
+import { motionOff } from "@/lib/motion";
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { THEMES } from "@/lib/themes";
@@ -10,7 +11,7 @@ export function ThemeShowcase() {
   const [i, setI] = useState(0);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (motionOff()) return;
     const id = setInterval(() => setI((n) => (n + 1) % THEMES.length), 2400);
     return () => clearInterval(id);
   }, []);

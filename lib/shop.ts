@@ -34,6 +34,7 @@ export interface StockItem {
   tier: "permanent" | "rotating";
   /** When a rotating item leaves the shop; null for a permanent one. */
   ends_at: string | null;
+  rarity: "standard" | "epic" | "legendary" | "ultimate" | "mythic";
 }
 
 /** What is on sale now: the permanent items and this week's rotating ones. */
