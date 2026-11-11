@@ -184,6 +184,21 @@ export interface AdminErrorRow {
   users: number;
 }
 
+export interface Analytics {
+  views: number;
+  sessions: number;
+  players: number;
+  today: number;
+  live: number;
+  since: string | null;
+  days: { d: string; sessions: number; views: number }[];
+  countries: { country: string; sessions: number; views: number; players: number }[];
+  pages: { path: string; views: number; sessions: number }[];
+  devices: Record<string, number>;
+  referrers: { referrer: string; sessions: number }[];
+  langs: Record<string, number>;
+}
+
 export interface AdminLogRow {
   id: number;
   action: string;

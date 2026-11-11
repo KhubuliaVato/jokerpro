@@ -3,6 +3,7 @@ import { Noto_Sans_Georgian } from "next/font/google";
 import Script from "next/script";
 import { preconnect } from "react-dom";
 import { BanBanner } from "@/components/BanBanner";
+import { Analytics } from "@/components/Analytics";
 import { ErrorReporter } from "@/components/ErrorReporter";
 import { FriendsDock } from "@/components/FriendsDock";
 import { GiftPopup } from "@/components/GiftPopup";
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <LangProvider>
           <AuthProvider>
             <ErrorReporter />
+            <Analytics />
             <BanBanner />
             <InviteWelcome />
             <GiftPopup />

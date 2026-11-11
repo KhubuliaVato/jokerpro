@@ -7,6 +7,7 @@ import {
   admin,
   useIsAdmin,
   useRemote,
+  type Analytics,
   type AdminErrorRow,
   type AdminLogRow,
   type AdminMessage,
@@ -31,6 +32,7 @@ const TABS = [
   { id: "tables", label: "მაგიდები" },
   { id: "shop", label: "მაღაზია" },
   { id: "chat", label: "ჩათი" },
+  { id: "analytics", label: "ანალიტიკა" },
   { id: "errors", label: "შეცდომები" },
   { id: "log", label: "ჟურნალი" },
 ] as const;
@@ -133,6 +135,7 @@ export function AdminPage() {
         {tab === "tables" && <TablesTab />}
         {tab === "shop" && <ShopTab />}
         {tab === "chat" && <ChatTab />}
+        {tab === "analytics" && <AnalyticsTab />}
         {tab === "errors" && <ErrorsTab />}
         {tab === "log" && <LogTab />}
       </div>
@@ -678,6 +681,125 @@ function ChatTab() {
           {data.length === 0 && <li className="text-white/45">შეტყობინებები არ არის</li>}
         </ul>
       )}
+    </div>
+  );
+}
+
+const DEVICE_NAMES: Record<string, string> = { mobile: "ტელეფონი", desktop: "კომპიუტერი", tablet: "ტაბლეტი" };
+const LANG_NAMES: Record<string, string> = { ka: "ქართული", en: "English", ru: "Русский" };
+
+/** The flag of a two-letter country code. */
+const flag = (code: string) => (/^[A-Z]{2}$/.test(code) ? String.fromCodePoint(...[...code].map((c) => 127397 + c.charCodeAt(0))) : "🌐");
+
+function countryName(code: string): string {
+  if (code === "??") return "უცნობი";
+  try {
+    return new Intl.DisplayNames(["ka"], { type: "region" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+function Bars({ rows, total }: { rows: { label: React.ReactNode; value: number; hint?: string }[]; total: number }) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  return (
+    <ul className="flex flex-col gap-2">
+      {rows.map((r, i) => (
+        <li key={i} className="flex flex-col gap-1">
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="min-w-0 truncate font-bold">{r.label}</span>
+            <span className="flex-none tabular-nums text-white/70">
+              <b className="text-amber-200">{num(r.value)}</b> <span className="text-xs text-white/40">{total > 0 ? `${Math.round((r.value / total) * 100)}%` : ""}</span>
+              {r.hint && <span className="ml-2 text-xs text-white/40">{r.hint}</span>}
+            </span>
+          </div>
+          <span className="block h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+            <span className="block h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300" style={{ width: `${Math.max(2, (r.value / max) * 100)}%` }} />
+          </span>
+        </li>
+      ))}
+      {rows.length === 0 && <li className="text-sm text-white/45">მონაცემი ჯერ არ არის</li>}
+    </ul>
+  );
+}
+
+function AnalyticsTab() {
+  const [days, setDays] = useState(30);
+  const { data, error, loading, reload } = useRemote(() => admin<Analytics>("admin_analytics", { p_days: days }), `analytics:${days}`);
+  if (!data) return error ? <Failed error={error} /> : <Loading />;
+  const max = Math.max(1, ...data.days.map((d) => d.sessions));
+  const deviceTotal = Object.values(data.devices).reduce((a, b) => a + b, 0);
+  const langTotal = Object.values(data.langs).reduce((a, b) => a + b, 0);
+  return (
+    <div className="flex flex-col gap-6">
+      <Failed error={error} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex gap-2">
+          {[7, 30, 90].map((n) => (
+            <button key={n} type="button" onClick={() => setDays(n)} className={`rounded-xl border px-3 py-1.5 text-sm font-bold ${days === n ? "border-amber-300 bg-amber-300 text-black" : "border-white/15 text-white/70 hover:border-white/40"}`}>
+              {n} დღე
+            </button>
+          ))}
+        </span>
+        <button className={SMALL} onClick={reload} disabled={loading}>
+          {loading ? "იტვირთება…" : "განახლება"}
+        </button>
+      </div>
+      <p className="text-sm text-white/50">
+        ვიზიტორი = ბრაუზერის ერთი ჩანართის სესია. ქვეყანას CDN-ი ადგენს IP-ით, მაგრამ IP არსად ინახება. ლოკალური სერვერიდან და ბოტებიდან ნახვები არ ითვლება.
+        {data.since ? ` ჩანაწერები იწყება ${when(data.since)}-დან.` : ""}
+      </p>
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Stat label="ახლა საიტზე" value={num(data.live)} hint="ბოლო 5 წუთი" accent />
+        <Stat label="დღეს ვიზიტორი" value={num(data.today)} hint="თბილისის დროით" />
+        <Stat label={`ვიზიტორი · ${days} დღე`} value={num(data.sessions)} hint={`${num(data.views)} ნახვა`} />
+        <Stat label="შესული მოთამაშე" value={num(data.players)} hint={`${days} დღეში`} />
+      </div>
+
+      <Panel title={`ვიზიტორები დღეების მიხედვით · ${Math.min(days, 90)} დღე`}>
+        <div className="flex h-40 items-end gap-[3px]">
+          {data.days.slice(-Math.min(days, 90)).map((d) => (
+            <div key={d.d} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1" title={`${d.d}: ${d.sessions} ვიზიტორი, ${d.views} ნახვა`}>
+              <span className="w-full rounded-t-sm bg-gradient-to-t from-amber-500 to-amber-300" style={{ height: `${Math.max(2, (d.sessions / max) * 100)}%`, opacity: d.sessions ? 1 : 0.25 }} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-1.5 flex justify-between text-[0.65rem] text-white/35">
+          <span>{data.days.slice(-Math.min(days, 90))[0]?.d.slice(5)}</span>
+          <span>{data.days[data.days.length - 1]?.d.slice(5)}</span>
+        </div>
+      </Panel>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Panel title="ქვეყნები">
+          <Bars
+            total={data.sessions}
+            rows={data.countries.map((c) => ({
+              label: (
+                <span>
+                  <span className="mr-2 text-lg">{flag(c.country)}</span>
+                  {countryName(c.country)}
+                </span>
+              ),
+              value: c.sessions,
+              hint: c.players > 0 ? `${c.players} მოთამაშე` : undefined,
+            }))}
+          />
+        </Panel>
+        <Panel title="გვერდები">
+          <Bars total={data.views} rows={data.pages.map((p) => ({ label: <span className="font-mono text-[0.85rem]">{p.path}</span>, value: p.views, hint: `${p.sessions} ვიზიტ.` }))} />
+        </Panel>
+        <Panel title="მოწყობილობა">
+          <Bars total={deviceTotal} rows={Object.entries(data.devices).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: DEVICE_NAMES[k] ?? k, value: v }))} />
+        </Panel>
+        <Panel title="საიტის ენა">
+          <Bars total={langTotal} rows={Object.entries(data.langs).sort((a, b) => b[1] - a[1]).map(([k, v]) => ({ label: LANG_NAMES[k] ?? k, value: v }))} />
+        </Panel>
+        <Panel title="საიდან მოვიდნენ" className="lg:col-span-2">
+          <Bars total={data.referrers.reduce((a, r) => a + r.sessions, 0)} rows={data.referrers.map((r) => ({ label: r.referrer, value: r.sessions }))} />
+        </Panel>
+      </div>
     </div>
   );
 }

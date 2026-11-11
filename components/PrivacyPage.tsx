@@ -63,6 +63,11 @@ const SECTIONS: { title: Text; body: Text[] }[] = [
         "Данные хранятся на серверах Supabase в Европе (Франкфурт), сайт размещён на Netlify. Google участвует только когда вы входите через него.",
       ],
       [
+        "ვთვლით საიტის გვერდების ნახვებს, რომ გავიგოთ, რომელი ქვეყნიდან და რომელ გვერდებზე შემოდიან მოთამაშეები. ამისთვის ვინახავთ მხოლოდ ქვეყანას, გვერდს, მოწყობილობის სახეობას და ბრაუზერის ჩანართისთვის შემთხვევით ნომერს. IP მისამართს, ქუქის ან სხვა მოწყობილობის მონაცემებს არ ვინახავთ.",
+        "We count page views to learn which countries and pages players come from. We keep only the country, the page, the kind of device and a random number for the browser tab. We do not store your IP address, cookies or other device data.",
+        "Мы считаем просмотры страниц, чтобы понимать, из каких стран и на какие страницы приходят игроки. Сохраняем только страну, страницу, тип устройства и случайный номер вкладки. IP-адрес, cookie и другие данные устройства мы не храним.",
+      ],
+      [
         "ბრაუზერში ვინახავთ მხოლოდ საჭიროს: შესვლის სესიას, ენას, არჩეულ ფონს და მსგავს პარამეტრებს. სარეკლამო თრექერებს არ ვიყენებთ.",
         "In your browser we keep only what is needed: your sign-in session, language, chosen background and similar settings. We use no advertising trackers.",
         "В браузере мы храним только необходимое: сессию входа, язык, выбранный фон и подобные настройки. Рекламных трекеров нет.",
