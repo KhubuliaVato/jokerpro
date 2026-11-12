@@ -7,7 +7,10 @@ import { formatDate } from "@/lib/format";
 import { rankFor } from "@/lib/ranks";
 import type { RatingRow } from "@/lib/ratings";
 import type { PlayerSummary } from "@/lib/search";
+import { levelColor } from "@/lib/level";
 import { Avatar } from "./Avatar";
+import { FramePicker } from "./FramePicker";
+import { useLevel } from "./useLevel";
 import { Nick } from "./Nick";
 import { useWorn } from "./useWorn";
 import { RankEmblem } from "./RankEmblem";
@@ -52,6 +55,7 @@ export function PlayerHero({
   position,
   gameSwitch,
   actions,
+  owner = false,
 }: {
   player: PlayerSummary | null;
   /** Shown before the membership date (e.g. the e-mail on one's own profile). */
@@ -62,9 +66,13 @@ export function PlayerHero({
   /** The game pills: the rank on the card belongs to the chosen game. */
   gameSwitch: React.ReactNode;
   actions?: React.ReactNode;
+  /** One's own page: the photo opens the frame chooser. */
+  owner?: boolean;
 }) {
   const t = useT();
   const worn = useWorn(player?.id);
+  const lv = useLevel(player?.id);
+  const [picking, setPicking] = useState(false);
   const points = rating?.rating ?? 50;
   const { rank, next, progress, toNext } = rankFor(points);
   return (
@@ -82,7 +90,24 @@ export function PlayerHero({
           <div className="relative flex-none">
             <div className="absolute inset-0 scale-125 rounded-full bg-amber-300/20 blur-2xl" />
             <div className="relative rounded-full p-1 max-sm:[&_.avatar-face]:size-24! max-sm:[&_.avatar-face]:text-5xl!" style={{ background: `linear-gradient(160deg, ${rank.accent}, ${rank.accent}33)` }}>
-              <Avatar size="xl" color={player?.avatar_color} icon={player?.avatar_icon} url={player?.avatar_url} frame={worn.frame} />
+              {owner && player ? (
+                <button
+                  type="button"
+                  onClick={() => setPicking(true)}
+                  aria-label={t("ჩარჩოს არჩევა", "Choose a frame", "Выбрать рамку")}
+                  className="group relative block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                >
+                  <Avatar size="xl" color={player.avatar_color} icon={player.avatar_icon} url={player.avatar_url} frame={worn.frame} />
+                  <span className="absolute inset-0 grid place-items-center rounded-full bg-black/55 text-center text-sm font-bold leading-tight opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 max-sm:opacity-0">
+                    {t("ჩარჩო", "Frame", "Рамка")}
+                  </span>
+                  <span aria-hidden className="absolute -right-0.5 top-1 grid size-7 place-items-center rounded-full border-2 border-black/30 bg-amber-300 text-black shadow-lg">
+                    <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" /></svg>
+                  </span>
+                </button>
+              ) : (
+                <Avatar size="xl" color={player?.avatar_color} icon={player?.avatar_icon} url={player?.avatar_url} frame={worn.frame} />
+              )}
             </div>
           </div>
           <div className="min-w-0">
@@ -91,9 +116,27 @@ export function PlayerHero({
               {subtitle && <span className="block truncate">{subtitle}</span>}
               {player && <span className="block">{t(`წევრია ${formatDate(new Date(player.created_at))}-დან`, `Member since ${formatDate(new Date(player.created_at))}`, `Участник с ${formatDate(new Date(player.created_at))}`)}</span>}
             </p>
+            {player && (
+              <div className="mt-3 flex items-center justify-center gap-3 sm:justify-start" title={`${lv.xp} XP`}>
+                <span className="h-2 w-40 overflow-hidden rounded-full bg-white/10 sm:w-52">
+                  <span className="block h-full rounded-full transition-[width] duration-700 ease-out" style={{ width: `${Math.round(lv.progress * 100)}%`, background: `linear-gradient(90deg, ${levelColor(lv.level)}88, ${levelColor(lv.level)})` }} />
+                </span>
+                <span className="text-xs tabular-nums text-white/50">{lv.max ? t("მაქსიმუმი", "Max level", "Максимум") : `${lv.into} / ${lv.span} XP`}</span>
+              </div>
+            )}
             <div className="mt-4 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
               {player && <CopyLink id={player.id} />}
               {actions}
+              {player && (
+                <span
+                  className="inline-flex h-11 items-center gap-2 rounded-full border bg-white/[0.04] px-4"
+                  style={{ borderColor: `${levelColor(lv.level)}66` }}
+                  title={`${lv.xp} XP`}
+                >
+                  <span className="text-[0.65rem] font-bold leading-none tracking-[0.18em] text-white/45">LVL</span>
+                  <b className="text-xl font-extrabold tabular-nums leading-none" style={{ color: levelColor(lv.level) }}>{lv.level}</b>
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -131,6 +174,7 @@ export function PlayerHero({
       </div>
 
       <div className="relative mt-6 border-t border-white/10 pt-5">{gameSwitch}</div>
+      {picking && player && <FramePicker userId={player.id} face={{ color: player.avatar_color, icon: player.avatar_icon, url: player.avatar_url }} level={lv.level} onClose={() => setPicking(false)} />}
     </section>
   );
 }

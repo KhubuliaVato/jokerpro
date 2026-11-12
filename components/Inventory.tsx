@@ -16,6 +16,7 @@ import { CardView } from "./CardView";
 import { EmojiArt, PlayFxArt, SoundArt } from "./FxArt";
 import { GiftDialog } from "./GiftDialog";
 import { Nick } from "./Nick";
+import { Wardrobe } from "./Wardrobe";
 
 const KING = { joker: false, suit: "H", rank: 13, id: "H13" } as const;
 
@@ -182,6 +183,28 @@ export function Inventory({ userId, owner, avatar, nickname }: { userId: string;
     ...(plays.length > 0 ? [{ id: "plays" as Cat, label: t("დადების ეფექტი", "Play effects", "Эффекты хода"), n: plays.length }] : []),
     ...(sounds.length > 0 ? [{ id: "sounds" as Cat, label: t("ხმები", "Sounds", "Звуки"), n: sounds.length }] : []),
   ];
+
+  // one's own inventory is the wheel: pick a kind, tap an item, it is worn
+  if (owner) {
+    return (
+      <>
+        {error && <p className="mb-3 text-sm text-red-300">{error}</p>}
+        <Wardrobe
+          owned={mine.owned}
+          worn={mine.worn}
+          theme={theme}
+          themes={THEMES.filter((th) => th.free || mine.owned.includes(th.id)).map((th) => th.id)}
+          decks={decks}
+          avatar={avatar}
+          nickname={nickname}
+          onPut={(slot, id) => void put(slot, id)}
+          onTheme={applyTheme}
+          onGift={setGiftFor}
+        />
+        {giftFor && <GiftDialog itemId={giftFor} onClose={() => setGiftFor(null)} onSent={() => void load()} />}
+      </>
+    );
+  }
 
   return (
     <section className="flex flex-col gap-4">

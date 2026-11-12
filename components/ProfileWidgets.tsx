@@ -1,5 +1,6 @@
 import type { GameInfo } from "@/lib/games";
 import { CoinIcon } from "./Coins";
+import { PlaceMedal } from "./PlaceMedal";
 import { useT } from "@/lib/i18n";
 import type { Achievement } from "@/lib/stats";
 
@@ -56,13 +57,12 @@ export function Donut({ percent, label }: { percent: number; label: string }) {
 
 /** How often each place was taken. */
 export function PlaceBars({ counts }: { counts: number[] }) {
-  const t = useT();
   const max = Math.max(1, ...counts);
   return (
     <ul className="flex min-w-0 flex-1 flex-col gap-3">
       {counts.map((n, i) => (
         <li key={i} className="flex items-center gap-3">
-          <span className="w-20 flex-none whitespace-nowrap text-sm text-white/55">{t(`${i + 1} ადგილი`, `Place ${i + 1}`, `${i + 1} место`)}</span>
+          <span className="flex-none"><PlaceMedal place={i + 1} size={1.9} /></span>
           <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/10">
             <span
               className="block h-full rounded-full transition-[width] duration-700 ease-out"

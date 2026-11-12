@@ -36,6 +36,11 @@ export const FRAMES = [
   { id: "f_moon", names: ["ღამის ღრუბელი", "Night cloud", "Ночное облако"] as Names, accent: "#818cf8" },
   { id: "f_matrix", names: ["მწვანე ეკრანი", "Green screen", "Зелёный экран"] as Names, accent: "#00ff41" },
   { id: "f_seal", names: ["ბეჭედი", "Seal", "Печать"] as Names, accent: "#ef4444" },
+  // earned with levels, not sold (lib/level.ts)
+  { id: "f_lv25", names: ["ბრინჯაოს ლეველი", "Bronze level", "Бронзовый уровень"] as Names, accent: "#d08a4c" },
+  { id: "f_lv50", names: ["ვერცხლის ლეველი", "Silver level", "Серебряный уровень"] as Names, accent: "#cbd5e1" },
+  { id: "f_lv75", names: ["ოქროს ლეველი", "Gold level", "Золотой уровень"] as Names, accent: "#fbbf24" },
+  { id: "f_lv100", names: ["ბრილიანტის ლეველი", "Diamond level", "Бриллиантовый уровень"] as Names, accent: "#67e8f9" },
 ] as const;
 
 /** Styles of a nickname; the look is in globals.css under `.nick-<id>`. */

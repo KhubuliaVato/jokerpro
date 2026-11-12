@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { readCache, writeCache } from "@/lib/cache";
 import { loadBalance, loadTableGrants, type CoinGrant } from "@/lib/coins";
+import { titleOf } from "@/lib/achievements";
 import { useT } from "@/lib/i18n";
 import { COINS_CHANGED } from "@/lib/shop";
 import { getSupabase } from "@/lib/supabase";
@@ -70,19 +71,11 @@ export function CoinBalance() {
   );
 }
 
-const ACHIEVEMENT_NAME: Record<string, [string, string, string]> = {
-  first: ["პირველი გამარჯვება", "First win", "Первая победа"],
-  ten: ["10 თამაში", "10 games", "10 игр"],
-  score: ["500 ქულა", "500 points", "500 очков"],
-  streak: ["სამი ზედიზედ", "Three in a row", "Три подряд"],
-  full: ["სრული თამაშის ოსტატი", "Full game master", "Мастер полной игры"],
-};
-
 /** What a grant was paid for, in words. */
 export function grantLabel(g: Pick<CoinGrant, "reason" | "ref">, t: (ka: string, en: string, ru: string) => string): string {
   if (g.reason === "win") return t("გამარჯვება", "Victory", "Победа");
   if (g.reason === "play") return t("თამაში", "Game played", "Сыграно");
-  const n = ACHIEVEMENT_NAME[g.ref];
+  const n = titleOf(g.ref);
   return n ? t(...n) : t("მიღწევა", "Achievement", "Достижение");
 }
 

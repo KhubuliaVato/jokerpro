@@ -5,23 +5,22 @@ import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n";
 import { formatDate, formatTime } from "@/lib/format";
 import { GAMES, gameName } from "@/lib/games";
-import { achievements, computeStats, placeCounts, type GameResult } from "@/lib/stats";
+import { computeStats, type GameResult } from "@/lib/stats";
 import { PLAYER_NAMES } from "./names";
 import { loadPosition, loadRating, type RatingRow } from "@/lib/ratings";
 import type { PlayerSummary } from "@/lib/search";
 import { getSupabase } from "@/lib/supabase";
+import { PlaceMedal } from "./PlaceMedal";
+import { StatsDashboard } from "./StatsDashboard";
 import { PlayerHero } from "./PlayerHero";
 import { Inventory } from "./Inventory";
-import { Achievements, Donut, GameTabs, Panel, PlaceBars, Sparkline } from "./ProfileWidgets";
+import { AchievementsBoard, nextAchievement, useBoard } from "./AchievementsBoard";
+import { GameTabs, Panel } from "./ProfileWidgets";
+import { hintOf, titleOf, iconOf } from "@/lib/achievements";
 import { FORMAT_LABEL, rise } from "./ui";
 
-const PLACE_STYLE = [
-  "",
-  "bg-amber-300 text-black",
-  "bg-slate-300 text-black",
-  "bg-orange-400 text-black",
-  "border border-white/25 text-white/80",
-];
+/** Colour of a game's row by the place taken (gold, silver, bronze; nothing for the rest). */
+const PLACE_TONE: Record<number, string> = { 1: "#fbbf24", 2: "#cbd5e1", 3: "#d08a4c" };
 
 type Tab = "overview" | "stats" | "achievements" | "inventory" | "history";
 
@@ -74,15 +73,9 @@ export function StatsSection({
   const rows = all.filter((r) => r.game === gameId);
   const game = GAMES.find((g) => g.id === gameId) ?? GAMES[0];
   const stats = computeStats(rows);
-  const trend = rows
-    .slice(0, 12)
-    .map((r) => r.score)
-    .reverse();
   const firstName = owner ? PLAYER_NAMES[0] : (name ?? t("მოთამაშე", "Player", "Игрок"));
-  const items = gameId === "joker" ? achievements(rows) : [];
-  const nextUp = items
-    .filter((a) => !a.done)
-    .sort((a, b) => b.progress.value / b.progress.max - a.progress.value / a.progress.max)[0];
+  const board = useBoard(userId, owner);
+  const nextUp = nextAchievement(board);
 
   const TABS: { id: Tab; label: string }[] = [
     { id: "overview", label: t("მიმოხილვა", "Overview", "Обзор") },
@@ -101,6 +94,7 @@ export function StatsSection({
         position={mine?.position ?? null}
         gameSwitch={<GameTabs games={GAMES} value={gameId} onChange={setGameId} />}
         actions={actions}
+        owner={owner}
       />
 
       <div className="flex flex-col gap-6 pb-8" style={rise(2)}>
@@ -147,15 +141,15 @@ export function StatsSection({
               {nextUp ? (
                 <Panel title={t("შემდეგი მიღწევა", "Next achievement", "Следующее достижение")}>
                   <div className="flex items-center gap-4">
-                    <span className="grid size-14 flex-none place-items-center rounded-full bg-white/10 text-3xl text-white/50">{nextUp.icon}</span>
+                    <span className="grid size-14 flex-none place-items-center rounded-full bg-white/10 text-3xl">{iconOf(nextUp.def.id)}</span>
                     <div className="min-w-0 flex-1">
-                      <b className="block text-lg leading-tight">{nextUp.title}</b>
-                      <span className="text-sm text-white/45">{nextUp.hint}</span>
+                      <b className="block text-lg leading-tight">{titleOf(nextUp.def.id) ? t(...titleOf(nextUp.def.id)!) : nextUp.def.id}</b>
+                      <span className="text-sm text-white/45">{t(...hintOf(nextUp.def))}</span>
                       <span className="mt-2.5 block h-2 overflow-hidden rounded-full bg-white/10">
-                        <span className="block h-full rounded-full bg-amber-300" style={{ width: `${(nextUp.progress.value / nextUp.progress.max) * 100}%` }} />
+                        <span className="block h-full rounded-full bg-amber-300" style={{ width: `${(nextUp.value / nextUp.def.target) * 100}%` }} />
                       </span>
                       <span className="mt-1 block text-xs tabular-nums text-white/50">
-                        {nextUp.progress.value}/{nextUp.progress.max}
+                        {nextUp.value}/{nextUp.def.target}
                       </span>
                     </div>
                   </div>
@@ -163,9 +157,9 @@ export function StatsSection({
               ) : (
                 <Panel title={t("მიღწევები", "Achievements", "Достижения")}>
                   <p className="text-white/50">
-                    {items.length
-                      ? t("ყველა მიღწევა აღებულია", "Every achievement is unlocked", "Все достижения получены")
-                      : t("ამ თამაშისთვის მიღწევები ჯერ არ არის.", "No achievements for this game yet.", "Для этой игры достижений пока нет.")}
+                    {board
+                      ? `${board.earned.length}/${board.defs.length}`
+                      : t("იტვირთება…", "Loading…", "Загрузка…")}
                   </p>
                 </Panel>
               )}
@@ -173,28 +167,9 @@ export function StatsSection({
           </>
         )}
 
-        {tab === "stats" && (
-          <div className="grid gap-6 md:grid-cols-2">
-            <Panel title={t("გამარჯვებები", "Wins", "Победы")}>
-              <div className="flex items-center gap-6">
-                <Donut percent={stats.winRate} label={t("წარმატება", "Success", "Успех")} />
-                <PlaceBars counts={placeCounts(rows)} />
-              </div>
-            </Panel>
-            <Panel title={t("ბოლო თამაშების ქულა", "Recent scores", "Очки последних игр")}>
-              <Sparkline values={trend} />
-            </Panel>
-          </div>
-        )}
+        {tab === "stats" && <StatsDashboard rows={rows} userId={userId} gameId={gameId} />}
 
-        {tab === "achievements" &&
-          (items.length ? (
-            <Achievements items={items} />
-          ) : (
-            <Panel>
-              <p className="text-white/50">{t("ამ თამაშისთვის მიღწევები ჯერ არ არის.", "No achievements for this game yet.", "Для этой игры достижений пока нет.")}</p>
-            </Panel>
-          ))}
+        {tab === "achievements" && <AchievementsBoard board={board} />}
 
         {tab === "inventory" && <Inventory userId={userId} owner={owner} avatar={player ? { color: player.avatar_color, icon: player.avatar_icon, url: player.avatar_url } : undefined} nickname={player?.nickname} />}
 
@@ -213,11 +188,7 @@ export function StatsSection({
             ) : rows.length === 0 ? (
               <EmptyGames name={game.name} href={game.href} owner={owner} />
             ) : (
-              <ul className="flex flex-col gap-2.5">
-                {rows.slice(0, 30).map((r) => (
-                  <HistoryRow key={r.id} r={r} firstName={firstName} />
-                ))}
-              </ul>
+              <HistoryList rows={rows.slice(0, 30)} firstName={firstName} />
             )}
           </section>
         )}
@@ -258,74 +229,188 @@ function Tile({ label, value, icon, tone }: { label: string; value: string; icon
   );
 }
 
-function HistoryRow({ r, firstName }: { r: GameResult; firstName: string }) {
+/** The history of one game: a summary strip, then the games grouped by day. */
+function HistoryList({ rows, firstName }: { rows: GameResult[]; firstName: string }) {
+  const t = useT();
+  const wins = rows.filter((r) => r.place === 1).length;
+  const podium = rows.filter((r) => r.place <= 3).length;
+  const avg = rows.reduce((sum, r) => sum + r.place, 0) / rows.length;
+  const delta = rows.reduce((sum, r) => sum + (r.rating_before != null && r.rating_after != null ? r.rating_after - r.rating_before : 0), 0);
+  const hasRating = rows.some((r) => r.rating_before != null && r.rating_after != null);
+
+  const days: { label: string; rows: GameResult[] }[] = [];
+  for (const r of rows) {
+    const label = formatDate(new Date(r.played_at));
+    const last = days[days.length - 1];
+    if (last && last.label === label) last.rows.push(r);
+    else days.push({ label, rows: [r] });
+  }
+
+  const stat = (label: string, value: string, tone: string) => (
+    <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.07] to-white/[0.02] px-4 py-3">
+      <span className="block text-xs font-bold uppercase tracking-wider text-white/45">{label}</span>
+      <b className="mt-0.5 block text-2xl font-extrabold tabular-nums" style={{ color: tone }}>{value}</b>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {stat(t("მოგება", "Wins", "Победы"), `${wins}/${rows.length}`, "#fbbf24")}
+        {stat(t("პრიზიორი", "Podium", "Призовые"), String(podium), "#e2e8f0")}
+        {stat(t("საშუალო ადგილი", "Avg. place", "Среднее место"), avg.toFixed(1), "#7dd3fc")}
+        {stat(t("ქულა", "Rating", "Рейтинг"), hasRating ? `${delta > 0 ? "+" : ""}${delta}` : "—", delta > 0 ? "#6ee7b7" : delta < 0 ? "#fca5a5" : "#94a3b8")}
+      </div>
+
+      {days.map((d) => (
+        <div key={d.label} className="flex flex-col gap-2.5">
+          <h3 className="flex items-center gap-3 pt-2 text-sm font-extrabold uppercase tracking-[0.14em] text-white/45">
+            {d.label}
+            <span className="h-px flex-1 bg-gradient-to-r from-white/15 to-transparent" />
+            <span className="text-xs font-bold normal-case tracking-normal text-white/35">
+              {d.rows.length} {t("თამაში", "games", "игр")}
+            </span>
+          </h3>
+          <ul className="flex flex-col gap-2.5">
+            {d.rows.map((r) => (
+              <HistoryRow key={r.id} r={r} firstName={firstName} timeOnly />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </>
+  );
+}
+
+/** How one player played a finished Joker game (the figures come from `result_stats`). */
+interface PlayStats {
+  hands: number;
+  hits: number;
+  khishtis: number;
+  best: number;
+  streak: number;
+}
+
+function HistoryRow({ r, firstName, timeOnly = false }: { r: GameResult; firstName: string; timeOnly?: boolean }) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  // undefined: not asked yet; null: no figures for this game
+  const [stats, setStats] = useState<PlayStats[] | null | undefined>(undefined);
   const when = new Date(r.played_at);
+  const tone = PLACE_TONE[r.place];
+  const delta = r.rating_before != null && r.rating_after != null ? r.rating_after - r.rating_before : null;
+
+  // the figures are asked for the first time the game is opened
+  const hasFigures = r.game === "joker" && !!r.online;
+  useEffect(() => {
+    if (!open || !hasFigures || stats !== undefined) return;
+    const supabase = getSupabase();
+    if (!supabase) return;
+    let off = false;
+    supabase.rpc("result_stats", { p_result: r.id }).then(({ data, error }) => {
+      if (!off) setStats(!error && Array.isArray(data) ? (data as PlayStats[]) : null);
+    });
+    return () => {
+      off = true;
+    };
+  }, [open, hasFigures, stats, r.id]);
+
+  // everybody at the table, best first, with their figures
+  const standings = r.scores
+    .map((s, i) => ({ score: s, me: i === 0, st: stats?.[i], name: r.players?.[i] ?? (i === 0 ? firstName : (PLAYER_NAMES[i] ?? `${t("მოთამაშე", "Player", "Игрок")} ${i + 1}`)) }))
+    .sort((a, b) => b.score - a.score);
+  const top = standings[0]?.score ?? 0;
   const max = Math.max(1, ...r.scores.map((s) => Math.abs(s)));
+
+  // the best figure of each kind is marked (only when the players differ)
+  const marks = (pick: (s: PlayStats) => number, better: "high" | "low") => {
+    const values = standings.flatMap((p) => (p.st ? [pick(p.st)] : []));
+    if (values.length < 2 || Math.min(...values) === Math.max(...values)) return null;
+    return better === "high" ? Math.max(...values) : Math.min(...values);
+  };
+  const bestHits = marks((s) => s.hits, "high");
+  const bestKh = marks((s) => s.khishtis, "low");
+  const bestHand = marks((s) => s.best, "high");
+  const bestStreak = marks((s) => s.streak, "high");
+
+  const cell = (label: string, value: string, hot: boolean) => (
+    <div className={`rounded-lg px-2.5 py-1.5 ${hot ? "bg-amber-300/12 ring-1 ring-amber-300/40" : "bg-white/[0.04]"}`}>
+      <span className="block text-[0.62rem] font-extrabold uppercase leading-tight tracking-wider text-white/40">{label}</span>
+      <b className={`text-base font-extrabold tabular-nums ${hot ? "text-amber-300" : "text-white/90"}`}>{value}</b>
+    </div>
+  );
+
   return (
-    <li className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition-colors hover:border-white/20">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="flex w-full items-center gap-4 px-4 py-3.5 text-left"
-      >
-        <span
-          className={`grid size-11 flex-none place-items-center rounded-full text-lg font-extrabold ${PLACE_STYLE[r.place] ?? PLACE_STYLE[4]}`}
-          title={t(`${r.place} ადგილი`, `Place ${r.place}`, `${r.place} место`)}
-        >
-          {r.place}
-        </span>
+    <li
+      className="relative overflow-hidden rounded-2xl border transition-[border-color,background-color] duration-200 hover:border-white/25"
+      style={{ borderColor: tone ? `${tone}38` : "rgb(255 255 255 / 0.1)", background: tone ? `linear-gradient(90deg, ${tone}1c, rgb(255 255 255 / 0.025) 45%)` : "rgb(255 255 255 / 0.03)" }}
+    >
+      {tone && <span className="absolute inset-y-0 left-0 w-1" style={{ background: `linear-gradient(180deg, ${tone}, ${tone}55)` }} />}
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left sm:gap-5">
+        <PlaceMedal place={r.place} size={3.2} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-lg font-bold">
-            {gameName(r.game)} · {FORMAT_LABEL[r.format] ?? r.format}
+          <span className="block truncate text-lg font-extrabold leading-tight">
+            {gameName(r.game)} <span className="font-bold text-white/55">· {FORMAT_LABEL[r.format] ?? r.format}</span>
+          </span>
+          <span className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-white/45">
+            <span className="tabular-nums">{timeOnly ? formatTime(when) : `${formatDate(when)} · ${formatTime(when)}`}</span>
             {r.kind && (
-              <span
-                className={`ml-2 rounded-full px-2.5 py-0.5 align-middle text-xs font-bold ${
-                  r.kind === "ranked" ? "bg-amber-300/15 text-amber-300" : "bg-sky-300/15 text-sky-300"
-                }`}
-              >
+              <span className={`rounded-full px-2.5 py-0.5 text-[0.68rem] font-extrabold uppercase tracking-wider ${r.kind === "ranked" ? "bg-amber-300/15 text-amber-300" : "bg-sky-300/15 text-sky-300"}`}>
                 {r.kind === "ranked" ? t("წოდებისთვის", "Ranked", "Рейтинговая") : t("მეგობრული", "Friendly", "Дружеская")}
               </span>
             )}
           </span>
-          <span className="block text-sm text-white/45">
-            {formatDate(when)} · {formatTime(when)}
-          </span>
         </span>
-        {r.rating_before != null && r.rating_after != null && (
-          <b
-            className={`w-14 text-right text-lg tabular-nums ${
-              r.rating_after > r.rating_before ? "text-emerald-300" : r.rating_after < r.rating_before ? "text-red-300" : "text-white/50"
-            }`}
+        {delta != null && (
+          <span
+            className={`hidden flex-none items-center gap-1 rounded-full px-3 py-1 text-sm font-extrabold tabular-nums sm:inline-flex ${delta > 0 ? "bg-emerald-400/12 text-emerald-300" : delta < 0 ? "bg-red-400/12 text-red-300" : "bg-white/8 text-white/50"}`}
             title={t("ქულის ცვლილება", "Rating change", "Изменение очков")}
           >
-            {r.rating_after - r.rating_before > 0 ? "+" : ""}
-            {r.rating_after - r.rating_before}
-          </b>
+            <span aria-hidden className="text-[0.65rem]">{delta > 0 ? "▲" : delta < 0 ? "▼" : "–"}</span>
+            {Math.abs(delta)}
+          </span>
         )}
-        <b className={`text-2xl tabular-nums ${r.score < 0 ? "text-red-300" : "text-white"}`}>{r.score}</b>
-        <span className={`text-white/35 transition-transform duration-300 ${open ? "rotate-180" : ""}`}>⌄</span>
+        <span className="flex-none text-right">
+          <b className={`block text-2xl font-extrabold leading-none tabular-nums ${r.score < 0 ? "text-red-300" : "text-white"}`}>{r.score}</b>
+          {delta != null && (
+            <span className={`mt-1 block text-xs font-bold tabular-nums sm:hidden ${delta > 0 ? "text-emerald-300" : delta < 0 ? "text-red-300" : "text-white/45"}`}>
+              {delta > 0 ? "▲" : delta < 0 ? "▼" : ""} {Math.abs(delta)}
+            </span>
+          )}
+        </span>
+        <svg viewBox="0 0 24 24" className={`size-5 flex-none text-white/35 transition-transform duration-300 ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
       </button>
 
       <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         <div className="overflow-hidden">
-          <ul className="flex flex-col gap-2.5 border-t border-white/10 px-4 py-4">
-            {r.scores.map((s, i) => (
-              <li key={i} className="flex items-center gap-3 text-sm">
-                <span className={`w-24 flex-none truncate ${i === 0 ? "font-bold text-amber-300" : "text-white/60"}`}>
-                  {r.players?.[i] ?? (i === 0 ? firstName : (PLAYER_NAMES[i] ?? `${t("მოთამაშე", "Player", "Игрок")} ${i + 1}`))}
-                </span>
-                <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-                  <span
-                    className={`block h-full rounded-full ${s < 0 ? "bg-red-400/70" : i === 0 ? "bg-amber-300" : "bg-white/40"}`}
-                    style={{ width: `${(Math.abs(s) / max) * 100}%` }}
-                  />
-                </span>
-                <b className="w-12 flex-none text-right tabular-nums">{s}</b>
+          <ul className="flex flex-col gap-3 border-t border-white/10 px-4 py-4">
+            {standings.map((p, i) => (
+              <li key={i} className={`flex flex-col gap-2.5 rounded-2xl p-3 ${p.me ? "bg-amber-300/[0.06] ring-1 ring-amber-300/20" : "bg-white/[0.025]"}`}>
+                <div className="flex items-center gap-3 text-sm">
+                  <PlaceMedal place={p.me ? r.place : i + 1} size={1.9} />
+                  <span className={`w-24 flex-none truncate text-base sm:w-36 ${p.me ? "font-extrabold text-amber-300" : "font-bold text-white/75"}`}>{p.name}</span>
+                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                    <span
+                      className={`block h-full rounded-full ${p.score < 0 ? "bg-red-400/70" : p.me ? "bg-gradient-to-r from-amber-500 to-amber-300" : "bg-white/40"}`}
+                      style={{ width: `${(Math.abs(p.score) / max) * 100}%` }}
+                    />
+                  </span>
+                  <b className="w-12 flex-none text-right text-base tabular-nums">{p.score}</b>
+                  <span className="hidden w-12 flex-none text-right text-xs tabular-nums text-white/35 sm:block">{i === 0 ? "" : p.score - top}</span>
+                </div>
+                {p.st && (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {cell(t("ნათქვამი წაიღო", "Kept the bid", "Выполнил заказ"), `${p.st.hits}/${p.st.hands}`, bestHits === p.st.hits)}
+                    {cell(t("ხიშტი", "Khishtis", "Хишти"), String(p.st.khishtis), bestKh === p.st.khishtis)}
+                    {cell(t("საუკეთესო ხელი", "Best hand", "Лучшая раздача"), `+${p.st.best}`, bestHand === p.st.best)}
+                    {cell(t("სტრიკი", "Best run", "Серия"), String(p.st.streak), bestStreak === p.st.streak)}
+                  </div>
+                )}
               </li>
             ))}
+            {open && hasFigures && stats === undefined && <li className="h-10 animate-pulse rounded-xl bg-white/[0.05]" />}
           </ul>
         </div>
       </div>
